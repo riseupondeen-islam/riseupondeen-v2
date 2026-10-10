@@ -1,0 +1,463 @@
+/* V2 feature expansion, stability and Tasbih refinements, Ask Rise/Quran visibility.
+   Migrated verbatim from the original index.html; cascade order is preserved by styles/index.css. */
+
+/* ---- original <style id=rud-v2-feature-expansion-styles> ---- */
+
+.rud-personal-checklist{display:grid;gap:7px;margin:12px 0}.rud-personal-checklist>div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;border:1px solid var(--rud-v2-stroke);border-radius:11px;background:var(--rud-v2-panel-strong);font-size:11px}.rud-personal-checklist b{color:var(--rud-v2-gold);font-size:14px}.rud-personal-editor{margin-top:10px}.rud-personal-editor input.rud-quran-select{width:100%;min-height:38px}.rud-ramadan-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.rud-ramadan-actions .rud-mini-btn.active{border-color:var(--rud-v2-gold);color:var(--text)}
+.rud-quran-study-strip{margin:10px 18px 0;padding:12px;border:1px solid var(--rud-v2-stroke);border-radius:16px;background:var(--rud-v2-panel);display:grid;gap:10px}.rud-quran-study-strip>div:first-child{display:grid;gap:4px}.rud-quran-study-strip strong{font-size:13px;color:var(--text)}.rud-quran-reflection-field{display:grid;gap:8px}.rud-quran-reflection-field span{color:var(--muted);font-size:10px;letter-spacing:.08em;text-transform:uppercase}.rud-quran-reflection-field textarea{width:100%;min-height:170px;resize:vertical;padding:13px;border:1px solid var(--rud-v2-stroke);border-radius:14px;background:var(--rud-v2-panel-strong);color:var(--text);font:inherit;line-height:1.6;outline:none}.rud-quran-reflection-field textarea:focus{border-color:var(--rud-v2-gold)}
+.rud-quran-local-results{display:grid;gap:6px;padding:8px 0 12px;border-bottom:1px solid var(--rud-v2-stroke);margin-bottom:8px}.rud-quran-local-results>.rud-deen-label{padding:0 4px}.rud-quran-local-results button{display:grid;gap:4px;width:100%;padding:10px 11px;text-align:left;border:1px solid var(--rud-v2-stroke);border-radius:12px;background:var(--rud-v2-panel);color:var(--text);cursor:pointer}.rud-quran-local-results button strong{font-size:11px}.rud-quran-local-results button small{color:var(--muted);font-size:9px;line-height:1.45;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+@media(max-width:560px){.rud-quran-study-strip{margin:8px 10px 0;padding:10px}.rud-quran-study-strip .rud-inline-actions{display:grid;grid-template-columns:1fr 1fr}.rud-quran-study-strip .rud-mini-btn{width:100%;min-width:0}.rud-ramadan-actions{display:grid;grid-template-columns:1fr}.rud-ramadan-actions .rud-mini-btn{width:100%}}
+
+html.rud-focus-reading body.route-view .rud-minimal-topbar{opacity:0;pointer-events:none;transform:translateY(-110%)}html.rud-focus-reading body.route-view .instagram-footer{display:none}html.rud-focus-reading body.route-view .dua-reader,html.rud-focus-reading body.route-view .compact-reader,html.rud-focus-reading body.route-view .name-reader{max-width:860px;margin-inline:auto}html.rud-focus-reading body.route-view #dynamicPage{padding-top:12px}.rud-guide-journey-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;margin:12px 0}.rud-guide-journey-controls>div:first-child{display:grid;gap:4px}.rud-guide-journey-controls strong{font-size:13px}.rud-guide-timeline.rud-guide-journey-active .rud-guide-step[hidden]{display:none!important}@media(max-width:560px){.rud-guide-journey-controls{align-items:stretch;flex-direction:column}.rud-guide-journey-controls .rud-inline-actions{display:grid;grid-template-columns:1fr 1fr 1fr}.rud-guide-journey-controls .rud-mini-btn{width:100%;min-width:0}}
+.rud-smart-home{width:min(560px,calc(100% - 24px));margin:12px auto 2px;display:flex;align-items:center;justify-content:center;gap:9px;min-height:30px}.rud-smart-home>span{color:var(--warm);font-size:8px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}.rud-smart-home>div{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center}.rud-smart-home a{display:inline-flex;align-items:center;min-height:28px;padding:0 9px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--soft);font-size:8.5px;font-weight:650;white-space:nowrap}.rud-smart-home a:hover{border-color:rgba(226,201,141,.35);color:var(--text)}html.light-mode body .rud-smart-home a{border-color:rgba(128,99,44,.14);background:rgba(255,255,255,.72);color:#62563f}@media(max-width:430px){.rud-smart-home{margin-top:9px;gap:6px;flex-direction:column}.rud-smart-home>div{gap:5px}.rud-smart-home a{min-height:26px;padding:0 8px;font-size:8px}}
+/* ---- original <style id=rud-final-stability-tasbih-performance> ---- */
+
+/* HOME STABILITY: hero entrance animations play once per visit, then stay settled
+   (see rudSettleHeroEntrance). Ambient animations are untouched. */
+html.rud-hero-settled .premium-hero-intro .hero-kicker,
+html.rud-hero-settled .premium-hero-intro .hero-tagline,
+html.rud-hero-settled .premium-hero-intro .hero-support,
+html.rud-hero-settled .premium-hero-intro .hero-actions,
+html.rud-hero-settled .premium-hero-intro .mood-launcher{
+  animation:none!important;
+  opacity:1!important;
+  transform:none!important;
+}
+/* Keep the page width stable when an overlay locks body scroll (no sideways jump). */
+html{scrollbar-gutter:stable}
+/* NAVBAR NOTIFICATION BADGE: absolutely positioned so the icon never moves or resizes. */
+.rud-deen-friends-nav{position:relative;overflow:visible!important}
+.rud-nav-badge{position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:999px;background:#d8c9a5;color:#0b1116;font:800 9px/16px "Manrope",system-ui,sans-serif;text-align:center;pointer-events:none;box-shadow:0 0 0 2px #07131c}
+html.light-mode .rud-nav-badge{box-shadow:0 0 0 2px #fff;background:#a8812f;color:#fff}
+.rud-nav-badge[hidden]{display:none!important}
+
+/* PREMIUM TASBIH — existing markup/logic, redesigned only visually. */
+@property --rud-tasbih-progress{
+  syntax:'<angle>';
+  inherits:false;
+  initial-value:0deg;
+}
+.rud-tasbih-page .rud-tasbih-shell{
+  width:min(560px,100%);
+  margin-inline:auto;
+}
+.rud-tasbih-page .rud-tasbih-device{
+  --rud-tasbih-progress:0deg;
+  width:min(330px,82vw)!important;
+  aspect-ratio:1!important;
+  margin:22px auto 0!important;
+  padding:58px 34px 48px!important;
+  border:1px solid rgba(214,180,105,.28)!important;
+  border-radius:50%!important;
+  background:
+    radial-gradient(circle at 50% 27%,rgba(255,255,255,.10),transparent 24%),
+    radial-gradient(circle at 50% 42%,rgba(214,180,105,.10),transparent 45%),
+    linear-gradient(145deg,#171b20 0%,#0b0e12 58%,#07090c 100%)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.10),
+    inset 0 -24px 42px rgba(0,0,0,.34),
+    0 24px 60px rgba(0,0,0,.30)!important;
+  transform:translateZ(0)!important;
+  transition:transform .18s cubic-bezier(.2,.8,.2,1),box-shadow .18s ease,border-color .18s ease!important;
+  overflow:hidden!important;
+}
+.rud-tasbih-page .rud-tasbih-device::before{
+  inset:13px!important;
+  background:repeating-conic-gradient(from -2deg,rgba(214,180,105,.34) 0 4deg,transparent 4deg 12deg)!important;
+  opacity:.58!important;
+}
+.rud-tasbih-page .rud-tasbih-device::after{
+  inset:9px!important;
+  background:conic-gradient(from -90deg,#d6b469 var(--rud-tasbih-progress),rgba(214,180,105,.035) 0)!important;
+  transition:--rud-tasbih-progress .38s cubic-bezier(.2,.8,.2,1)!important;
+  opacity:.95!important;
+}
+.rud-tasbih-page .rud-tasbih-device-label{
+  color:#a99a7c!important;
+  font-size:8px!important;
+  letter-spacing:.22em!important;
+}
+.rud-tasbih-page .rud-tasbih-screen{
+  color:#f3e5c4!important;
+  font-size:clamp(4rem,18vw,5.9rem)!important;
+  font-weight:750!important;
+  letter-spacing:-.055em!important;
+  line-height:.92!important;
+  text-shadow:0 0 22px rgba(214,180,105,.12)!important;
+  font-variant-numeric:tabular-nums;
+  transform:translateZ(0)!important;
+  transition:transform .18s cubic-bezier(.2,.8,.2,1),opacity .18s ease!important;
+}
+.rud-tasbih-page .rud-tasbih-target{
+  color:#8e9297!important;
+  font-size:10px!important;
+  letter-spacing:.02em!important;
+}
+.rud-tasbih-page .rud-tasbih-device.pressed{
+  transform:translateZ(0) scale(.972)!important;
+  border-color:rgba(214,180,105,.50)!important;
+  box-shadow:
+    inset 0 4px 18px rgba(0,0,0,.34),
+    0 12px 30px rgba(0,0,0,.26)!important;
+}
+.rud-tasbih-page .rud-tasbih-device.pressed .rud-tasbih-screen{
+  transform:scale(1.035)!important;
+}
+.rud-tasbih-page .rud-tasbih-actions{
+  margin-top:18px!important;
+  gap:9px!important;
+}
+.rud-tasbih-page .rud-compact-btn{
+  min-height:42px!important;
+  padding:0 17px!important;
+  border-radius:999px!important;
+  border-color:rgba(214,180,105,.20)!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 8px 22px rgba(0,0,0,.14)!important;
+}
+.rud-tasbih-page .rud-compact-btn:active{transform:translateY(1px)!important;}
+
+/* Light Tasbih: premium ivory/gold, not a dark device. */
+html.light-mode body #dynamicPage .rud-tasbih-page .rud-tasbih-device{
+  border-color:rgba(155,116,42,.28)!important;
+  background:
+    radial-gradient(circle at 50% 25%,rgba(255,255,255,.98),transparent 25%),
+    radial-gradient(circle at 50% 44%,rgba(191,151,72,.10),transparent 48%),
+    linear-gradient(145deg,#fffefa 0%,#f8f3e8 58%,#eee5d2 100%)!important;
+  color:#28241d!important;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -24px 42px rgba(125,92,31,.07),
+    0 24px 60px rgba(73,54,22,.12)!important;
+}
+html.light-mode body #dynamicPage .rud-tasbih-page .rud-tasbih-device::before{
+  background:repeating-conic-gradient(from -2deg,rgba(155,116,42,.24) 0 4deg,transparent 4deg 12deg)!important;
+}
+html.light-mode body #dynamicPage .rud-tasbih-page .rud-tasbih-device::after{
+  background:conic-gradient(from -90deg,#ad8230 var(--rud-tasbih-progress),rgba(155,116,42,.07) 0)!important;
+}
+html.light-mode body #dynamicPage .rud-tasbih-page .rud-tasbih-device-label{color:#89734c!important;}
+html.light-mode body #dynamicPage .rud-tasbih-page .rud-tasbih-screen{color:#27231c!important;text-shadow:0 2px 12px rgba(100,74,27,.10)!important;}
+html.light-mode body #dynamicPage .rud-tasbih-page .rud-tasbih-target{color:#746f66!important;}
+html.light-mode body #dynamicPage .rud-tasbih-page .rud-compact-btn{
+  color:#28241d!important;
+  background:linear-gradient(180deg,#fff,#f6f1e7)!important;
+  border-color:rgba(155,116,42,.20)!important;
+  box-shadow:inset 0 1px 0 #fff,0 8px 22px rgba(73,54,22,.08)!important;
+}
+@media(max-width:430px){
+  .rud-tasbih-page .rud-tasbih-device{width:min(292px,82vw)!important;margin-top:18px!important;}
+}
+@media(prefers-reduced-motion:reduce){
+  .rud-tasbih-page .rud-tasbih-device,
+  .rud-tasbih-page .rud-tasbih-screen{transition:none!important;}
+  .rud-tasbih-page .rud-tasbih-device::after{transition:none!important;}
+}
+
+/* Low-cost rendering on phones/tablets and other constrained devices.
+   Decorative blur is not allowed to compete with the actual app content. */
+body.perf-lite .glass,
+body.perf-lite .rud-quran-player-overlay,
+body.perf-lite .rud-zikr-selector{
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+body.perf-lite .hero::before,
+body.perf-lite .site-atmosphere,
+body.perf-lite .global-mecca-bg{
+  filter:none!important;
+}
+body.perf-lite .hero .rud-quick-actions .rud-circle-action,
+body.perf-lite .premium-btn,
+body.perf-lite button,
+body.perf-lite a{
+  transition-duration:.12s!important;
+}
+
+/* ---- original <style id=rud-tasbih-smooth-count-final> ---- */
+
+/* Stable Tasbih interaction: no layout shift, no abrupt color flash, no shaking. */
+.rud-tasbih-device,.rud-tasbih-screen,.rud-tasbih-device::after{will-change:auto!important}
+.rud-tasbih-device{transition:background .24s ease,border-color .24s ease,box-shadow .24s ease!important}
+.rud-tasbih-device::after{transition:opacity .24s ease,background .28s ease!important}
+.rud-tasbih-screen{width:7ch!important;min-width:7ch!important;text-align:center!important;color:#ead497!important;transition:color .22s ease,text-shadow .22s ease!important}
+.rud-tasbih-screen.rud-count-pop{animation:rudTasbihCountPop .22s ease-out!important}
+@keyframes rudTasbihCountPop{0%{color:#fff4cf;text-shadow:0 0 0 rgba(226,201,141,0);transform:scale(1)}45%{color:#f7e3a6;text-shadow:0 0 18px rgba(226,201,141,.30);transform:scale(1.025)}100%{color:#ead497;text-shadow:0 0 10px rgba(226,201,141,.12);transform:scale(1)}}
+.rud-tasbih-device.pressed{transform:none!important}
+.rud-tasbih-device:active{transform:none!important}
+@media(prefers-reduced-motion:reduce){.rud-tasbih-screen.rud-count-pop{animation:none!important}.rud-tasbih-device,.rud-tasbih-screen{transition:none!important}}
+
+/* ---- original <style id=rud-global-no-shake-final> ---- */
+
+/* Cross-device stability: fixed chrome and content containers never shift due to
+   hover transforms, fractional viewport changes or dynamic text width. */
+html,body{overflow-x:hidden!important}
+.rud-minimal-topbar,.rud-explore-drawer,.rud-explore-panel{contain:layout style}
+.rud-tasbih-page .rud-tool-head h1,.rud-tool-head h1,.rud-tasbih-screen{font-variant-numeric:tabular-nums;font-synthesis:none}
+@media(max-width:700px){
+  .rud-minimal-topbar{left:9px!important;right:9px!important;width:auto!important;transform:none!important}
+  .rud-minimal-topbar .rud-topbar-actions{flex:0 0 auto}
+  .rud-minimal-logo{flex:0 1 auto;min-width:0}
+  .rud-explore-panel{width:min(410px,100vw)!important}
+  .rud-tool-page,.rud-tasbih-page{max-width:100%!important;overflow-x:clip}
+}
+@media(hover:none),(pointer:coarse){
+  .premium-btn:hover,.live-card:hover,.popular-card:hover,.name-card:hover,.knowledge-card:hover,.rud-tasbih-page .rud-dhikr-card:hover{transform:none!important}
+}
+
+/* ---- original <style id=rud-tasbih-ultimate-ritual-final> ---- */
+
+/* Tasbih ritual finish: centered typography + soft, non-shaking dhikr feedback. */
+#dynamicPage .rud-tasbih-page .rud-tasbih-shell,
+#dynamicPage .rud-tasbih-page .rud-tool-head,
+#dynamicPage .rud-tasbih-page .rud-tool-head > div,
+#dynamicPage .rud-tasbih-page .rud-selected-zikr,
+#dynamicPage .rud-tasbih-page .rud-tasbih-device{
+  text-align:center!important;
+}
+#dynamicPage .rud-tasbih-page .rud-tasbih-device{
+  isolation:isolate!important;
+  overflow:visible!important;
+  transform:translateZ(0)!important;
+}
+#dynamicPage .rud-tasbih-page .rud-tasbih-device-label,
+#dynamicPage .rud-tasbih-page .rud-tasbih-screen,
+#dynamicPage .rud-tasbih-page .rud-tasbih-target{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  text-align:center!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+#dynamicPage .rud-tasbih-page .rud-tasbih-screen{
+  width:7ch!important;
+  min-width:7ch!important;
+  max-width:100%!important;
+  font-variant-numeric:tabular-nums!important;
+  font-feature-settings:"tnum" 1!important;
+  text-align:center!important;
+  transform-origin:center!important;
+  will-change:transform,color,text-shadow!important;
+}
+#dynamicPage .rud-tasbih-page .rud-tasbih-ripple{
+  position:absolute!important;
+  z-index:0!important;
+  left:50%!important;
+  top:50%!important;
+  width:82px!important;
+  height:82px!important;
+  transform:translate(-50%,-50%) scale(.72)!important;
+  border:1px solid rgba(232,205,139,.34)!important;
+  border-radius:50%!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  box-shadow:0 0 0 0 rgba(232,205,139,0),0 0 24px rgba(232,205,139,0)!important;
+}
+#dynamicPage .rud-tasbih-page .rud-tasbih-ripple.is-rippling{
+  animation:rudTasbihRipple 680ms cubic-bezier(.18,.72,.22,1) both!important;
+}
+#dynamicPage .rud-tasbih-page .rud-tasbih-device>*:not(.rud-tasbih-ripple){position:relative!important;z-index:2!important}
+#dynamicPage .rud-tasbih-page .rud-tasbih-device.rud-counting{
+  animation:rudTasbihBreath 520ms cubic-bezier(.2,.75,.2,1) both!important;
+}
+#dynamicPage .rud-tasbih-page .rud-tasbih-device.rud-counting::before{
+  animation:rudTasbihHalo 520ms ease-out both!important;
+}
+#dynamicPage .rud-tasbih-page .rud-tasbih-device.rud-counting::after{
+  animation:rudTasbihRing 520ms ease-out both!important;
+}
+#dynamicPage .rud-tasbih-page .rud-tasbih-screen.rud-count-pop{
+  animation:rudTasbihNumber 340ms cubic-bezier(.2,.8,.2,1) both!important;
+}
+@keyframes rudTasbihBreath{
+  0%{transform:translateZ(0) scale(1);}
+  22%{transform:translateZ(0) scale(.985);}
+  55%{transform:translateZ(0) scale(1.012);}
+  100%{transform:translateZ(0) scale(1);}
+}
+@keyframes rudTasbihRipple{
+  0%{opacity:.48;transform:translate(-50%,-50%) scale(.70);box-shadow:0 0 0 0 rgba(232,205,139,.24),0 0 18px rgba(232,205,139,.18);}
+  55%{opacity:.22;transform:translate(-50%,-50%) scale(2.05);box-shadow:0 0 0 12px rgba(232,205,139,.055),0 0 34px rgba(232,205,139,.10);}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(2.55);box-shadow:0 0 0 28px rgba(232,205,139,0),0 0 48px rgba(232,205,139,0);}
+}
+@keyframes rudTasbihHalo{
+  0%{opacity:.58;filter:brightness(1);}
+  45%{opacity:.92;filter:brightness(1.12);}
+  100%{opacity:.58;filter:brightness(1);}
+}
+@keyframes rudTasbihRing{
+  0%{opacity:.72;filter:brightness(1);}
+  45%{opacity:1;filter:brightness(1.18);}
+  100%{opacity:.95;filter:brightness(1);}
+}
+@keyframes rudTasbihNumber{
+  0%{transform:scale(1);color:#f3e5c4;text-shadow:0 0 0 rgba(214,180,105,0);}
+  38%{transform:scale(1.045);color:#fff2c9;text-shadow:0 0 22px rgba(226,201,141,.42),0 0 44px rgba(226,201,141,.12);}
+  72%{transform:scale(1.015);color:#f8e8b9;text-shadow:0 0 16px rgba(226,201,141,.24);}
+  100%{transform:scale(1);color:#f3e5c4;text-shadow:0 0 10px rgba(226,201,141,.10);}
+}
+/* Light mode: warm champagne glow, never a harsh flash. */
+html.light-mode body #dynamicPage .rud-tasbih-page .rud-tasbih-ripple{
+  border-color:rgba(169,126,42,.34)!important;
+}
+html.light-mode body #dynamicPage .rud-tasbih-page .rud-tasbih-screen.rud-count-pop{
+  animation:rudTasbihNumberLight 340ms cubic-bezier(.2,.8,.2,1) both!important;
+}
+html.light-mode body #dynamicPage .rud-tasbih-page .rud-tasbih-device.rud-counting{
+  animation:rudTasbihBreathLight 520ms cubic-bezier(.2,.75,.2,1) both!important;
+}
+@keyframes rudTasbihNumberLight{
+  0%{transform:scale(1);color:#27231c;text-shadow:0 0 0 rgba(169,126,42,0);}
+  38%{transform:scale(1.045);color:#9d7425;text-shadow:0 0 18px rgba(169,126,42,.22),0 0 34px rgba(169,126,42,.08);}
+  72%{transform:scale(1.015);color:#815f1e;text-shadow:0 0 12px rgba(169,126,42,.14);}
+  100%{transform:scale(1);color:#27231c;text-shadow:0 2px 12px rgba(100,74,27,.10);}
+}
+@keyframes rudTasbihBreathLight{
+  0%{transform:translateZ(0) scale(1);box-shadow:inset 0 1px 0 #fff,inset 0 -24px 42px rgba(125,92,31,.07),0 24px 60px rgba(73,54,22,.12);}
+  45%{transform:translateZ(0) scale(1.012);box-shadow:inset 0 1px 0 #fff,inset 0 -24px 42px rgba(125,92,31,.07),0 25px 66px rgba(73,54,22,.16),0 0 28px rgba(169,126,42,.08);}
+  100%{transform:translateZ(0) scale(1);box-shadow:inset 0 1px 0 #fff,inset 0 -24px 42px rgba(125,92,31,.07),0 24px 60px rgba(73,54,22,.12);}
+}
+@media(prefers-reduced-motion:reduce){
+  #dynamicPage .rud-tasbih-page .rud-tasbih-ripple,
+  #dynamicPage .rud-tasbih-page .rud-tasbih-device.rud-counting,
+  #dynamicPage .rud-tasbih-page .rud-tasbih-screen.rud-count-pop{animation:none!important}
+}
+
+/* ---- original <style id=rud-tasbih-perfect-center-final> ---- */
+
+/* Final Tasbih alignment: every counter element is centered on the exact device axis. */
+#dynamicPage .rud-tasbih-page .rud-tasbih-device{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  justify-items:center!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  text-indent:0!important;
+}
+#dynamicPage .rud-tasbih-page .rud-tasbih-device > .rud-tasbih-device-label,
+#dynamicPage .rud-tasbih-page .rud-tasbih-device > .rud-tasbih-screen,
+#dynamicPage .rud-tasbih-page .rud-tasbih-device > .rud-tasbih-target{
+  grid-column:1!important;
+  justify-self:center!important;
+  align-self:center!important;
+  text-align:center!important;
+  margin-inline:auto!important;
+  left:auto!important;
+  right:auto!important;
+}
+#dynamicPage .rud-tasbih-page .rud-tasbih-device > .rud-tasbih-device-label,
+#dynamicPage .rud-tasbih-page .rud-tasbih-device > .rud-tasbih-target{
+  width:100%!important;
+}
+#dynamicPage .rud-tasbih-page .rud-tasbih-device > .rud-tasbih-screen{
+  width:7ch!important;
+  min-width:7ch!important;
+  max-width:none!important;
+  justify-self:center!important;
+}
+
+/* ---- original <style id=rud-tasbih-exact-center-final> ---- */
+
+/* Exact geometric centering for the Tasbih count. The number itself is anchored to
+   the mathematical center of the circular device, independent of font metrics. */
+#dynamicPage .rud-tasbih-page .rud-tasbih-device{
+  position:relative!important;
+  display:block!important;
+  padding:0!important;
+  text-align:center!important;
+}
+#dynamicPage .rud-tasbih-page .rud-tasbih-device > .rud-tasbih-device-label{
+  position:absolute!important;
+  z-index:3!important;
+  left:50%!important;
+  top:31%!important;
+  width:max-content!important;
+  min-width:0!important;
+  margin:0!important;
+  transform:translateX(-50%)!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+}
+#dynamicPage .rud-tasbih-page .rud-tasbih-device > .rud-tasbih-screen{
+  position:absolute!important;
+  z-index:3!important;
+  left:50%!important;
+  top:50%!important;
+  width:auto!important;
+  min-width:0!important;
+  max-width:none!important;
+  margin:0!important;
+  transform:translate(-50%,-50%)!important;
+  transform-origin:center center!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+  direction:ltr!important;
+  unicode-bidi:isolate!important;
+}
+#dynamicPage .rud-tasbih-page .rud-tasbih-device > .rud-tasbih-target{
+  position:absolute!important;
+  z-index:3!important;
+  left:50%!important;
+  top:64%!important;
+  width:max-content!important;
+  min-width:0!important;
+  margin:0!important;
+  transform:translateX(-50%)!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+}
+/* Keep the count centered while the existing breathing/count animation scales it. */
+#dynamicPage .rud-tasbih-page .rud-tasbih-screen.rud-count-pop{
+  transform:translate(-50%,-50%)!important;
+}
+#dynamicPage .rud-tasbih-page .rud-tasbih-device.pressed .rud-tasbih-screen{
+  transform:translate(-50%,-50%) scale(1.035)!important;
+}
+@keyframes rudTasbihNumber{
+  0%{transform:translate(-50%,-50%) scale(1);color:#f3e5c4;text-shadow:0 0 0 rgba(214,180,105,0);}
+  38%{transform:translate(-50%,-50%) scale(1.045);color:#fff2c9;text-shadow:0 0 22px rgba(226,201,141,.42),0 0 44px rgba(226,201,141,.12);}
+  72%{transform:translate(-50%,-50%) scale(1.015);color:#f8e8b9;text-shadow:0 0 16px rgba(226,201,141,.24);}
+  100%{transform:translate(-50%,-50%) scale(1);color:#f3e5c4;text-shadow:0 0 10px rgba(226,201,141,.10);}
+}
+@keyframes rudTasbihNumberLight{
+  0%{transform:translate(-50%,-50%) scale(1);color:#27231c;text-shadow:0 0 0 rgba(169,126,42,0);}
+  38%{transform:translate(-50%,-50%) scale(1.045);color:#9d7425;text-shadow:0 0 18px rgba(169,126,42,.22),0 0 34px rgba(169,126,42,.08);}
+  72%{transform:translate(-50%,-50%) scale(1.015);color:#815f1e;text-shadow:0 0 12px rgba(169,126,42,.14);}
+  100%{transform:translate(-50%,-50%) scale(1);color:#27231c;text-shadow:0 2px 12px rgba(100,74,27,.10);}
+}
+@media(max-width:430px){
+  #dynamicPage .rud-tasbih-page .rud-tasbih-device > .rud-tasbih-device-label{top:31%!important}
+  #dynamicPage .rud-tasbih-page .rud-tasbih-device > .rud-tasbih-target{top:64%!important}
+}
+
+/* ---- original <style id=rud-ask-rise-quran-visibility-final> ---- */
+
+/* Ask Rise owns the viewport while open. The persistent Qur'an player must
+   never float over the Ask Rise conversation/composer. Audio playback itself
+   is intentionally untouched. */
+body.rud-ask-rise-open .rud-quran-mini-player,
+body.rud-ask-rise-open .rud-quran-player-overlay,
+body.rud-ask-rise-open .rud-quran-sheet-overlay,
+body.rud-ask-rise-open #rudQuranSidePlayer{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+body.rud-ask-rise-open #searchOverlay{
+  z-index:12000!important;
+}
+
+/* ---- original <style id=rud-home-heading-final> ---- */
+
+@media(max-width:760px){
+  body:not(.route-view) > #root > main:not(#dynamicPage):not(#adminApp) .hero .hero-title-simple{
+    font-size:clamp(3.5rem,16.5vw,5rem)!important;
+  }
+}
+
+/* ---- original <style id=rud-prayer-performance-final> ---- */
+
+.rud-prayer-page .rud-prayer-list,.rud-prayer-page .rud-next-prayer
+.rud-prayer-page .rud-prayer-row{content-visibility:auto;contain-intrinsic-size:41px}

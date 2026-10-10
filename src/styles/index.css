@@ -1,0 +1,14 @@
+/* Global stylesheet entry. Order matters: it reproduces the original <style> cascade exactly. */
+@import "./00-react-root.css";
+@import "./01-base.css";
+@import "./02-admin-and-deen-friends-console.css";
+@import "./03-home-names-readers-refinements.css";
+@import "./04-navigation-controls-and-detail.css";
+@import "./05-topbar-prayer-tasbih.css";
+@import "./06-light-dark-theme-system.css";
+@import "./07-v2-features-stability.css";
+@import "./08-deen-friends.css";
+@import "./09-nearby-masjid-map-ios.css";
+@import "./10-libraries-readers-install.css";
+@import "./11-prayer-tasbih-premium.css";
+@import "./12-ask-rise.css";

@@ -1,0 +1,3 @@
+/* React mounts the app shell into #root. display:contents keeps #root out of the box tree,
+   so the original layout (designed for direct <body> children) is unchanged. */
+#root{display:contents}

@@ -1,0 +1,1940 @@
+rules_version = '2';
+
+service cloud.firestore {
+
+  match /databases/{database}/documents {
+
+    /* =========================================================
+       COMMON HELPERS
+       ========================================================= */
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return signedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email == 'riseupondeen@gmail.com';
+    }
+
+    function hasRole(role) {
+      return signedIn()
+        && (
+          isSuperAdmin()
+          || request.auth.token.role == role
+        );
+    }
+
+    function isTrustSafetyAdmin() {
+      return signedIn()
+        && (
+          isSuperAdmin()
+          || request.auth.token.role == 'TRUST_SAFETY_ADMIN'
+        );
+    }
+
+    function isCommunityAdmin() {
+      return signedIn()
+        && (
+          isSuperAdmin()
+          || request.auth.token.role == 'TRUST_SAFETY_ADMIN'
+          || request.auth.token.role == 'COMMUNITY_ADMIN'
+        );
+    }
+
+    function isSupportAdmin() {
+      return signedIn()
+        && (
+          isSuperAdmin()
+          || request.auth.token.role == 'TRUST_SAFETY_ADMIN'
+          || request.auth.token.role == 'COMMUNITY_ADMIN'
+          || request.auth.token.role == 'SUPPORT_ADMIN'
+        );
+    }
+
+    function isAnalyticsAdmin() {
+      return signedIn()
+        && (
+          isSuperAdmin()
+          || request.auth.token.role == 'TRUST_SAFETY_ADMIN'
+          || request.auth.token.role == 'ANALYTICS_ADMIN'
+        );
+    }
+
+    function isViewer() {
+      return signedIn()
+        && (
+          isSuperAdmin()
+          || request.auth.token.role == 'VIEWER'
+        );
+    }
+
+    function canViewAdminData() {
+      return signedIn()
+        && (
+          isSuperAdmin()
+          || isTrustSafetyAdmin()
+          || isCommunityAdmin()
+          || isSupportAdmin()
+          || isAnalyticsAdmin()
+          || isViewer()
+        );
+    }
+
+    function hasPrivateMessagePermission() {
+      return signedIn()
+        && (
+          isSuperAdmin()
+          || (
+            request.auth.token.permissions != null
+            && request.auth.token.permissions.hasAny([
+              'VIEW_PRIVATE_MESSAGES'
+            ])
+          )
+        );
+    }
+
+    function isAdmin() {
+      return isSuperAdmin()
+        || isTrustSafetyAdmin()
+        || isCommunityAdmin()
+        || isSupportAdmin()
+        || isAnalyticsAdmin()
+        || isViewer();
+    }
+
+    function isString(v, max) {
+      return v is string && v.size() <= max;
+    }
+
+    function validVisitorId(v) {
+      return isString(v, 120);
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function friendshipExists(fid) {
+      return exists(
+        /databases/$(database)/documents/deens_friendships/$(fid)
+      );
+    }
+
+    function friendshipData(fid) {
+      return get(
+        /databases/$(database)/documents/deens_friendships/$(fid)
+      ).data;
+    }
+
+    function isFriendMember(fid) {
+      return signedIn()
+        && friendshipExists(fid)
+        && friendshipData(fid).members.hasAny([
+          request.auth.uid
+        ]);
+    }
+
+    /* ---------- Deen Friends message validation helpers ---------- */
+
+    function streakPath(fid) {
+      return /databases/$(database)/documents/deens_friend_streaks/$(fid);
+    }
+
+    function msgKeysOk(d, extra) {
+      return d.keys().hasOnly([
+        'friendshipId','senderUid','recipientUid','text',
+        'createdAt','createdAtMs','kind','expiresAtMs'
+      ].concat(extra));
+    }
+
+    /* Shared by every new Deen interaction record. */
+    function validMsgBase(d) {
+      return signedIn()
+        && d.keys().hasAll([
+          'friendshipId','senderUid','recipientUid','text',
+          'createdAt','createdAtMs','kind','expiresAtMs'
+        ])
+        && isString(d.friendshipId, 260)
+        && friendshipExists(d.friendshipId)
+        && friendshipData(d.friendshipId).members.hasAll([d.senderUid, d.recipientUid])
+        && isString(d.senderUid, 128)
+        && isString(d.recipientUid, 128)
+        && d.senderUid == request.auth.uid
+        && d.recipientUid != request.auth.uid
+        && d.text is string
+        && d.createdAt == request.time
+        && d.createdAtMs is int
+        && d.createdAtMs >= request.time.toMillis() - 86400000
+        && d.createdAtMs <= request.time.toMillis() + 86400000
+        && d.expiresAtMs is int
+        && d.expiresAtMs > d.createdAtMs
+        && d.expiresAtMs <= d.createdAtMs + 7948800000;
+    }
+
+    function validChallengeMsg(id, d) {
+      return d.kind == 'challenge'
+        && msgKeysOk(d, ['challenge','status','completedBy'])
+        && d.text == ''
+        && id.matches('ch_' + d.friendshipId + '_.*')
+        && d.challenge is map
+        && d.challenge.keys().hasOnly([
+          'type','custom','official','officialId',
+          'category','title','description','target','activity'
+        ])
+        && d.challenge.keys().hasAll(['type','category','title','target'])
+        && isString(d.challenge.type, 40)
+        && isString(d.challenge.category, 30)
+        && isString(d.challenge.title, 80)
+        && d.challenge.title.size() >= 3
+        && isString(d.challenge.get('description', ''), 200)
+        && d.challenge.target is int
+        && d.challenge.target >= 1
+        && d.challenge.target <= 1000
+        && d.challenge.get('activity', 'manual') in ['manual', 'tasbih']
+        && (
+          d.challenge.get('official', false) == false
+          || (
+            isString(d.challenge.get('officialId', ''), 128)
+            && exists(/databases/$(database)/documents/deens_official_challenges/$(d.challenge.officialId))
+            && get(/databases/$(database)/documents/deens_official_challenges/$(d.challenge.officialId)).data.active == true
+          )
+        )
+        && d.status == 'pending'
+        && d.completedBy is map
+        && d.completedBy.size() == 0;
+    }
+
+    /* A check-in card is only valid if the sender really checked in (streak doc). */
+    function validCheckinMsg(id, d) {
+      return d.kind == 'checkin'
+        && msgKeysOk(d, [])
+        && d.text == ''
+        && id.matches('ck_' + d.friendshipId + '_' + request.auth.uid + '_.*')
+        && exists(streakPath(d.friendshipId))
+        && get(streakPath(d.friendshipId)).data.checkins.get(request.auth.uid, '').size() == 10;
+    }
+
+    /* Predefined encouragement only — no free text. */
+    function validEncourageMsg(d) {
+      return d.kind == 'encourage'
+        && msgKeysOk(d, [])
+        && d.text in [
+          "MashaAllah, keep going.",
+          "May Allah make it easy for you.",
+          "Keep your Qur'an streak alive.",
+          "Alhamdulillah.",
+          "May Allah accept it from you.",
+          // V2 quick reactions (still a fixed list: no free text between users)
+          "Ameen 🤲",
+          "JazakAllahu khayran 💚",
+          "BarakAllahu feek ✨",
+          "SubhanAllah 🌙"
+        ];
+    }
+
+    function validContentMsg(d) {
+      return d.kind == 'content'
+        && msgKeysOk(d, ['sharedContent'])
+        && d.text == ''
+        && d.sharedContent is map
+        && d.sharedContent.keys().hasOnly(['id','type','title','preview','reference','arabic'])
+        && d.sharedContent.keys().hasAll(['id','type','title'])
+        && isString(d.sharedContent.id, 200)
+        && d.sharedContent.type in ['quran','dua','hadith','zikr','reminder']
+        && isString(d.sharedContent.title, 200)
+        && isString(d.sharedContent.get('preview', ''), 300)
+        && isString(d.sharedContent.get('reference', ''), 200)
+        && isString(d.sharedContent.get('arabic', ''), 1200);
+    }
+
+    function isChallengeActive(d) {
+      return request.time.toMillis() <= d.expiresAtMs;
+    }
+
+    /*
+      Private chat investigation access.
+
+      A document is created only after an authorized investigator
+      confirms the investigation reason.
+
+      Recommended ID:
+      {adminUid}_{friendshipId}
+    */
+    function hasActivePrivateChatAccess(friendshipId) {
+      return hasPrivateMessagePermission()
+        && exists(
+          /databases/$(database)/documents/deens_private_chat_access/$(request.auth.uid + '_' + friendshipId)
+        )
+        && get(
+          /databases/$(database)/documents/deens_private_chat_access/$(request.auth.uid + '_' + friendshipId)
+        ).data.adminUid == request.auth.uid
+        && get(
+          /databases/$(database)/documents/deens_private_chat_access/$(request.auth.uid + '_' + friendshipId)
+        ).data.friendshipId == friendshipId
+        && get(
+          /databases/$(database)/documents/deens_private_chat_access/$(request.auth.uid + '_' + friendshipId)
+        ).data.active == true;
+    }
+
+
+    /* =========================================================
+       PUBLIC / ADMIN CONTENT
+       ========================================================= */
+
+    match /content/{documentId} {
+
+      allow read:
+        if isAdmin()
+        || resource.data.published == true;
+
+      allow create, update, delete:
+        if isAdmin();
+    }
+
+
+    /* =========================================================
+       VISITOR SESSIONS
+       ========================================================= */
+
+    match /visitor_sessions/{sessionId} {
+
+      allow create:
+        if
+          validVisitorId(request.resource.data.visitorId) &&
+          isString(request.resource.data.visitorName, 50) &&
+          isString(request.resource.data.sessionId, 160) &&
+          request.resource.data.sessionId == sessionId &&
+          request.resource.data.startedAt is timestamp &&
+          request.resource.data.lastSeenAt is timestamp &&
+          request.resource.data.clientLastSeenMs is int &&
+          request.resource.data.clientLastSeenMs >= 0 &&
+          request.resource.data.durationSeconds is int &&
+          request.resource.data.durationSeconds >= 0 &&
+          isString(request.resource.data.route, 180) &&
+          request.resource.data.device in [
+            'mobile',
+            'tablet',
+            'desktop'
+          ];
+
+      allow update:
+        if
+          request.resource.data.sessionId == sessionId &&
+          request.resource.data.sessionId == resource.data.sessionId &&
+          request.resource.data.visitorId == resource.data.visitorId &&
+          validVisitorId(request.resource.data.visitorId) &&
+          isString(request.resource.data.visitorName, 50) &&
+          request.resource.data.startedAt is timestamp &&
+          request.resource.data.lastSeenAt is timestamp &&
+          request.resource.data.clientLastSeenMs is int &&
+          request.resource.data.clientLastSeenMs >= 0 &&
+          request.resource.data.durationSeconds is int &&
+          request.resource.data.durationSeconds >= 0 &&
+          isString(request.resource.data.route, 180) &&
+          request.resource.data.device in [
+            'mobile',
+            'tablet',
+            'desktop'
+          ];
+
+      allow read, delete:
+        if isAdmin();
+    }
+
+
+    /* =========================================================
+       BROADCAST MESSAGES
+       ========================================================= */
+
+    match /broadcast_messages/{messageId} {
+
+      allow read:
+        if isAdmin()
+        || resource.data.active == true;
+
+      allow create, update, delete:
+        if isAdmin();
+    }
+
+
+    /* =========================================================
+       BROADCAST RECEIPTS
+       ========================================================= */
+
+    match /broadcast_receipts/{receiptId} {
+
+      allow create, update:
+        if
+          validVisitorId(request.resource.data.visitorId) &&
+          isString(request.resource.data.broadcastId, 128) &&
+          request.resource.data.eventType in [
+            'shown',
+            'dismissed'
+          ];
+
+      allow read, delete:
+        if isAdmin();
+    }
+
+
+    /* =========================================================
+       PUSH JOBS
+       ========================================================= */
+
+    match /push_jobs/{jobId} {
+
+      allow create, read, update, delete:
+        if isAdmin();
+    }
+
+
+    /* =========================================================
+       PUSH SUBSCRIPTIONS
+       ========================================================= */
+
+    match /push_subscriptions/{visitorId} {
+
+      allow read:
+        if isAdmin();
+
+      allow create, update:
+        if
+          request.resource.data.visitorId == visitorId &&
+          validVisitorId(request.resource.data.visitorId) &&
+          request.resource.data.active is bool &&
+          (
+            request.resource.data.fcmToken == null ||
+            isString(request.resource.data.fcmToken, 4096)
+          ) &&
+          isString(request.resource.data.platform, 30) &&
+          (
+            request.resource.data.schedule == null ||
+            (
+              request.resource.data.schedule is map &&
+              request.resource.data.schedule.categories is map &&
+              request.resource.data.schedule.reminderTime is string &&
+              request.resource.data.schedule.timeZone is string
+            )
+          ) &&
+          request.resource.data.firstEnabledAt is int &&
+          request.resource.data.firstEnabledAt >= 0 &&
+          request.resource.data.updatedAt is timestamp;
+
+      allow delete:
+        if isAdmin();
+    }
+
+
+    /* =========================================================
+       TRASH
+       ========================================================= */
+
+    match /trash/{documentId} {
+
+      allow read, create, update, delete:
+        if isAdmin();
+    }
+
+
+    /* =========================================================
+       =========================================================
+       DEEN FRIENDS — USER LAYER
+       =========================================================
+       ========================================================= */
+
+
+    /* =========================================================
+       DEEN USER PROFILES
+       ========================================================= */
+
+    match /deens_users/{uid} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if signedIn();
+
+      allow create:
+        if
+          isOwner(uid) &&
+          request.resource.data.uid == uid &&
+          isString(request.resource.data.visitorId, 120) &&
+          isString(request.resource.data.username, 50) &&
+          isString(request.resource.data.usernameKey, 80) &&
+          isString(request.resource.data.displayName, 50) &&
+          request.resource.data.createdAt is timestamp &&
+          request.resource.data.updatedAt is timestamp &&
+          request.resource.data.lastActiveAt is int;
+
+      allow update:
+        if
+          isOwner(uid) &&
+          request.resource.data.uid == uid &&
+          (
+            request.resource.data.visitorId == resource.data.visitorId ||
+            (
+              !('visitorId' in resource.data) &&
+              isString(request.resource.data.visitorId, 120)
+            )
+          ) &&
+          request.resource.data.usernameKey == resource.data.usernameKey &&
+          isString(request.resource.data.username, 50) &&
+          isString(request.resource.data.displayName, 50) &&
+          request.resource.data.updatedAt is timestamp &&
+          request.resource.data.lastActiveAt is int;
+
+      allow delete:
+        if isSuperAdmin();
+    }
+
+
+    /* =========================================================
+       UNIQUE USERNAMES
+       ========================================================= */
+
+    match /visitor_usernames/{usernameKey} {
+
+      allow read:
+        if signedIn();
+
+      allow create:
+        if
+          signedIn() &&
+          request.resource.data.ownerUid == request.auth.uid &&
+          isString(request.resource.data.visitorId, 120) &&
+          isString(request.resource.data.ownerUid, 128) &&
+          isString(request.resource.data.name, 50) &&
+          isString(request.resource.data.nameKey, 80) &&
+          request.resource.data.nameKey == usernameKey &&
+          (
+            !('createdAt' in request.resource.data) ||
+            request.resource.data.createdAt is timestamp
+          ) &&
+          (
+            !('updatedAt' in request.resource.data) ||
+            request.resource.data.updatedAt is timestamp
+          );
+
+      allow update:
+        if
+          signedIn() &&
+          resource.data.ownerUid == request.auth.uid &&
+          request.resource.data.ownerUid == resource.data.ownerUid &&
+          request.resource.data.nameKey == resource.data.nameKey &&
+          request.resource.data.name == resource.data.name &&
+          isString(request.resource.data.visitorId, 120) &&
+          (
+            request.resource.data.updatedAt == null ||
+            request.resource.data.updatedAt is timestamp
+          );
+
+      // V2: the Deen Friends admin console (Super Admin only) reserves usernames for the accounts it
+      // creates, edits or approves a username change for. Without this, "Create user", "Edit profile"
+      // and "Approve username" were always denied, because the owner is another user. The record
+      // must still be well-formed and keyed by its own name.
+      allow create, update:
+        if
+          isSuperAdmin() &&
+          isString(request.resource.data.ownerUid, 128) &&
+          request.resource.data.ownerUid.size() > 0 &&
+          isString(request.resource.data.visitorId, 120) &&
+          isString(request.resource.data.name, 50) &&
+          isString(request.resource.data.nameKey, 80) &&
+          request.resource.data.nameKey == usernameKey;
+
+      allow delete:
+        if isSuperAdmin();
+    }
+
+
+    /* =========================================================
+       FRIEND REQUESTS
+       ========================================================= */
+
+    match /deens_friend_requests/{requestId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if
+          signedIn() &&
+          (
+            resource.data.fromUid == request.auth.uid ||
+            resource.data.toUid == request.auth.uid ||
+            isCommunityAdmin() ||
+            isTrustSafetyAdmin()
+          );
+
+      allow create:
+        if
+          signedIn() &&
+          request.resource.data.fromUid == request.auth.uid &&
+          request.resource.data.toUid != request.auth.uid &&
+          isString(request.resource.data.fromUid, 128) &&
+          isString(request.resource.data.toUid, 128) &&
+          request.resource.data.status == 'pending' &&
+          request.resource.data.createdAt is timestamp &&
+          request.resource.data.createdAtMs is int;
+
+      allow update:
+        if
+          signedIn() &&
+          resource.data.status == 'pending' &&
+          (
+            (
+              resource.data.toUid == request.auth.uid &&
+              request.resource.data.fromUid == resource.data.fromUid &&
+              request.resource.data.toUid == resource.data.toUid &&
+              request.resource.data.status in [
+                'accepted',
+                'declined'
+              ]
+            )
+            ||
+            (
+              resource.data.fromUid == request.auth.uid &&
+              request.resource.data.fromUid == resource.data.fromUid &&
+              request.resource.data.toUid == resource.data.toUid &&
+              request.resource.data.status == 'cancelled'
+            )
+            ||
+            isCommunityAdmin() ||
+            isTrustSafetyAdmin()
+          ) &&
+          request.resource.data.updatedAt is timestamp;
+
+      allow delete:
+        if
+          signedIn() &&
+          (
+            resource.data.fromUid == request.auth.uid ||
+            resource.data.toUid == request.auth.uid ||
+            isCommunityAdmin() ||
+            isTrustSafetyAdmin()
+          );
+    }
+
+
+    /* =========================================================
+       DEEN FRIENDSHIPS
+       ========================================================= */
+
+    match /deens_friendships/{friendshipId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if
+          signedIn() &&
+          (
+            resource.data.members.hasAny([
+              request.auth.uid
+            ]) ||
+            isCommunityAdmin() ||
+            isTrustSafetyAdmin()
+          );
+
+      allow create:
+        if
+          signedIn() &&
+          request.resource.data.members is list &&
+          request.resource.data.members.size() == 2 &&
+          request.resource.data.members.hasAny([
+            request.auth.uid
+          ]) &&
+          isString(request.resource.data.members[0], 128) &&
+          isString(request.resource.data.members[1], 128) &&
+          request.resource.data.members[0] != request.resource.data.members[1] &&
+          request.resource.data.createdAt is timestamp &&
+          request.resource.data.updatedAt is timestamp &&
+          request.resource.data.streakCount is int &&
+          request.resource.data.streakCount >= 0;
+
+      allow update:
+        if
+          signedIn() &&
+          (
+            resource.data.members.hasAny([
+              request.auth.uid
+            ])
+            ||
+            isCommunityAdmin()
+            ||
+            isTrustSafetyAdmin()
+          ) &&
+          request.resource.data.members == resource.data.members &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.updatedAt is timestamp &&
+          request.resource.data.streakCount is int &&
+          request.resource.data.streakCount >= 0;
+
+      allow delete:
+        if
+          signedIn() &&
+          (
+            resource.data.members.hasAny([
+              request.auth.uid
+            ]) ||
+            isCommunityAdmin() ||
+            isTrustSafetyAdmin()
+          );
+    }
+
+
+    /* =========================================================
+       DEEN FRIEND STREAKS
+       ========================================================= */
+
+    match /deens_friend_streaks/{friendshipId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      // The resource.data branch makes "members array-contains uid"
+      // list queries provable; the isFriendMember branch serves direct gets.
+      allow read:
+        if
+          (
+            signedIn() &&
+            resource.data.members.hasAny([request.auth.uid])
+          ) ||
+          isFriendMember(friendshipId) ||
+          isCommunityAdmin() ||
+          isTrustSafetyAdmin();
+
+      allow create:
+        if
+          isFriendMember(friendshipId) &&
+          request.resource.data.members ==
+            friendshipData(friendshipId).members &&
+          request.resource.data.count is int &&
+          request.resource.data.count >= 0 &&
+          request.resource.data.lastBothDate is string &&
+          request.resource.data.checkins is map &&
+          request.resource.data.bothDates is list &&
+          request.resource.data.updatedAt is timestamp;
+
+      allow update:
+        if
+          isFriendMember(friendshipId) &&
+          request.resource.data.members ==
+            resource.data.members &&
+          request.resource.data.count is int &&
+          request.resource.data.count >= 0 &&
+          request.resource.data.count <= 100000 &&
+          request.resource.data.lastBothDate is string &&
+          request.resource.data.checkins is map &&
+          request.resource.data.bothDates is list &&
+          request.resource.data.bothDates.size() <= 365 &&
+          request.resource.data.updatedAt is timestamp;
+
+      allow delete:
+        if isFriendMember(friendshipId);
+    }
+
+
+    /* =========================================================
+       DEEN FRIEND MESSAGES  (Deen interaction stream)
+
+       One record per interaction. kind is one of:
+         challenge | checkin | encourage | content
+       Free-text messages can no longer be created.
+
+       Read:
+         - either participant (sender/recipient)
+         - any member of the friendship (needed for the per-friendship
+           query: where friendshipId == X)
+         - admins only with VIEW_PRIVATE_MESSAGES + active access record
+
+       Update (participants only, field-restricted):
+         - recipient: read receipt (readAt / readAtMs)
+         - recipient: pending challenge -> accepted | declined
+         - either participant: add OWN completion to an accepted challenge
+
+       Delete: sender (own record) or Super Admin.
+       ========================================================= */
+
+    match /deens_friend_messages/{messageId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+      allow read:
+        if
+          signedIn() &&
+          (
+            resource.data.recipientUid == request.auth.uid ||
+            resource.data.senderUid == request.auth.uid ||
+            isFriendMember(resource.data.friendshipId)
+          )
+          ||
+          hasActivePrivateChatAccess(resource.data.friendshipId);
+
+      allow create:
+        if
+          validMsgBase(request.resource.data) &&
+          (
+            validChallengeMsg(messageId, request.resource.data) ||
+            validCheckinMsg(messageId, request.resource.data) ||
+            validEncourageMsg(request.resource.data) ||
+            validContentMsg(request.resource.data)
+          );
+
+      allow update:
+        if
+          signedIn() &&
+          (
+            // 1. read receipt by the recipient. V2: may also set purgeAt (seen + 24h) so the
+            //    TTL policy on purgeAt removes seen records server-side. Limited to 25h ahead.
+            (
+              resource.data.recipientUid == request.auth.uid &&
+              request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['readAt', 'readAtMs', 'purgeAt']) &&
+              request.resource.data.readAtMs is int &&
+              request.resource.data.readAt == request.time &&
+              (
+                !('purgeAt' in request.resource.data.diff(resource.data).affectedKeys()) ||
+                (
+                  resource.data.get('kind', '') != 'challenge' &&
+                  request.resource.data.purgeAt is timestamp &&
+                  request.resource.data.purgeAt <= request.time + duration.value(25, 'h')
+                )
+              )
+            )
+            ||
+            // 2. recipient accepts / declines a pending, unexpired challenge
+            (
+              resource.data.get('kind', '') == 'challenge' &&
+              resource.data.recipientUid == request.auth.uid &&
+              resource.data.status == 'pending' &&
+              isChallengeActive(resource.data) &&
+              request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['status', 'respondedAtMs', 'purgeAt']) &&
+              request.resource.data.status in ['accepted', 'declined'] &&
+              request.resource.data.respondedAtMs is int &&
+              (
+                !('purgeAt' in request.resource.data.diff(resource.data).affectedKeys()) ||
+                (
+                  request.resource.data.status == 'declined' &&
+                  request.resource.data.purgeAt is timestamp
+                )
+              )
+            )
+            ||
+            // 3. a participant records ONLY their own completion
+            (
+              resource.data.get('kind', '') == 'challenge' &&
+              request.auth.uid in [
+                resource.data.senderUid,
+                resource.data.recipientUid
+              ] &&
+              resource.data.status == 'accepted' &&
+              isChallengeActive(resource.data) &&
+              request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['completedBy', 'purgeAt']) &&
+              (
+                !('purgeAt' in request.resource.data.diff(resource.data).affectedKeys()) ||
+                (
+                  request.resource.data.purgeAt is timestamp &&
+                  request.resource.data.completedBy.keys()
+                    .hasAll([resource.data.senderUid, resource.data.recipientUid])
+                )
+              ) &&
+              !(request.auth.uid in resource.data.completedBy) &&
+              request.resource.data.completedBy
+                .diff(resource.data.completedBy).affectedKeys()
+                .hasOnly([request.auth.uid]) &&
+              request.resource.data.completedBy[request.auth.uid] is string
+            )
+          );
+
+      allow delete:
+        if
+          signedIn() &&
+          (
+            resource.data.senderUid == request.auth.uid ||
+            isSuperAdmin()
+          );
+    }
+
+
+    /* =========================================================
+       OFFICIAL RISEUPONDEEN CHALLENGES
+
+       Managed centrally by admins. Signed-in users may read
+       active challenges only (list queries must filter
+       active == true). Clients can never write here.
+       ========================================================= */
+
+    match /deens_official_challenges/{challengeId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+      allow read:
+        if
+          signedIn() &&
+          (
+            resource.data.active == true ||
+            isCommunityAdmin() ||
+            isTrustSafetyAdmin()
+          );
+
+      allow create, update:
+        if
+          (isCommunityAdmin() || isTrustSafetyAdmin()) &&
+          isString(request.resource.data.title, 80) &&
+          request.resource.data.title.size() >= 3 &&
+          isString(request.resource.data.get('description', ''), 200) &&
+          isString(request.resource.data.category, 30) &&
+          request.resource.data.target is int &&
+          request.resource.data.target >= 1 &&
+          request.resource.data.target <= 1000 &&
+          request.resource.data.durationDays is int &&
+          request.resource.data.durationDays >= 1 &&
+          request.resource.data.durationDays <= 90 &&
+          request.resource.data.active is bool &&
+          request.resource.data.get('featured', false) is bool &&
+          isString(request.resource.data.get('source', ''), 200) &&
+          (
+            !('endAtMs' in request.resource.data) ||
+            request.resource.data.endAtMs is int
+          );
+
+      allow delete:
+        if isTrustSafetyAdmin();
+    }
+
+
+    /* =========================================================
+       DEEN CHAT SUMMARIES
+       ========================================================= */
+
+    match /deens_chat_summaries/{friendshipId} {
+
+      allow read:
+        if
+          isFriendMember(friendshipId)
+          || isCommunityAdmin()
+          || isTrustSafetyAdmin();
+
+      allow create:
+        if
+          isFriendMember(friendshipId) &&
+          request.resource.data.friendshipId == friendshipId &&
+          request.resource.data.members is list &&
+          request.resource.data.members.size() == 2 &&
+          request.resource.data.members.hasAny([
+            request.auth.uid
+          ]) &&
+          isString(request.resource.data.lastMessage, 160) &&
+          isString(request.resource.data.lastSenderUid, 128) &&
+          request.resource.data.members.hasAny([
+            request.resource.data.lastSenderUid
+          ]) &&
+          isString(request.resource.data.unreadFor, 128) &&
+          request.resource.data.members.hasAny([
+            request.resource.data.unreadFor
+          ]) &&
+          request.resource.data.unreadCount is int &&
+          request.resource.data.unreadCount >= 0 &&
+          request.resource.data.unreadCount <= 999 &&
+          request.resource.data.updatedAtMs is int &&
+          request.resource.data.updatedAt is timestamp;
+
+      allow update:
+        if
+          isFriendMember(friendshipId) &&
+          request.resource.data.friendshipId == resource.data.friendshipId &&
+          request.resource.data.members == resource.data.members &&
+          isString(request.resource.data.lastMessage, 160) &&
+          isString(request.resource.data.lastSenderUid, 128) &&
+          request.resource.data.members.hasAny([
+            request.resource.data.lastSenderUid
+          ]) &&
+          isString(request.resource.data.unreadFor, 128) &&
+          request.resource.data.members.hasAny([
+            request.resource.data.unreadFor
+          ]) &&
+          request.resource.data.unreadCount is int &&
+          request.resource.data.unreadCount >= 0 &&
+          request.resource.data.unreadCount <= 999 &&
+          request.resource.data.updatedAtMs is int &&
+          request.resource.data.updatedAt is timestamp;
+
+      allow delete:
+        if isFriendMember(friendshipId);
+    }
+
+
+    /* =========================================================
+       USERNAME CHANGE REQUESTS
+       ========================================================= */
+
+    match /deens_username_change_requests/{requestId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow create:
+        if
+          signedIn() &&
+          request.resource.data.uid == request.auth.uid &&
+          isString(request.resource.data.displayName, 80) &&
+          isString(request.resource.data.currentUsername, 80) &&
+          isString(request.resource.data.requestedUsername, 80) &&
+          isString(request.resource.data.reason, 500) &&
+          request.resource.data.status == 'pending' &&
+          request.resource.data.createdAt is timestamp &&
+          request.resource.data.createdAtMs is int;
+
+      allow read:
+        if
+          signedIn() &&
+          (
+            resource.data.uid == request.auth.uid ||
+            isCommunityAdmin() ||
+            isTrustSafetyAdmin()
+          );
+
+      allow update:
+        if
+          signedIn() &&
+          (
+            (
+              resource.data.uid == request.auth.uid &&
+              request.resource.data.uid == resource.data.uid &&
+              request.resource.data.currentUsername == resource.data.currentUsername &&
+              request.resource.data.requestedUsername == resource.data.requestedUsername &&
+              request.resource.data.reason == resource.data.reason &&
+              request.resource.data.status == resource.data.status
+            )
+            ||
+            (
+              (isCommunityAdmin() || isTrustSafetyAdmin() || isSuperAdmin()) &&
+              request.resource.data.uid == resource.data.uid &&
+              request.resource.data.currentUsername == resource.data.currentUsername &&
+              request.resource.data.requestedUsername == resource.data.requestedUsername &&
+              request.resource.data.reason == resource.data.reason &&
+              request.resource.data.status in ['pending','handled','rejected']
+            )
+          );
+
+      allow delete:
+        if isSuperAdmin();
+    }
+
+
+    /* =========================================================
+       BLOCKS
+       
+       Recommended document:
+       /deens_blocks/{blockId}
+
+       Fields:
+         blockerUid
+         blockedUid
+         status
+         createdAt
+         updatedAt
+       ========================================================= */
+
+    match /deens_blocks/{blockId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if
+          signedIn() &&
+          (
+            resource.data.blockerUid == request.auth.uid ||
+            resource.data.blockedUid == request.auth.uid ||
+            isCommunityAdmin() ||
+            isTrustSafetyAdmin()
+          );
+
+      allow create:
+        if
+          signedIn() &&
+          request.resource.data.blockerUid == request.auth.uid &&
+          request.resource.data.blockedUid != request.auth.uid &&
+          isString(request.resource.data.blockerUid, 128) &&
+          isString(request.resource.data.blockedUid, 128) &&
+          request.resource.data.createdAt is timestamp &&
+          request.resource.data.status in [
+            'active'
+          ];
+
+      allow update:
+        if
+          signedIn() &&
+          (
+            resource.data.blockerUid == request.auth.uid ||
+            isTrustSafetyAdmin()
+          ) &&
+          request.resource.data.blockerUid == resource.data.blockerUid &&
+          request.resource.data.blockedUid == resource.data.blockedUid &&
+          request.resource.data.updatedAt is timestamp &&
+          request.resource.data.status in [
+            'active',
+            'removed'
+          ];
+
+      allow delete:
+        if
+          signedIn() &&
+          (
+            resource.data.blockerUid == request.auth.uid ||
+            isTrustSafetyAdmin()
+          );
+    }
+
+
+    /* =========================================================
+       CONNECTION HISTORY
+       
+       Historical records should not be modified by users.
+       ========================================================= */
+
+    match /deens_connection_history/{historyId} {
+
+      allow read:
+        if
+          isCommunityAdmin()
+          || isTrustSafetyAdmin();
+
+      allow create:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow update, delete:
+        if false;
+    }
+
+
+    /* =========================================================
+       USER REPORTS
+       ========================================================= */
+
+    match /deens_reports/{reportId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow create:
+        if
+          signedIn() &&
+          request.resource.data.reporterUid == request.auth.uid &&
+          isString(request.resource.data.reporterUid, 128) &&
+          isString(request.resource.data.reportedUid, 128) &&
+          request.resource.data.category in [
+            'harassment',
+            'abuse',
+            'spam',
+            'inappropriate_content',
+            'religious_abuse',
+            'threatening_behavior',
+            'suspicious_activity',
+            'other'
+          ] &&
+          isString(request.resource.data.reason, 1000) &&
+          request.resource.data.createdAt is timestamp &&
+          request.resource.data.status == 'new';
+
+      allow read:
+        if
+          signedIn() &&
+          (
+            resource.data.reporterUid == request.auth.uid ||
+            isTrustSafetyAdmin()
+          );
+
+      allow update:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow delete:
+        if isSuperAdmin();
+    }
+
+
+    /* =========================================================
+       MODERATION CASES
+       ========================================================= */
+
+    match /deens_moderation_cases/{caseId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow create:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow update:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow delete:
+        if false;
+    }
+
+
+    /* =========================================================
+       USER RESTRICTIONS
+       ========================================================= */
+
+    match /deens_user_restrictions/{restrictionId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if
+          (
+            signedIn() &&
+            resource.data.uid == request.auth.uid
+          )
+          ||
+          isTrustSafetyAdmin()
+          ||
+          isSuperAdmin();
+
+      allow create:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow update:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow delete:
+        if
+          isSuperAdmin();
+    }
+
+
+    /* =========================================================
+       USER SUSPENSIONS
+       ========================================================= */
+
+    match /deens_user_suspensions/{suspensionId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if
+          (
+            signedIn() &&
+            resource.data.uid == request.auth.uid
+          )
+          ||
+          isTrustSafetyAdmin()
+          ||
+          isSuperAdmin();
+
+      allow create:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow update:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow delete:
+        if false;
+    }
+
+
+    /* =========================================================
+       APPEALS
+       ========================================================= */
+
+    match /deens_user_appeals/{appealId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow create:
+        if
+          signedIn() &&
+          request.resource.data.uid == request.auth.uid &&
+          isString(request.resource.data.reason, 2000) &&
+          request.resource.data.createdAt is timestamp &&
+          request.resource.data.status == 'submitted';
+
+      allow read:
+        if
+          (
+            signedIn() &&
+            resource.data.uid == request.auth.uid
+          )
+          ||
+          isTrustSafetyAdmin()
+          ||
+          isSuperAdmin();
+
+      allow update:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow delete:
+        if false;
+    }
+
+
+    /* =========================================================
+       RISK SIGNALS
+       
+       Signals are safety indicators only.
+       They must not automatically ban a user.
+       ========================================================= */
+
+    match /deens_risk_signals/{signalId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow create:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow update:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow delete:
+        if isSuperAdmin();
+    }
+
+
+    /* =========================================================
+       ACTIVITY LOGS
+       ========================================================= */
+
+    match /deens_activity_logs/{activityId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if
+          isTrustSafetyAdmin()
+          || isCommunityAdmin()
+          || isSuperAdmin();
+
+      allow create:
+        if
+          signedIn() &&
+          (
+            request.resource.data.uid == request.auth.uid ||
+            isTrustSafetyAdmin() ||
+            isSuperAdmin()
+          ) &&
+          isString(request.resource.data.eventType, 100) &&
+          request.resource.data.createdAt is timestamp;
+
+      allow update, delete:
+        if false;
+    }
+
+
+    /* =========================================================
+       ADMIN AUDIT LOGS
+       
+       Immutable.
+       No update/delete.
+       ========================================================= */
+
+    match /deens_admin_audit_logs/{auditId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if
+          isSuperAdmin()
+          || isTrustSafetyAdmin();
+
+      allow create:
+        if
+          isAdmin() &&
+          request.resource.data.adminUid == request.auth.uid &&
+          isString(request.resource.data.action, 120) &&
+          isString(request.resource.data.target, 500) &&
+          isString(request.resource.data.reason, 1000) &&
+          request.resource.data.timestamp is timestamp;
+
+      allow update, delete:
+        if false;
+    }
+
+
+    /* =========================================================
+       PRIVATE CHAT ACCESS REQUESTS
+       
+       This collection is the security gate for private
+       conversation access.
+
+       Only Super Admin or admins carrying the explicit
+       VIEW_PRIVATE_MESSAGES permission can create access.
+
+       The application should create this document only after:
+         1. Reason entered
+         2. Case ID supplied
+         3. Explicit confirmation
+         4. Audit event recorded
+       ========================================================= */
+
+    match /deens_private_chat_access/{accessId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if
+          isSuperAdmin()
+          || (
+            hasPrivateMessagePermission() &&
+            resource.data.adminUid == request.auth.uid
+          );
+
+      allow create:
+        if
+          hasPrivateMessagePermission() &&
+          request.resource.data.adminUid == request.auth.uid &&
+          isString(request.resource.data.friendshipId, 260) &&
+          isString(request.resource.data.reason, 1000) &&
+          isString(request.resource.data.caseId, 160) &&
+          request.resource.data.active == true &&
+          request.resource.data.createdAt is timestamp;
+
+      allow update:
+        if
+          isSuperAdmin()
+          ||
+          (
+            hasPrivateMessagePermission() &&
+            resource.data.adminUid == request.auth.uid &&
+            request.resource.data.adminUid == resource.data.adminUid &&
+            request.resource.data.friendshipId == resource.data.friendshipId &&
+            request.resource.data.caseId == resource.data.caseId &&
+            request.resource.data.reason == resource.data.reason &&
+            request.resource.data.active == false
+          );
+
+      allow delete:
+        if isSuperAdmin();
+    }
+
+
+    /* =========================================================
+       PRIVATE CHAT ACCESS AUDIT
+       
+       Immutable.
+       ========================================================= */
+
+    match /deens_private_chat_access_logs/{logId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if
+          isSuperAdmin()
+          || isTrustSafetyAdmin();
+
+      allow create:
+        if
+          hasPrivateMessagePermission() &&
+          request.resource.data.adminUid == request.auth.uid &&
+          isString(request.resource.data.conversationId, 260) &&
+          isString(request.resource.data.reason, 1000) &&
+          isString(request.resource.data.caseId, 160) &&
+          request.resource.data.timestamp is timestamp;
+
+      allow update, delete:
+        if false;
+    }
+
+
+    /* =========================================================
+       COMMUNITY NOTICES
+       ========================================================= */
+
+    match /deens_community_notices/{noticeId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if
+          signedIn() &&
+          (
+            resource.data.published == true ||
+            isCommunityAdmin() ||
+            isTrustSafetyAdmin() ||
+            isSuperAdmin()
+          );
+
+      allow create:
+        if
+          isCommunityAdmin()
+          || isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow update:
+        if
+          isCommunityAdmin()
+          || isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow delete:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+    }
+
+
+    /* =========================================================
+       DEEN FRIENDS ADMIN SETTINGS
+       ========================================================= */
+
+    match /deens_admin_settings/{settingId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if
+          isSuperAdmin()
+          || isTrustSafetyAdmin()
+          || isCommunityAdmin()
+          || isAnalyticsAdmin();
+
+      allow create, update:
+        if isSuperAdmin();
+
+      allow delete:
+        if isSuperAdmin();
+    }
+
+
+    /* =========================================================
+       AGGREGATED ANALYTICS
+       
+       No individual private content here.
+       ========================================================= */
+
+    match /deens_analytics/{analyticsId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if
+          isAnalyticsAdmin()
+          || isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow create, update:
+        if
+          isAnalyticsAdmin()
+          || isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow delete:
+        if isSuperAdmin();
+    }
+
+
+    /* =========================================================
+       ADMIN INVESTIGATION EVIDENCE
+       ========================================================= */
+
+    match /deens_case_evidence/{evidenceId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow create:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow update:
+        if
+          isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow delete:
+        if isSuperAdmin();
+    }
+
+
+    /* =========================================================
+       ADMIN USER NOTES
+       
+       Internal moderation/support notes.
+       ========================================================= */
+
+    match /deens_admin_user_notes/{noteId} {
+      // Explicit Deen Friends Super Admin override.
+      allow read, create, update, delete: if isSuperAdmin();
+
+
+
+      allow read:
+        if
+          isSupportAdmin()
+          || isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow create:
+        if
+          isSupportAdmin()
+          || isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow update:
+        if
+          isSupportAdmin()
+          || isTrustSafetyAdmin()
+          || isSuperAdmin();
+
+      allow delete:
+        if isTrustSafetyAdmin()
+          || isSuperAdmin();
+    }
+
+
+
+    /* =========================================================
+       DAILY DEEN CHALLENGES (V2)
+
+       Created and managed by Community / Trust & Safety admins
+       (and the Super Admin). challengeType is always 'daily_deen',
+       which keeps them separate from friend challenges
+       (deens_friend_messages, kind 'challenge').
+
+       Users may read a challenge only when it is published AND
+       addressed to everyone or to them. Each user writes only
+       their own progress document.
+       ========================================================= */
+
+    function validDailyChallenge(d) {
+      return d.keys().hasAll([
+          'challengeType','title','description','instructions','category','activity',
+          'target','startDate','endDate','requiredDays','status','audience','assignedUids',
+          'updatedBy','updatedAt','updatedAtMs'
+        ])
+        && d.keys().hasOnly([
+          'challengeType','title','description','instructions','category','activity',
+          'target','startDate','endDate','requiredDays','status','audience','assignedUids',
+          'updatedBy','updatedAt','updatedAtMs','createdBy','createdAt'
+        ])
+        && d.challengeType == 'daily_deen'
+        && isString(d.title, 80) && d.title.size() >= 3
+        && isString(d.description, 400)
+        && isString(d.instructions, 1000)
+        && isString(d.category, 30)
+        && d.activity in ['manual', 'tasbih']
+        && d.target is int && d.target >= 1 && d.target <= 10000
+        && d.startDate is string && d.startDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && d.endDate is string && d.endDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && d.endDate >= d.startDate
+        && d.requiredDays is int && d.requiredDays >= 1 && d.requiredDays <= 90
+        && d.status in ['draft', 'published', 'archived']
+        && d.audience in ['all', 'selected']
+        && d.assignedUids is list && d.assignedUids.size() <= 200
+        && (d.audience == 'all' || d.assignedUids.size() >= 1)
+        && d.updatedBy == request.auth.uid
+        && d.updatedAt == request.time
+        && d.updatedAtMs is int;
+    }
+
+    function dailyChallengeVisibleTo(data) {
+      return data.status == 'published'
+        && (data.audience == 'all' || data.assignedUids.hasAny([request.auth.uid]));
+    }
+
+    match /deens_daily_challenges/{challengeId} {
+
+      allow read:
+        if isCommunityAdmin()
+        || (signedIn() && dailyChallengeVisibleTo(resource.data));
+
+      allow create:
+        if isCommunityAdmin()
+        && validDailyChallenge(request.resource.data)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      allow update:
+        if isCommunityAdmin()
+        && validDailyChallenge(request.resource.data)
+        && request.resource.data.get('createdBy', '') == resource.data.get('createdBy', '');
+
+      allow delete:
+        if isTrustSafetyAdmin();
+
+      match /participants/{uid} {
+
+        allow read:
+          if isOwner(uid) || isCommunityAdmin();
+
+        allow create, update:
+          if isOwner(uid)
+          && dailyChallengeVisibleTo(get(/databases/$(database)/documents/deens_daily_challenges/$(challengeId)).data)
+          && request.resource.data.keys().hasOnly([
+               'uid','challengeId','completedDates','completedCount',
+               'lastCompletedDate','status','updatedAt','updatedAtMs'
+             ])
+          && request.resource.data.uid == uid
+          && request.resource.data.challengeId == challengeId
+          && request.resource.data.completedDates is list
+          && request.resource.data.completedDates.size() <= 120
+          && request.resource.data.completedCount == request.resource.data.completedDates.size()
+          && request.resource.data.lastCompletedDate is string
+          && request.resource.data.status in ['active', 'completed']
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.updatedAtMs is int;
+
+        allow delete:
+          if isOwner(uid) || isTrustSafetyAdmin();
+      }
+    }
+
+
+    /* =========================================================
+       OFFICIAL RISE CONVERSATIONS (V2)
+
+       One private thread per user with the RiseUponDeen team:
+         deens_rise_threads/{uid}
+         deens_rise_threads/{uid}/messages/{messageId}
+
+       - Only the owner and support-level admins can read it
+         (least privilege: Analytics admins and Viewers cannot).
+       - A user can only write messages from 'user'.
+       - Only support admins can write messages from 'rise'.
+       - The single automated welcome message has the fixed id
+         'welcome' and exactly this text, so it is created once.
+       - Messages are never edited; they are deleted only by the
+         Super Admin.
+       ========================================================= */
+
+    function riseWelcomeText() {
+      return 'Assalamu alaikum! This is your private conversation with the RiseUponDeen team. Share a question, a suggestion, something you are struggling with, or a problem with the app. A member of the team reads every message and replies here, in sha Allah. This first message is automated.';
+    }
+
+    function riseThreadKeysOk(d) {
+      return d.keys().hasOnly([
+        'uid','displayName','username','lastMessagePreview','lastFrom','lastMessageAtMs',
+        'unreadByUser','unreadByRise','status','createdAt','updatedAt'
+      ]);
+    }
+
+    function riseThreadFieldsOk(d, uid) {
+      return d.uid == uid
+        && isString(d.displayName, 50)
+        && isString(d.username, 50)
+        && isString(d.lastMessagePreview, 160)
+        && d.lastFrom in ['user', 'rise']
+        && d.lastMessageAtMs is int
+        && d.unreadByUser is int && d.unreadByUser >= 0 && d.unreadByUser <= 999
+        && d.unreadByRise is int && d.unreadByRise >= 0 && d.unreadByRise <= 999
+        && d.status in ['open', 'resolved']
+        && d.updatedAt == request.time;
+    }
+
+    match /deens_rise_threads/{uid} {
+
+      allow read:
+        if isOwner(uid) || isSupportAdmin();
+
+      allow create:
+        if isOwner(uid)
+        && riseThreadKeysOk(request.resource.data)
+        && riseThreadFieldsOk(request.resource.data, uid)
+        && request.resource.data.status == 'open'
+        && request.resource.data.createdAt == request.time;
+
+      // Owner: their own summary fields; can raise unreadByRise by at most one per write
+      // and can never change status or createdAt.
+      allow update:
+        if (
+            isOwner(uid)
+            && riseThreadKeysOk(request.resource.data)
+            && riseThreadFieldsOk(request.resource.data, uid)
+            && request.resource.data.status == resource.data.status
+            && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)
+            && request.resource.data.unreadByRise <= resource.data.unreadByRise + 1
+          )
+          || (
+            isSupportAdmin()
+            && riseThreadKeysOk(request.resource.data)
+            && riseThreadFieldsOk(request.resource.data, uid)
+            && request.resource.data.displayName == resource.data.displayName
+            && request.resource.data.username == resource.data.username
+          );
+
+      allow delete:
+        if isSuperAdmin();
+
+      match /messages/{messageId} {
+
+        allow read:
+          if isOwner(uid) || isSupportAdmin();
+
+        allow create:
+          if request.resource.data.keys().hasOnly([
+               'from','senderUid','adminUid','text','automated','createdAt','createdAtMs'
+             ])
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.createdAtMs is int
+          && request.resource.data.automated is bool
+          && (
+            // the user's own message
+            (
+              isOwner(uid)
+              && messageId != 'welcome'
+              && request.resource.data.from == 'user'
+              && request.resource.data.senderUid == uid
+              && request.resource.data.automated == false
+              && !('adminUid' in request.resource.data)
+              && request.resource.data.text is string
+              && request.resource.data.text.size() >= 1
+              && request.resource.data.text.size() <= 2000
+            )
+            ||
+            // the one-time automated welcome (fixed id and fixed text)
+            (
+              isOwner(uid)
+              && messageId == 'welcome'
+              && request.resource.data.from == 'rise'
+              && request.resource.data.senderUid == uid
+              && request.resource.data.automated == true
+              && request.resource.data.text == riseWelcomeText()
+            )
+            ||
+            // a reply from the RISE support team
+            (
+              isSupportAdmin()
+              && messageId != 'welcome'
+              && request.resource.data.from == 'rise'
+              && request.resource.data.senderUid == request.auth.uid
+              && request.resource.data.adminUid == request.auth.uid
+              && request.resource.data.automated == false
+              && request.resource.data.text is string
+              && request.resource.data.text.size() >= 1
+              && request.resource.data.text.size() <= 2000
+            )
+          );
+
+        allow update:
+          if false;
+
+        allow delete:
+          if isSuperAdmin();
+      }
+    }
+
+
+    /* =========================================================
+       DEEN FRIENDS PUSH DEVICES (V2)
+
+       deens_push_devices/{uid}/devices/{deviceId}
+       Links a device's FCM registration token to a signed-in
+       Deen Friends user so the trusted scheduler (Admin SDK,
+       push-scheduler/) can notify them of friend requests,
+       messages, RISE replies and challenges.
+
+       Only the owner can read or write their devices, so nobody
+       can attach their token to another user. Clients never send
+       notifications; only the server (Admin SDK) reads these.
+       ========================================================= */
+
+    match /deens_push_devices/{uid}/devices/{deviceId} {
+
+      allow read, delete:
+        if isOwner(uid);
+
+      allow create, update:
+        if isOwner(uid)
+        && request.resource.data.keys().hasOnly([
+             'uid','deviceId','fcmToken','platform','categories','active','updatedAt','updatedAtMs'
+           ])
+        && request.resource.data.uid == uid
+        && request.resource.data.deviceId == deviceId
+        && isString(deviceId, 120)
+        && isString(request.resource.data.fcmToken, 4096)
+        && isString(request.resource.data.platform, 30)
+        && request.resource.data.categories is map
+        && request.resource.data.categories.keys().hasOnly(['friendRequests','friendActivity','rise','challenges'])
+        && request.resource.data.active is bool
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedAtMs is int;
+    }
+
+    /* =========================================================
+       DEFAULT DENY
+       
+       Anything not explicitly listed above is blocked.
+       ========================================================= */
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

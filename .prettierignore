@@ -1,0 +1,6 @@
+dist
+dist-e2e
+node_modules
+src/styles
+src/features/quran/data
+public/sw.js

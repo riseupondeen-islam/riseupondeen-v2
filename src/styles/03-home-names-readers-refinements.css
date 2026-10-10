@@ -1,0 +1,3532 @@
+/* Home, Names, Guidance, readers and focused-reading refinements.
+   Migrated verbatim from the original index.html; cascade order is preserved by styles/index.css. */
+
+/* ---- original <style id=rud-import-progress-fix> ---- */
+
+.bulk-import-progress{
+  min-height:34px!important;
+  height:34px!important;
+  overflow:hidden!important;
+  position:relative!important;
+  border:1px solid rgba(216,201,165,.13)!important;
+  background:rgba(255,255,255,.045)!important;
+}
+.bulk-import-progress i{
+  display:block!important;
+  position:absolute!important;
+  left:0!important;
+  top:0!important;
+  bottom:0!important;
+  width:0;
+  background:linear-gradient(90deg,rgba(216,201,165,.50),rgba(197,218,239,.58))!important;
+  box-shadow:0 0 22px rgba(216,201,165,.12)!important;
+  transition:width .16s linear!important;
+}
+.bulk-import-progress span{
+  position:relative!important;
+  z-index:2!important;
+  height:100%!important;
+  display:grid!important;
+  place-items:center!important;
+  color:#f2f4f5!important;
+  font-size:.72rem!important;
+  font-weight:700!important;
+  letter-spacing:.01em!important;
+}
+
+/* ---- original <style id=rud-final-production-optimization> ---- */
+
+/* Firestore content replacement should not trigger distracting layout animation. */
+#latestLiveGrid,
+#featuredLiveGrid,
+#namesGrid,
+#routeGrid{
+  overflow-anchor:none;
+}
+
+/* Keep mobile Firebase-loaded content lightweight. */
+@media(max-width:700px){
+  .live-card,
+  .compact-guidance-card,
+  .dua-library-card,
+  .name-library-card{
+    box-shadow:0 12px 32px rgba(0,0,0,.16)!important;
+  }
+}
+
+/* ---- original <style id=rud-logo-gold-headings-final> ---- */
+
+:root{
+  --rud-logo-gold:#d8bb79;
+  --rud-logo-gold-light:#f4ead2;
+  --rud-logo-gold-deep:#b8944f;
+}
+
+/* Major public headings */
+.hero h1,
+.section-title,
+.route-hero h1,
+.reader-head h1,
+.reflection-content h2,
+.brand-message h2,
+.reminder-quote{
+  color:var(--rud-logo-gold)!important;
+  text-shadow:
+    0 0 22px rgba(216,187,121,.10),
+    0 9px 34px rgba(0,10,20,.28)!important;
+}
+
+/* Main hero title: same refined gold family used by the AK logo */
+.hero h1{
+  background:linear-gradient(
+    180deg,
+    #f7edd6 0%,
+    #e5cb91 38%,
+    #d8bb79 68%,
+    #b8944f 100%
+  )!important;
+  -webkit-background-clip:text!important;
+  background-clip:text!important;
+  -webkit-text-fill-color:transparent!important;
+  filter:drop-shadow(0 10px 28px rgba(184,148,79,.10))!important;
+}
+
+/* Card/detail headings */
+.knowledge-card h3,
+.popular-card h3,
+.live-card h3,
+.textual-card h3,
+.dua-library-card h3,
+.compact-guidance-card h3,
+.name-library-card h3,
+.name-card .translit,
+.dua-translit,
+.modal-card h3{
+  color:#ead6a7!important;
+}
+
+/* Small premium labels */
+.eyebrow,
+.live-type,
+.verse-ref,
+.dua-ref,
+.name-index,
+.compact-panel-label,
+.compact-info-label,
+.reflection-label,
+.guidance-ribbon-label,
+.name-library-kicker,
+.name-reader-label{
+  color:#cfb373!important;
+}
+
+/* Arabic remains moonlight white for clarity and respect */
+.arabic-name,
+.dua-arabic,
+.modal-arabic,
+.arabic-big,
+[dir="rtl"]{
+  color:#f8fcff!important;
+}
+
+/* Keep the existing logo itself untouched. */
+
+/* ---- original <style id=rud-mobile-tiles-refinement> ---- */
+
+/* Focused responsive refinement only — no Firebase, routing, content logic or admin behavior changed */
+
+/* Section heading hierarchy: avoid repeated visual weight */
+.reminder-section .section-title,
+#dailyHeartSection .section-title,
+.for-heart-section .section-title{
+  font-size:clamp(2rem,4.2vw,3.8rem)!important;
+  line-height:1.02!important;
+  margin-bottom:14px!important;
+}
+
+/* Keep card grids a little tighter and more premium on desktop */
+.names-grid,
+.knowledge-grid,
+.live-grid,
+.textual-grid{
+  gap:14px!important;
+}
+
+.name-card,
+.knowledge-card,
+.live-card,
+.textual-card{
+  border-radius:22px!important;
+}
+
+/* Mobile: compact, balanced tiles instead of oversized desktop cards */
+@media(max-width:700px){
+  .section{
+    padding-top:72px!important;
+    padding-bottom:72px!important;
+  }
+
+  .section-title{
+    font-size:clamp(1.95rem,9vw,2.7rem)!important;
+    line-height:1.04!important;
+    letter-spacing:-.035em!important;
+    margin:12px auto 12px!important;
+    text-align:center!important;
+  }
+
+  .eyebrow{
+    justify-content:center!important;
+    width:100%!important;
+    text-align:center!important;
+    font-size:10px!important;
+    letter-spacing:.16em!important;
+  }
+
+  .section-copy{
+    margin-left:auto!important;
+    margin-right:auto!important;
+    max-width:32rem!important;
+    text-align:center!important;
+    font-size:.96rem!important;
+    line-height:1.65!important;
+  }
+
+  /* Two-column premium tile system on mobile where suitable */
+  .names-grid,
+  .knowledge-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px!important;
+  }
+
+  .name-card{
+    min-height:210px!important;
+    padding:18px 16px!important;
+    border-radius:18px!important;
+  }
+
+  .name-card .index{
+    font-size:9px!important;
+  }
+
+  .arabic-name{
+    margin:28px 0 18px!important;
+    font-size:clamp(1.8rem,8vw,2.45rem)!important;
+    line-height:1.25!important;
+  }
+
+  .translit{
+    font-size:1rem!important;
+    line-height:1.3!important;
+  }
+
+  .meaning{
+    font-size:.8rem!important;
+    line-height:1.45!important;
+    margin-top:5px!important;
+  }
+
+  .name-arrow{
+    width:32px!important;
+    height:32px!important;
+    right:14px!important;
+    bottom:14px!important;
+  }
+
+  .knowledge-card{
+    min-height:220px!important;
+    padding:20px!important;
+    border-radius:18px!important;
+  }
+
+  .knowledge-card h3{
+    left:20px!important;
+    right:20px!important;
+    bottom:56px!important;
+    font-size:clamp(1.15rem,5.5vw,1.5rem)!important;
+    line-height:1.12!important;
+  }
+
+  .knowledge-card p{
+    left:20px!important;
+    right:20px!important;
+    bottom:18px!important;
+    max-width:none!important;
+    font-size:.78rem!important;
+    line-height:1.45!important;
+  }
+
+  /* Firestore content tiles stay single-column but much shorter */
+  .live-grid,
+  .textual-grid{
+    grid-template-columns:1fr!important;
+    gap:10px!important;
+  }
+
+  .live-card{
+    min-height:230px!important;
+    padding:20px!important;
+    border-radius:18px!important;
+  }
+
+  .live-card h3{
+    font-size:clamp(1.3rem,6vw,1.7rem)!important;
+  }
+
+  .textual-card{
+    padding:20px!important;
+    border-radius:18px!important;
+  }
+
+  .textual-card h3{
+    font-size:1.25rem!important;
+  }
+
+  .textual-card .arabic-big{
+    font-size:clamp(1.8rem,8vw,2.45rem)!important;
+    margin:16px 0!important;
+  }
+
+  /* Daily reflection / heart card becomes shorter and more elegant */
+  .reminder-panel,
+  .heart-reflection,
+  .daily-heart-card{
+    min-height:360px!important;
+    padding:26px 20px!important;
+    border-radius:22px!important;
+  }
+
+  .reminder-quote{
+    font-size:clamp(1.8rem,8vw,2.65rem)!important;
+    line-height:1.08!important;
+    margin:16px auto 12px!important;
+    text-align:center!important;
+  }
+
+  .reminder-text{
+    margin:18px auto 20px!important;
+    max-width:32rem!important;
+    text-align:center!important;
+    font-size:.94rem!important;
+    line-height:1.6!important;
+  }
+
+  /* Ensure card heading zones remain centered on mobile */
+  .names-head{
+    align-items:center!important;
+    text-align:center!important;
+    gap:12px!important;
+    margin-bottom:28px!important;
+  }
+}
+
+/* Extra small phones: retain two columns but reduce padding further */
+@media(max-width:390px){
+  .names-grid,
+  .knowledge-grid{
+    gap:8px!important;
+  }
+  .name-card{
+    min-height:195px!important;
+    padding:16px 13px!important;
+  }
+  .knowledge-card{
+    min-height:205px!important;
+    padding:16px!important;
+  }
+}
+
+/* ---- original <style id=rud-3-names-compact-mobile-final> ---- */
+
+/* ============================================================
+   FINAL HOMEPAGE NAMES OF ALLAH — 3 COMPACT PREMIUM CARDS
+   Highly specific selectors intentionally override older rules.
+   ============================================================ */
+
+/* Desktop stays elegant and controlled */
+#names.names-minimal-section #namesGrid.minimal-names-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:14px!important;
+  margin-top:28px!important;
+}
+
+#names.names-minimal-section #namesGrid.minimal-names-grid > .name-card{
+  min-height:220px!important;
+  padding:22px 20px!important;
+  border-radius:22px!important;
+  background:
+    radial-gradient(circle at 82% 0%,rgba(216,187,121,.075),transparent 32%),
+    linear-gradient(145deg,rgba(13,31,46,.82),rgba(4,15,25,.90))!important;
+  border:1px solid rgba(216,187,121,.14)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,247,226,.035),
+    0 16px 40px rgba(0,7,16,.18)!important;
+}
+
+#names.names-minimal-section #namesGrid .name-card .name-index{
+  font-size:.56rem!important;
+  letter-spacing:.15em!important;
+  color:#cfb373!important;
+}
+
+#names.names-minimal-section #namesGrid .name-card .name-arabic{
+  margin:22px 0 14px!important;
+  font-size:clamp(2rem,3vw,2.7rem)!important;
+  line-height:1.2!important;
+}
+
+#names.names-minimal-section #namesGrid .name-card h3{
+  font-size:1rem!important;
+  line-height:1.25!important;
+}
+
+#names.names-minimal-section #namesGrid .name-card p{
+  margin-top:5px!important;
+  font-size:.78rem!important;
+  line-height:1.4!important;
+}
+
+/* ------------------------------------------------------------
+   MOBILE: short premium horizontal cards.
+   3 Names fit cleanly without huge vertical scrolling.
+   ------------------------------------------------------------ */
+@media(max-width:700px){
+
+  #names.names-minimal-section{
+    padding-top:62px!important;
+    padding-bottom:64px!important;
+  }
+
+  #names.names-minimal-section .minimal-section-head{
+    margin-bottom:20px!important;
+    text-align:center!important;
+  }
+
+  #names.names-minimal-section .minimal-section-head .eyebrow{
+    justify-content:center!important;
+    width:100%!important;
+    font-size:9px!important;
+    letter-spacing:.18em!important;
+  }
+
+  #names.names-minimal-section .minimal-section-head .section-title{
+    margin:9px auto 7px!important;
+    max-width:100%!important;
+    font-size:clamp(2rem,9vw,2.55rem)!important;
+    line-height:1.02!important;
+    text-align:center!important;
+  }
+
+  #names.names-minimal-section .minimal-section-head .section-copy{
+    margin:0 auto!important;
+    max-width:290px!important;
+    font-size:.86rem!important;
+    line-height:1.5!important;
+    text-align:center!important;
+  }
+
+  #names.names-minimal-section #namesGrid.minimal-names-grid{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:9px!important;
+    margin-top:20px!important;
+  }
+
+  #names.names-minimal-section #namesGrid.minimal-names-grid > .name-card{
+    position:relative!important;
+    display:grid!important;
+    grid-template-columns:58px minmax(0,1fr) 28px!important;
+    grid-template-rows:1fr 1fr!important;
+    grid-template-areas:
+      "arabic title mark"
+      "arabic meaning mark"!important;
+
+    width:100%!important;
+    min-height:0!important;
+    height:92px!important;
+    margin:0!important;
+    padding:12px 13px!important;
+    column-gap:12px!important;
+    row-gap:0!important;
+    align-items:center!important;
+
+    border-radius:17px!important;
+    border:1px solid rgba(216,187,121,.15)!important;
+    background:
+      radial-gradient(circle at 92% 8%,rgba(216,187,121,.08),transparent 28%),
+      linear-gradient(145deg,rgba(15,34,49,.88),rgba(5,17,28,.94))!important;
+    box-shadow:
+      inset 0 1px 0 rgba(255,247,226,.035),
+      0 10px 24px rgba(0,7,16,.16)!important;
+
+    overflow:hidden!important;
+    transform:none!important;
+    text-align:left!important;
+  }
+
+  /* Remove the large decorative diamond that visually enlarged each tile */
+  #names.names-minimal-section #namesGrid.minimal-names-grid > .name-card::after{
+    width:62px!important;
+    height:62px!important;
+    right:-30px!important;
+    bottom:-34px!important;
+    opacity:.45!important;
+  }
+
+  #names.names-minimal-section #namesGrid .name-card .name-index{
+    position:absolute!important;
+    top:7px!important;
+    right:10px!important;
+    left:auto!important;
+    margin:0!important;
+    font-size:6.5px!important;
+    line-height:1!important;
+    letter-spacing:.12em!important;
+    color:rgba(216,187,121,.62)!important;
+  }
+
+  #names.names-minimal-section #namesGrid .name-card .name-arabic{
+    grid-area:arabic!important;
+    margin:0!important;
+    padding:0!important;
+    font-size:1.62rem!important;
+    line-height:1.05!important;
+    text-align:center!important;
+    align-self:center!important;
+    color:#f7fbff!important;
+  }
+
+  #names.names-minimal-section #namesGrid .name-card > div:last-child{
+    display:contents!important;
+  }
+
+  #names.names-minimal-section #namesGrid .name-card h3{
+    grid-area:title!important;
+    margin:4px 0 0!important;
+    padding:0!important;
+    align-self:end!important;
+    font-size:.94rem!important;
+    line-height:1.15!important;
+    font-weight:700!important;
+    color:#f4f7f8!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+
+  #names.names-minimal-section #namesGrid .name-card p{
+    grid-area:meaning!important;
+    margin:1px 0 4px!important;
+    padding:0!important;
+    align-self:start!important;
+    font-size:.70rem!important;
+    line-height:1.25!important;
+    color:rgba(211,222,230,.70)!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+
+  /* Small gold marker gives the card a premium finished edge */
+  #names.names-minimal-section #namesGrid .name-card::before{
+    content:"›"!important;
+    grid-area:mark!important;
+    position:static!important;
+    width:27px!important;
+    height:27px!important;
+    display:grid!important;
+    place-items:center!important;
+    justify-self:end!important;
+    align-self:center!important;
+    border:1px solid rgba(216,187,121,.18)!important;
+    border-radius:50%!important;
+    background:rgba(216,187,121,.035)!important;
+    color:#d8bb79!important;
+    font-size:17px!important;
+    line-height:1!important;
+  }
+
+  #names.names-minimal-section .names-section-action{
+    margin-top:16px!important;
+    text-align:center!important;
+  }
+
+  #names.names-minimal-section #viewAllNamesBtn{
+    min-height:40px!important;
+    padding:0 18px!important;
+    border-radius:999px!important;
+    font-size:11px!important;
+    letter-spacing:.02em!important;
+  }
+}
+
+@media(max-width:375px){
+  #names.names-minimal-section #namesGrid.minimal-names-grid > .name-card{
+    height:86px!important;
+    grid-template-columns:52px minmax(0,1fr) 26px!important;
+    padding:10px 11px!important;
+    column-gap:9px!important;
+  }
+
+  #names.names-minimal-section #namesGrid .name-card .name-arabic{
+    font-size:1.48rem!important;
+  }
+
+  #names.names-minimal-section #namesGrid .name-card h3{
+    font-size:.87rem!important;
+  }
+
+  #names.names-minimal-section #namesGrid .name-card p{
+    font-size:.66rem!important;
+  }
+}
+
+/* ---- original <style id=rud-name-arrows-guidance-premium-final> ---- */
+
+/* =========================================================
+   FINAL POLISH — NAME ARROW ALIGNMENT + GUIDANCE CARDS
+   Visual-only refinement. No Firebase/data/routing changes.
+   ========================================================= */
+
+/* -------------------------
+   Names of Allah arrows
+   ------------------------- */
+#names.names-minimal-section #namesGrid.minimal-names-grid > .name-card{
+  position:relative!important;
+}
+
+#names.names-minimal-section #namesGrid.minimal-names-grid > .name-card::before{
+  box-sizing:border-box!important;
+  line-height:1!important;
+}
+
+/* Desktop arrow alignment */
+@media(min-width:701px){
+  #names.names-minimal-section #namesGrid.minimal-names-grid > .name-card::before{
+    position:absolute!important;
+    right:16px!important;
+    bottom:16px!important;
+    width:30px!important;
+    height:30px!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    padding:0!important;
+    margin:0!important;
+    transform:none!important;
+    border-radius:50%!important;
+    font-size:16px!important;
+    line-height:1!important;
+    text-align:center!important;
+  }
+}
+
+/* Mobile arrow alignment */
+@media(max-width:700px){
+  #names.names-minimal-section #namesGrid.minimal-names-grid > .name-card::before{
+    content:"›"!important;
+    grid-area:mark!important;
+    position:static!important;
+    width:28px!important;
+    height:28px!important;
+    min-width:28px!important;
+    min-height:28px!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    justify-self:end!important;
+    align-self:center!important;
+    padding:0 0 2px 0!important;
+    margin:0!important;
+    transform:none!important;
+    border:1px solid rgba(216,187,121,.20)!important;
+    border-radius:50%!important;
+    background:linear-gradient(180deg,rgba(216,187,121,.06),rgba(216,187,121,.02))!important;
+    color:#d8bb79!important;
+    font-size:18px!important;
+    font-family:Arial,sans-serif!important;
+    font-weight:400!important;
+    line-height:1!important;
+    text-align:center!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important;
+  }
+
+  #names.names-minimal-section #namesGrid.minimal-names-grid > .name-card:active::before{
+    transform:scale(.96)!important;
+  }
+}
+
+/* -------------------------
+   Guidance for the Heart
+   ------------------------- */
+.guidance-ribbon-section{
+  padding-block:clamp(54px,6vw,78px)!important;
+}
+
+.guidance-ribbon-head{
+  text-align:center!important;
+  margin-bottom:24px!important;
+}
+
+.guidance-ribbon-head .eyebrow{
+  justify-content:center!important;
+}
+
+.guidance-ribbon-head .section-title{
+  margin:9px auto 0!important;
+  text-align:center!important;
+  font-size:clamp(2rem,3.6vw,3.35rem)!important;
+  line-height:1.03!important;
+}
+
+/* Desktop: two premium cards instead of one stretched ribbon */
+.guidance-ribbon{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:14px!important;
+  min-height:0!important;
+  overflow:visible!important;
+  border:0!important;
+  border-radius:0!important;
+  background:none!important;
+  box-shadow:none!important;
+}
+
+.guidance-ribbon::before{
+  display:none!important;
+}
+
+.guidance-ribbon-divider{
+  display:none!important;
+}
+
+.guidance-ribbon-item{
+  position:relative!important;
+  min-height:210px!important;
+  padding:26px 26px 24px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  justify-content:flex-end!important;
+  gap:0!important;
+  overflow:hidden!important;
+  border:1px solid rgba(216,187,121,.13)!important;
+  border-radius:22px!important;
+  background:
+    radial-gradient(circle at 88% 10%,rgba(216,187,121,.085),transparent 34%),
+    radial-gradient(circle at 12% 100%,rgba(123,173,214,.065),transparent 34%),
+    linear-gradient(145deg,rgba(14,32,47,.90),rgba(5,16,26,.95))!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 18px 46px rgba(0,7,16,.20)!important;
+}
+
+.guidance-ribbon-item::before{
+  content:""!important;
+  position:absolute!important;
+  inset:12px!important;
+  border:1px solid rgba(255,255,255,.035)!important;
+  border-radius:16px!important;
+  pointer-events:none!important;
+}
+
+.guidance-ribbon-label{
+  writing-mode:horizontal-tb!important;
+  transform:none!important;
+  margin-bottom:auto!important;
+  font-size:8px!important;
+  letter-spacing:.18em!important;
+  color:#cfb373!important;
+  opacity:.9!important;
+}
+
+.guidance-ribbon-copy{
+  position:relative!important;
+  z-index:1!important;
+  width:100%!important;
+  min-width:0!important;
+}
+
+.guidance-ribbon-copy strong{
+  display:block!important;
+  margin:0 0 6px!important;
+  font-family:"Cormorant Garamond",serif!important;
+  font-size:clamp(1.55rem,2.3vw,2rem)!important;
+  line-height:1.05!important;
+  color:#f1f3f4!important;
+}
+
+.guidance-ribbon-copy span{
+  display:block!important;
+  margin:0!important;
+  max-width:100%!important;
+  font-size:.82rem!important;
+  line-height:1.5!important;
+  color:rgba(203,214,222,.68)!important;
+}
+
+.guidance-ribbon-link{
+  position:relative!important;
+  z-index:1!important;
+  margin-top:16px!important;
+  min-height:38px!important;
+  padding:0 14px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+  border:1px solid rgba(216,187,121,.14)!important;
+  border-radius:999px!important;
+  background:rgba(216,187,121,.035)!important;
+  color:#e7d6ac!important;
+  font-size:.70rem!important;
+  font-weight:600!important;
+  transition:background .22s ease,border-color .22s ease,transform .22s ease!important;
+}
+
+.guidance-ribbon-link i{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:16px!important;
+  height:16px!important;
+  margin:0!important;
+  line-height:1!important;
+  color:#d8bb79!important;
+}
+
+.guidance-ribbon-link:hover{
+  transform:translateY(-1px)!important;
+  border-color:rgba(216,187,121,.26)!important;
+  background:rgba(216,187,121,.065)!important;
+}
+
+/* Mobile: compact premium stacked tiles */
+@media(max-width:700px){
+  .guidance-ribbon-section{
+    padding-block:58px!important;
+  }
+
+  .guidance-ribbon-head{
+    margin-bottom:18px!important;
+  }
+
+  .guidance-ribbon-head .section-title{
+    font-size:clamp(1.95rem,8.5vw,2.5rem)!important;
+  }
+
+  .guidance-ribbon{
+    grid-template-columns:1fr!important;
+    gap:10px!important;
+  }
+
+  .guidance-ribbon-item{
+    min-height:0!important;
+    height:132px!important;
+    padding:16px 16px 14px!important;
+    border-radius:17px!important;
+    justify-content:center!important;
+  }
+
+  .guidance-ribbon-item::before{
+    inset:8px!important;
+    border-radius:12px!important;
+  }
+
+  .guidance-ribbon-label{
+    position:absolute!important;
+    top:12px!important;
+    left:14px!important;
+    margin:0!important;
+    font-size:6.5px!important;
+    letter-spacing:.16em!important;
+  }
+
+  .guidance-ribbon-copy{
+    padding-top:10px!important;
+  }
+
+  .guidance-ribbon-copy strong{
+    font-size:1.25rem!important;
+    line-height:1.08!important;
+    margin-bottom:4px!important;
+  }
+
+  .guidance-ribbon-copy span{
+    font-size:.73rem!important;
+    line-height:1.4!important;
+  }
+
+  .guidance-ribbon-link{
+    margin-top:10px!important;
+    min-height:32px!important;
+    padding:0 11px!important;
+    font-size:.64rem!important;
+  }
+
+  .guidance-ribbon-link i{
+    width:14px!important;
+    height:14px!important;
+    font-size:.72rem!important;
+  }
+}
+
+@media(max-width:380px){
+  .guidance-ribbon-item{
+    height:124px!important;
+    padding:15px 14px 13px!important;
+  }
+
+  .guidance-ribbon-copy strong{
+    font-size:1.15rem!important;
+  }
+
+  .guidance-ribbon-copy span{
+    font-size:.69rem!important;
+  }
+}
+
+/* ---- original <style id=rud-guidance-labels-right-middle-final> ---- */
+
+/* Guidance for the Heart: DUA / HADITH labels on right-middle vertically */
+.guidance-ribbon-item{
+  padding-right:72px!important;
+}
+
+.guidance-ribbon-label{
+  position:absolute!important;
+  top:50%!important;
+  right:18px!important;
+  left:auto!important;
+  bottom:auto!important;
+  margin:0!important;
+  writing-mode:vertical-rl!important;
+  text-orientation:mixed!important;
+  transform:translateY(-50%) rotate(180deg)!important;
+  transform-origin:center!important;
+  font-size:8px!important;
+  line-height:1!important;
+  letter-spacing:.20em!important;
+  color:#cfb373!important;
+  opacity:.92!important;
+  z-index:2!important;
+}
+
+@media(max-width:700px){
+  .guidance-ribbon-item{
+    padding:16px 54px 14px 16px!important;
+  }
+
+  .guidance-ribbon-label{
+    top:50%!important;
+    right:15px!important;
+    left:auto!important;
+    font-size:6.5px!important;
+    letter-spacing:.18em!important;
+    transform:translateY(-50%) rotate(180deg)!important;
+  }
+}
+
+@media(max-width:380px){
+  .guidance-ribbon-item{
+    padding-right:48px!important;
+  }
+
+  .guidance-ribbon-label{
+    right:13px!important;
+  }
+}
+
+/* ---- original <style id=rud-guidance-horizontal-right-labels-final> ---- */
+
+/* Guidance for the Heart — premium horizontal DUA / HADITH labels
+   Keep them at the same right-middle position. */
+
+.guidance-ribbon-item{
+  padding-right:82px!important;
+}
+
+.guidance-ribbon-label{
+  position:absolute!important;
+  top:50%!important;
+  right:18px!important;
+  left:auto!important;
+  bottom:auto!important;
+
+  /* Horizontal label */
+  writing-mode:horizontal-tb!important;
+  text-orientation:mixed!important;
+  transform:translateY(-50%)!important;
+
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+
+  min-width:48px!important;
+  height:25px!important;
+  padding:0 9px!important;
+  margin:0!important;
+
+  border:1px solid rgba(216,187,121,.20)!important;
+  border-radius:999px!important;
+  background:
+    linear-gradient(180deg,rgba(216,187,121,.075),rgba(216,187,121,.025))!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 7px 20px rgba(0,7,16,.12)!important;
+
+  color:#d8bb79!important;
+  font-size:7px!important;
+  font-weight:700!important;
+  line-height:1!important;
+  letter-spacing:.14em!important;
+  white-space:nowrap!important;
+  opacity:1!important;
+  z-index:3!important;
+}
+
+/* subtle decorative dot toward the content */
+.guidance-ribbon-label::before{
+  content:""!important;
+  position:absolute!important;
+  left:-10px!important;
+  top:50%!important;
+  width:3px!important;
+  height:3px!important;
+  border-radius:50%!important;
+  background:#d8bb79!important;
+  transform:translateY(-50%)!important;
+  box-shadow:0 0 8px rgba(216,187,121,.35)!important;
+}
+
+@media(max-width:700px){
+  .guidance-ribbon-item{
+    padding:16px 72px 14px 16px!important;
+  }
+
+  .guidance-ribbon-label{
+    top:50%!important;
+    right:13px!important;
+    left:auto!important;
+    min-width:43px!important;
+    height:23px!important;
+    padding:0 7px!important;
+    font-size:6.2px!important;
+    letter-spacing:.12em!important;
+    transform:translateY(-50%)!important;
+  }
+
+  .guidance-ribbon-label::before{
+    left:-8px!important;
+  }
+}
+
+@media(max-width:380px){
+  .guidance-ribbon-item{
+    padding-right:65px!important;
+  }
+
+  .guidance-ribbon-label{
+    right:10px!important;
+    min-width:41px!important;
+  }
+}
+
+/* ---- original <style id=rud-guidance-quote-premium-final> ---- */
+
+/* Final Guidance for the Heart refinements */
+.guidance-ribbon-label{display:none!important;}
+.guidance-ribbon-item{
+  padding:26px 26px 74px!important;
+  justify-content:flex-end!important;
+}
+.guidance-ribbon-link{
+  position:absolute!important;
+  right:22px!important;
+  bottom:20px!important;
+  margin:0!important;
+  min-height:38px!important;
+  padding:0 15px!important;
+  border-color:rgba(216,187,121,.22)!important;
+  background:linear-gradient(135deg,rgba(216,187,121,.075),rgba(216,187,121,.025))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 9px 24px rgba(0,7,16,.16)!important;
+}
+.guidance-ribbon-link:hover{
+  border-color:rgba(216,187,121,.38)!important;
+  background:rgba(216,187,121,.09)!important;
+}/* Premium quote directly below Guidance for the Heart */
+.final-visual-reflection{
+  min-height:clamp(330px,42vw,500px)!important;
+  border-top:1px solid rgba(216,187,121,.08)!important;
+  border-bottom:1px solid rgba(216,187,121,.08)!important;
+  background:
+    radial-gradient(ellipse at 50% 45%,rgba(216,187,121,.075),transparent 35%),
+    radial-gradient(ellipse at 50% 0%,rgba(117,166,205,.07),transparent 48%),
+    linear-gradient(180deg,rgba(5,18,28,.90),rgba(3,12,20,.96))!important;
+}
+.final-visual-reflection .reflection-content{padding:86px 18px!important;}
+.final-visual-reflection .reflection-content::before{
+  content:"❝"!important;
+  margin:0 auto 12px!important;
+  color:#d8bb79!important;
+  font-family:"Cormorant Garamond",Georgia,serif!important;
+  font-size:3rem!important;
+  line-height:.7!important;
+  text-shadow:0 0 24px rgba(216,187,121,.18)!important;
+}
+.final-visual-reflection .reflection-content h2{
+  position:relative!important;
+  max-width:980px!important;
+  padding:30px clamp(18px,5vw,54px)!important;
+  border:1px solid rgba(216,187,121,.20)!important;
+  border-radius:24px!important;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(216,187,121,.075),transparent 48%),
+    linear-gradient(145deg,rgba(255,255,255,.025),rgba(255,255,255,.008))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 24px 70px rgba(0,7,16,.20)!important;
+  color:#e3c77f!important;
+  -webkit-text-fill-color:#e3c77f!important;
+  font-family:"Cormorant Garamond",Georgia,serif!important;
+  font-size:clamp(2.25rem,5vw,5rem)!important;
+  font-weight:600!important;
+  line-height:1.02!important;
+  letter-spacing:.015em!important;
+  text-transform:none!important;
+  text-shadow:0 7px 28px rgba(0,0,0,.34),0 0 22px rgba(216,187,121,.08)!important;
+}
+.final-visual-reflection .reflection-content h2::before,
+.final-visual-reflection .reflection-content h2::after{
+  content:"✦"!important;
+  display:block!important;
+  position:absolute!important;
+  top:50%!important;
+  transform:translateY(-50%)!important;
+  color:rgba(216,187,121,.58)!important;
+  font-family:serif!important;
+  font-size:.62rem!important;
+  -webkit-text-fill-color:rgba(216,187,121,.58)!important;
+}
+.final-visual-reflection .reflection-content h2::before{left:15px!important;}
+.final-visual-reflection .reflection-content h2::after{right:15px!important;}
+.final-visual-reflection .reflection-content p{display:none!important;}
+.final-visual-reflection .eyebrow{display:none!important;}@media(max-width:700px){
+  .guidance-ribbon-item{height:148px!important;padding:16px 16px 58px!important;}
+  .guidance-ribbon-link{right:13px!important;bottom:12px!important;min-height:32px!important;padding:0 11px!important;font-size:.64rem!important;}
+  .final-visual-reflection{min-height:300px!important;}
+  .final-visual-reflection .reflection-content{padding:68px 10px!important;}
+  .final-visual-reflection .reflection-content::before{font-size:2.35rem!important;margin-bottom:10px!important;}
+  .final-visual-reflection .reflection-content h2{
+    width:100%!important;
+    padding:25px 25px!important;
+    border-radius:18px!important;
+    font-size:clamp(1.85rem,8.5vw,2.75rem)!important;
+    line-height:1.04!important;
+    letter-spacing:.01em!important;
+  }
+  .final-visual-reflection .reflection-content h2::before{left:10px!important;}
+  .final-visual-reflection .reflection-content h2::after{right:10px!important;}
+}
+
+/* ---- original <style id=rud-final-home-quote-fancy-premium> ---- */
+
+.final-visual-reflection .reflection-content{
+  max-width:980px!important;
+}
+
+.final-visual-reflection .reflection-content h2{
+  position:relative!important;
+  width:fit-content!important;
+  max-width:min(900px,94vw)!important;
+  margin:24px auto 22px!important;
+  padding:28px clamp(24px,5vw,62px) 31px!important;
+
+  font-family:"Cormorant Garamond",Georgia,serif!important;
+  font-size:clamp(3rem,6.7vw,6.6rem)!important;
+  font-weight:500!important;
+  font-style:italic!important;
+  line-height:.94!important;
+  letter-spacing:-.045em!important;
+  text-transform:none!important;
+  text-align:center!important;
+
+  color:#f6f0df!important;
+  text-shadow:
+    0 2px 0 rgba(255,255,255,.03),
+    0 12px 34px rgba(0,0,0,.38),
+    0 0 42px rgba(216,187,121,.055)!important;
+}
+
+/* elegant gold hairlines */
+.final-visual-reflection .reflection-content h2::before,
+.final-visual-reflection .reflection-content h2::after{
+  content:""!important;
+  position:absolute!important;
+  left:50%!important;
+  width:min(210px,34vw)!important;
+  height:1px!important;
+  transform:translateX(-50%)!important;
+  background:linear-gradient(
+    90deg,
+    transparent,
+    rgba(216,187,121,.22) 18%,
+    rgba(231,207,151,.72) 50%,
+    rgba(216,187,121,.22) 82%,
+    transparent
+  )!important;
+}
+
+.final-visual-reflection .reflection-content h2::before{
+  top:0!important;
+}
+
+.final-visual-reflection .reflection-content h2::after{
+  bottom:0!important;
+}
+
+/* make the supporting line subtle so the quote remains the hero */
+.final-visual-reflection .reflection-content h2 + p{
+  margin-top:18px!important;
+  color:rgba(216,187,121,.66)!important;
+  font-size:.68rem!important;
+  font-weight:700!important;
+  letter-spacing:.24em!important;
+  text-transform:uppercase!important;
+}
+
+/* mobile: luxurious but compact */
+@media(max-width:700px){
+  .final-visual-reflection .reflection-content{
+    padding-left:12px!important;
+    padding-right:12px!important;
+  }
+
+  .final-visual-reflection .reflection-content h2{
+    max-width:94vw!important;
+    margin:18px auto 16px!important;
+    padding:23px 16px 25px!important;
+    font-size:clamp(2.55rem,12.4vw,4.15rem)!important;
+    line-height:.96!important;
+    letter-spacing:-.038em!important;
+  }
+
+  .final-visual-reflection .reflection-content h2::before,
+  .final-visual-reflection .reflection-content h2::after{
+    width:112px!important;
+  }
+
+  .final-visual-reflection .reflection-content h2 + p{
+    margin-top:15px!important;
+    font-size:.58rem!important;
+    letter-spacing:.20em!important;
+  }
+}
+
+/* ---- original <style id=rud-quote-remove-lines-final> ---- */
+
+/* Remove decorative lines around This Duniya Is Not Your Final Home" */
+.final-visual-reflection .reflection-content h2::before,
+.final-visual-reflection .reflection-content h2::after{
+  content:none!important;
+  display:none!important;
+  background:none!important;
+}
+
+/* ---- original <style id=rud-search-feeling-center-final> ---- */
+
+/* Center the Search by feeling block/control without changing functionality */
+.hero-search,
+.feeling-search,
+.search-by-feeling,
+.search-feeling,
+#feelingSearch,
+#searchByFeeling{
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+
+.hero-search-wrap,
+.feeling-search-wrap,
+.search-feeling-wrap,
+.search-shell{
+  margin-left:auto!important;
+  margin-right:auto!important;
+  justify-content:center!important;
+  align-items:center!important;
+}
+
+/* Known homepage search structures */
+.hero .search-box,
+.hero-content .search-box,
+.hero .feeling-search,
+.hero-content .feeling-search{
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+
+@media(max-width:700px){
+  .hero-search,
+  .feeling-search,
+  .search-by-feeling,
+  .search-feeling,
+  #feelingSearch,
+  #searchByFeeling,
+  .hero .search-box,
+  .hero-content .search-box{
+    margin-left:auto!important;
+    margin-right:auto!important;
+    max-width:92%!important;
+  }
+}
+
+/* ---- original <style id=rud-search-perfect-alignment-final> ---- */
+
+/* Ask Rise launcher — compact, single source of truth. */
+#heroMoodSearch.mood-launcher{
+  position:relative!important;
+  z-index:12!important;
+  isolation:isolate!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:min(330px,calc(100% - 24px))!important;
+  min-height:62px!important;
+  margin:24px auto 0!important;
+  padding:10px 52px 10px 16px!important;
+  border:1px solid rgba(216,187,121,.14)!important;
+  border-radius:18px!important;
+  overflow:hidden!important;
+  text-align:center!important;
+  background:radial-gradient(circle at 90% 50%,rgba(216,187,121,.045),transparent 30%),linear-gradient(180deg,rgba(13,30,44,.84),rgba(6,18,29,.94))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 13px 30px rgba(0,7,16,.15)!important;
+}
+#heroMoodSearch.mood-launcher:hover{
+  transform:none!important;
+  border-color:rgba(216,187,121,.24)!important;
+  background:radial-gradient(circle at 90% 50%,rgba(216,187,121,.065),transparent 30%),linear-gradient(180deg,rgba(15,32,47,.88),rgba(7,20,31,.95))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 14px 32px rgba(0,7,16,.16)!important;
+}
+#heroMoodSearch .mood-launcher-copy{
+  position:static!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  transform:none!important;
+  text-align:center!important;
+}
+#heroMoodSearch .mood-launcher-copy small{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:10px!important;
+  margin:0!important;
+  padding:0!important;
+  color:rgba(246,248,249,.97)!important;
+  font-family:"Cormorant Garamond",Georgia,serif!important;
+  font-size:1.32rem!important;
+  font-weight:600!important;
+  line-height:1!important;
+  letter-spacing:-.01em!important;
+  text-transform:none!important;
+  white-space:nowrap!important;
+}
+#heroMoodSearch .mood-ai-logo{
+  display:inline-grid!important;
+  place-items:center!important;
+  width:24px!important;
+  height:24px!important;
+  flex:0 0 24px!important;
+  border:1px solid rgba(216,187,121,.26)!important;
+  border-radius:7px!important;
+  background:rgba(216,187,121,.075)!important;
+  color:#d8bd7e!important;
+  font:800 7px/1 "Manrope",sans-serif!important;
+  letter-spacing:0!important;
+}
+#heroMoodSearch .mood-search-icon{
+  position:absolute!important;
+  top:50%!important;
+  right:10px!important;
+  z-index:2!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:36px!important;
+  height:36px!important;
+  min-width:36px!important;
+  margin:0!important;
+  padding:0!important;
+  transform:translateY(-50%)!important;
+  border:1px solid rgba(216,187,121,.12)!important;
+  border-radius:50%!important;
+  background:rgba(216,187,121,.025)!important;
+  color:rgba(218,193,136,.82)!important;
+  box-shadow:none!important;
+}
+#heroMoodSearch:hover .mood-search-icon{transform:translateY(-50%)!important}
+@media(max-width:700px){
+  #heroMoodSearch.mood-launcher{width:min(290px,calc(100% - 32px))!important;min-height:58px!important;margin:22px auto 0!important;padding:9px 47px 9px 14px!important;border-radius:17px!important}
+  #heroMoodSearch .mood-launcher-copy small{gap:9px!important;font-size:1.18rem!important}
+  #heroMoodSearch .mood-ai-logo{width:22px!important;height:22px!important;flex-basis:22px!important;font-size:6.5px!important}
+  #heroMoodSearch .mood-search-icon{right:8px!important;width:34px!important;height:34px!important;min-width:34px!important}
+}
+@media(max-width:360px){
+  #heroMoodSearch.mood-launcher{width:min(272px,calc(100% - 28px))!important}
+}
+
+/* ---- original <style id=rud-quote-size-return-final> ---- */
+
+/* Final reflection: slightly smaller quote, no decorative quote mark */
+.final-visual-reflection .reflection-content h2{
+  font-size:clamp(2.45rem,5.4vw,5.25rem)!important;
+  line-height:.98!important;
+  max-width:min(820px,92vw)!important;
+  margin:20px auto 14px!important;
+  padding:16px clamp(16px,3vw,34px) 18px!important;
+}
+
+/* Ensure no decorative quotation mark / lines are generated */
+.final-visual-reflection .reflection-content h2::before,
+.final-visual-reflection .reflection-content h2::after{
+  content:none!important;
+  display:none!important;
+}
+
+/* Restore the previous quiet Return to Allah line */
+.final-visual-reflection .reflection-content h2 + p{
+  display:block!important;
+  margin:8px auto 0!important;
+  padding:0!important;
+  color:rgba(216,187,121,.76)!important;
+  font-family:"Manrope",sans-serif!important;
+  font-size:.66rem!important;
+  font-weight:700!important;
+  line-height:1.4!important;
+  letter-spacing:.20em!important;
+  text-transform:uppercase!important;
+  text-align:center!important;
+}
+
+@media(max-width:700px){
+  .final-visual-reflection .reflection-content h2{
+    font-size:clamp(2.1rem,10.2vw,3.35rem)!important;
+    line-height:.98!important;
+    max-width:92vw!important;
+    margin:16px auto 11px!important;
+    padding:12px 10px 14px!important;
+  }
+
+  .final-visual-reflection .reflection-content h2 + p{
+    margin-top:6px!important;
+    font-size:.56rem!important;
+    letter-spacing:.18em!important;
+  }
+}
+
+/* ---- original <style id=rud-journey-kaaba-full-view-final> ---- */
+
+/* ==========================================================
+   CONTINUE THE JOURNEY / INSTAGRAM SECTION
+   Reduce foreground content so the Kaaba background remains
+   clearly visible, especially on mobile.
+   ========================================================== */
+
+.final-visual-reflection{
+  min-height:clamp(560px,78vh,760px)!important;
+  padding:clamp(54px,7vw,86px) 0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  overflow:hidden!important;
+}
+
+/* Keep the background image visible rather than overly covered */
+.final-visual-reflection::before{
+  background:
+    linear-gradient(180deg,rgba(3,12,20,.22),rgba(3,12,20,.34))!important;
+}
+
+/* Make the quote/content area lighter and less dominant */
+.final-visual-reflection .reflection-content{
+  max-width:760px!important;
+  padding:0 22px!important;
+}
+
+/* Continue the Journey heading */
+.final-visual-reflection .reflection-content .eyebrow{
+  margin-bottom:8px!important;
+  font-size:7px!important;
+  letter-spacing:.18em!important;
+}
+
+.final-visual-reflection .reflection-content h2{
+  max-width:700px!important;
+  margin:14px auto 10px!important;
+  padding:8px 12px 10px!important;
+  font-size:clamp(2.15rem,4.5vw,4.25rem)!important;
+  line-height:.98!important;
+}
+
+/* Return to Allah remains elegant but small */
+.final-visual-reflection .reflection-content h2 + p{
+  margin:6px auto 0!important;
+  font-size:.58rem!important;
+  letter-spacing:.18em!important;
+}
+
+/* Reduce Instagram follow card footprint */
+.final-visual-reflection .instagram-card,
+.final-visual-reflection .social-card,
+.final-visual-reflection .follow-card,
+.final-visual-reflection [class*="instagram"]{
+  max-width:360px!important;
+  min-height:0!important;
+  margin:22px auto 0!important;
+  padding:14px 16px!important;
+  border-radius:17px!important;
+}
+
+/* Mobile: prioritize seeing the Kaaba and surrounding background */
+@media(max-width:700px){
+  .final-visual-reflection{
+    min-height:620px!important;
+    height:auto!important;
+    padding:52px 0 46px!important;
+
+    /* show more of the background vertically */
+    background-size:cover!important;
+    background-position:center center!important;
+  }
+
+  .final-visual-reflection .reflection-content{
+    width:100%!important;
+    max-width:100%!important;
+    padding:0 18px!important;
+  }
+
+  .final-visual-reflection .reflection-content h2{
+    max-width:330px!important;
+    margin:12px auto 8px!important;
+    padding:6px 6px 8px!important;
+    font-size:clamp(1.85rem,8.8vw,2.7rem)!important;
+    line-height:1!important;
+  }
+
+  .final-visual-reflection .reflection-content h2 + p{
+    margin-top:5px!important;
+    font-size:.52rem!important;
+    letter-spacing:.16em!important;
+  }
+
+  .final-visual-reflection .instagram-card,
+  .final-visual-reflection .social-card,
+  .final-visual-reflection .follow-card,
+  .final-visual-reflection [class*="instagram"]{
+    width:min(290px,88vw)!important;
+    max-width:290px!important;
+    margin:18px auto 0!important;
+    padding:11px 13px!important;
+    border-radius:15px!important;
+    transform:none!important;
+  }
+
+  /* Reduce common text inside the follow card */
+  .final-visual-reflection .instagram-card h3,
+  .final-visual-reflection .social-card h3,
+  .final-visual-reflection .follow-card h3,
+  .final-visual-reflection [class*="instagram"] h3{
+    margin:0 0 3px!important;
+    font-size:.9rem!important;
+    line-height:1.2!important;
+  }
+
+  .final-visual-reflection .instagram-card p,
+  .final-visual-reflection .social-card p,
+  .final-visual-reflection .follow-card p,
+  .final-visual-reflection [class*="instagram"] p{
+    margin:0!important;
+    font-size:.67rem!important;
+    line-height:1.35!important;
+  }
+
+  .final-visual-reflection .instagram-card a,
+  .final-visual-reflection .social-card a,
+  .final-visual-reflection .follow-card a,
+  .final-visual-reflection [class*="instagram"] a{
+    min-height:32px!important;
+    padding:0 11px!important;
+    font-size:.64rem!important;
+  }
+}
+
+@media(max-width:380px){
+  .final-visual-reflection{
+    min-height:590px!important;
+    padding-top:46px!important;
+    padding-bottom:42px!important;
+  }
+
+  .final-visual-reflection .reflection-content h2{
+    max-width:300px!important;
+    font-size:1.95rem!important;
+  }
+
+  .final-visual-reflection .instagram-card,
+  .final-visual-reflection .social-card,
+  .final-visual-reflection .follow-card,
+  .final-visual-reflection [class*="instagram"]{
+    width:min(270px,88vw)!important;
+    max-width:270px!important;
+  }
+}
+
+/* ---- original <style id=rud-kaaba-quote-no-shade-no-mark-final> ---- */
+
+/* Kaaba quote area — remove shade/card/glass treatment and any quote marks.
+   Keep only clean text directly over the background. */
+
+.final-visual-reflection .reflection-content,
+.final-visual-reflection .reflection-content h2{
+  background:transparent!important;
+  background-image:none!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  border:none!important;
+  box-shadow:none!important;
+  outline:none!important;
+}
+
+/* Remove every decorative quote/line generated around the final quote */
+.final-visual-reflection .reflection-content h2::before,
+.final-visual-reflection .reflection-content h2::after,
+.final-visual-reflection .reflection-content::before,
+.final-visual-reflection .reflection-content::after{
+  content:none!important;
+  display:none!important;
+  background:none!important;
+  border:none!important;
+  box-shadow:none!important;
+}
+
+/* No dark/local shade behind the quote text */
+.final-visual-reflection .reflection-content h2{
+  padding:0!important;
+  text-shadow:0 3px 18px rgba(0,0,0,.32)!important;
+}
+
+/* Keep the Kaaba image as visible as possible */
+.final-visual-reflection::before{
+  background:linear-gradient(
+    180deg,
+    rgba(3,12,20,.08),
+    rgba(3,12,20,.14)
+  )!important;
+}
+
+/* Ensure accidental quotation characters are not injected */
+.final-visual-reflection blockquote{
+  quotes:none!important;
+}
+.final-visual-reflection blockquote::before,
+.final-visual-reflection blockquote::after{
+  content:none!important;
+  display:none!important;
+}
+
+/* ---- original <style id=rud-instagram-card-premium-final> ---- */
+
+/* =========================================================
+   INSTAGRAM FOLLOW CARD — PREMIUM REFINEMENT
+   Visual-only. Link and functionality remain unchanged.
+   ========================================================= */
+
+.instagram-footer{
+  padding:clamp(42px,5.5vw,68px) 20px!important;
+  background:
+    radial-gradient(ellipse 460px 160px at 50% 0%,rgba(216,187,121,.045),transparent 72%),
+    linear-gradient(180deg,#07111a 0%,#040a0f 100%)!important;
+}
+
+.instagram-footer-link{
+  position:relative!important;
+  isolation:isolate!important;
+  width:min(500px,100%)!important;
+  min-height:108px!important;
+  padding:18px 20px!important;
+
+  display:grid!important;
+  grid-template-columns:58px minmax(0,1fr) 38px!important;
+  gap:17px!important;
+  align-items:center!important;
+
+  overflow:hidden!important;
+  border:1px solid rgba(216,187,121,.14)!important;
+  border-radius:25px!important;
+
+  background:
+    radial-gradient(circle at 10% 12%,rgba(216,187,121,.085),transparent 28%),
+    radial-gradient(circle at 88% 85%,rgba(130,177,214,.055),transparent 30%),
+    linear-gradient(145deg,rgba(15,33,47,.92),rgba(5,16,26,.97))!important;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.045),
+    0 22px 54px rgba(0,6,14,.26)!important;
+
+  transition:
+    transform .32s cubic-bezier(.2,.8,.2,1),
+    border-color .32s ease,
+    box-shadow .32s ease!important;
+}
+
+/* fine inner frame */
+.instagram-footer-link::before{
+  content:""!important;
+  position:absolute!important;
+  inset:7px!important;
+  z-index:-1!important;
+  pointer-events:none!important;
+  border:1px solid rgba(255,255,255,.025)!important;
+  border-radius:19px!important;
+}
+
+/* subtle premium gold glow, not flashy */
+.instagram-footer-link::after{
+  content:""!important;
+  position:absolute!important;
+  top:-70px!important;
+  right:-55px!important;
+  z-index:-1!important;
+  width:150px!important;
+  height:150px!important;
+  border-radius:50%!important;
+  pointer-events:none!important;
+  background:rgba(216,187,121,.055)!important;
+  filter:blur(34px)!important;
+}
+
+.instagram-footer-link:hover{
+  transform:translateY(-3px)!important;
+  border-color:rgba(216,187,121,.25)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 28px 66px rgba(0,6,14,.32)!important;
+}
+
+.instagram-mark{
+  position:relative!important;
+  width:58px!important;
+  height:58px!important;
+  border-radius:18px!important;
+  border:1px solid rgba(216,187,121,.16)!important;
+  background:
+    radial-gradient(circle at 30% 20%,rgba(216,187,121,.10),transparent 46%),
+    rgba(255,255,255,.025)!important;
+  color:#d8bb79!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 10px 24px rgba(0,0,0,.14)!important;
+}
+
+.instagram-mark svg{
+  width:25px!important;
+  height:25px!important;
+  opacity:.92!important;
+}
+
+.instagram-footer-copy{
+  min-width:0!important;
+  gap:6px!important;
+  text-align:left!important;
+}
+
+.instagram-footer-copy small{
+  color:rgba(216,187,121,.70)!important;
+  font-size:7px!important;
+  line-height:1!important;
+  letter-spacing:.20em!important;
+  font-weight:700!important;
+  text-transform:uppercase!important;
+}
+
+.instagram-footer-copy strong{
+  color:#f4f5f4!important;
+  font-family:"Cormorant Garamond",Georgia,serif!important;
+  font-size:clamp(1.2rem,1.9vw,1.45rem)!important;
+  line-height:1.06!important;
+  font-weight:600!important;
+  letter-spacing:-.018em!important;
+}
+
+.instagram-heart-quote{
+  max-width:430px!important;
+  margin:0 auto 15px!important;
+  color:rgba(242,243,239,.88)!important;
+  font-family:"Cormorant Garamond",Georgia,serif!important;
+  font-size:clamp(1.22rem,2vw,1.65rem)!important;
+  font-weight:500!important;
+  font-style:italic!important;
+  line-height:1.12!important;
+  letter-spacing:-.018em!important;
+  text-align:center!important;
+  text-shadow:0 7px 22px rgba(0,0,0,.20)!important;
+}
+
+.instagram-footer-arrow{
+  width:36px!important;
+  height:36px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  justify-self:end!important;
+  padding:0!important;
+  border-radius:50%!important;
+  border:1px solid rgba(216,187,121,.15)!important;
+  background:rgba(216,187,121,.025)!important;
+  color:#d8bb79!important;
+  font-size:14px!important;
+  line-height:1!important;
+  transition:transform .3s ease,background .3s ease!important;
+}
+
+.instagram-footer-link:hover .instagram-footer-arrow{
+  transform:translateX(2px)!important;
+  background:rgba(216,187,121,.06)!important;
+}
+
+/* Mobile — compact but still luxurious */
+@media(max-width:600px){
+  .instagram-footer{
+    padding:38px 16px 44px!important;
+  }
+
+  .instagram-heart-quote{
+    max-width:300px!important;
+    margin-bottom:12px!important;
+    font-size:1.18rem!important;
+    line-height:1.12!important;
+  }
+
+  .instagram-footer-link{
+    width:min(350px,100%)!important;
+    min-height:88px!important;
+    padding:13px 14px!important;
+    grid-template-columns:46px minmax(0,1fr) 30px!important;
+    gap:11px!important;
+    border-radius:19px!important;
+  }
+
+  .instagram-footer-link::before{
+    inset:5px!important;
+    border-radius:14px!important;
+  }
+
+  .instagram-mark{
+    width:46px!important;
+    height:46px!important;
+    border-radius:14px!important;
+  }
+
+  .instagram-mark svg{
+    width:21px!important;
+    height:21px!important;
+  }
+
+  .instagram-footer-copy{
+    gap:4px!important;
+  }
+
+  .instagram-footer-copy small{
+    font-size:5.8px!important;
+    letter-spacing:.16em!important;
+  }
+
+  .instagram-footer-copy strong{
+    font-size:1.03rem!important;
+    line-height:1.08!important;
+  }
+
+  .instagram-footer-arrow{
+    width:29px!important;
+    height:29px!important;
+    font-size:12px!important;
+  }
+}
+
+/* ---- original <style id=rud-all-names-match-home-final> ---- */
+
+/* ============================================================
+   VIEW ALL — 99 NAMES
+   Match the compact premium homepage Name-card proportions.
+   ============================================================ */
+
+#dynamicPage .names-route-grid{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:14px!important;
+  align-items:stretch!important;
+}
+
+#dynamicPage .names-route-grid .name-library-card{
+  position:relative!important;
+  min-width:0!important;
+  min-height:220px!important;
+  overflow:hidden!important;
+  border:1px solid rgba(216,187,121,.14)!important;
+  border-radius:22px!important;
+  background:
+    radial-gradient(circle at 82% 0%,rgba(216,187,121,.075),transparent 32%),
+    linear-gradient(145deg,rgba(13,31,46,.82),rgba(4,15,25,.90))!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,247,226,.035),
+    0 16px 40px rgba(0,7,16,.18)!important;
+  transition:border-color .12s ease!important;
+}
+
+#dynamicPage .names-route-grid .name-library-card:hover{
+  border-color:rgba(216,187,121,.24)!important;
+}
+
+#dynamicPage .names-route-grid .name-library-link{
+  position:relative!important;
+  width:100%!important;
+  min-height:220px!important;
+  height:100%!important;
+  padding:22px 20px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  justify-content:flex-start!important;
+  text-align:left!important;
+  color:inherit!important;
+  text-decoration:none!important;
+}
+
+#dynamicPage .names-route-grid .name-library-kicker{
+  position:absolute!important;
+  top:16px!important;
+  right:17px!important;
+  left:auto!important;
+  margin:0!important;
+  color:rgba(216,187,121,.64)!important;
+  font-size:.54rem!important;
+  font-weight:700!important;
+  line-height:1!important;
+  letter-spacing:.14em!important;
+  text-transform:uppercase!important;
+}
+
+#dynamicPage .names-route-grid .name-library-arabic{
+  width:100%!important;
+  margin:26px 0 14px!important;
+  color:#f7fbff!important;
+  font-family:"Noto Naskh Arabic","Amiri",serif!important;
+  font-size:clamp(2rem,3vw,2.7rem)!important;
+  line-height:1.2!important;
+  text-align:center!important;
+}
+
+#dynamicPage .names-route-grid .name-library-copy{
+  width:100%!important;
+  min-width:0!important;
+  margin-top:auto!important;
+}
+
+#dynamicPage .names-route-grid .name-library-link h3{
+  margin:0!important;
+  padding-right:40px!important;
+  color:#ead6a7!important;
+  font-family:"Cormorant Garamond",Georgia,serif!important;
+  font-size:1.08rem!important;
+  font-weight:600!important;
+  line-height:1.2!important;
+}
+
+#dynamicPage .names-route-grid .name-library-link p{
+  margin:5px 0 0!important;
+  padding-right:40px!important;
+  color:rgba(210,220,227,.68)!important;
+  font-size:.78rem!important;
+  line-height:1.4!important;
+  display:-webkit-box!important;
+  -webkit-line-clamp:2!important;
+  -webkit-box-orient:vertical!important;
+  overflow:hidden!important;
+}
+
+#dynamicPage .names-route-grid .name-library-open{
+  position:absolute!important;
+  right:16px!important;
+  bottom:16px!important;
+  width:30px!important;
+  height:30px!important;
+  margin:0!important;
+  padding:0 0 2px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border:1px solid rgba(216,187,121,.18)!important;
+  border-radius:50%!important;
+  background:rgba(216,187,121,.035)!important;
+  color:#d8bb79!important;
+  font-family:Arial,sans-serif!important;
+  font-size:18px!important;
+  font-weight:400!important;
+  line-height:1!important;
+  text-align:center!important;
+}
+
+/* Tablet */
+@media(max-width:900px){
+  #dynamicPage .names-route-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:11px!important;
+  }
+}
+
+/* ------------------------------------------------------------
+   MOBILE — exactly the compact homepage feel:
+   short horizontal rows, no oversized cards.
+   ------------------------------------------------------------ */
+@media(max-width:700px){
+  #dynamicPage .route-library-section{
+    padding-top:12px!important;
+  }
+
+  #dynamicPage .names-route-grid{
+    grid-template-columns:1fr!important;
+    gap:9px!important;
+  }
+
+  #dynamicPage .names-route-grid .name-library-card{
+    min-height:0!important;
+    height:92px!important;
+    border-radius:17px!important;
+    box-shadow:
+      inset 0 1px 0 rgba(255,247,226,.035),
+      0 10px 24px rgba(0,7,16,.16)!important;
+  }
+
+  #dynamicPage .names-route-grid .name-library-link{
+    display:grid!important;
+    grid-template-columns:58px minmax(0,1fr) 28px!important;
+    grid-template-rows:1fr 1fr!important;
+    grid-template-areas:
+      "arabic title arrow"
+      "arabic meaning arrow"!important;
+
+    min-height:0!important;
+    height:92px!important;
+    padding:12px 13px!important;
+    column-gap:12px!important;
+    row-gap:0!important;
+    align-items:center!important;
+    text-align:left!important;
+  }
+
+  #dynamicPage .names-route-grid .name-library-kicker{
+    top:7px!important;
+    right:10px!important;
+    font-size:6.5px!important;
+    letter-spacing:.12em!important;
+  }
+
+  #dynamicPage .names-route-grid .name-library-arabic{
+    grid-area:arabic!important;
+    width:auto!important;
+    margin:0!important;
+    padding:0!important;
+    align-self:center!important;
+    color:#f7fbff!important;
+    font-size:1.62rem!important;
+    line-height:1.05!important;
+    text-align:center!important;
+  }
+
+  #dynamicPage .names-route-grid .name-library-copy{
+    display:contents!important;
+  }
+
+  #dynamicPage .names-route-grid .name-library-link h3{
+    grid-area:title!important;
+    align-self:end!important;
+    margin:4px 0 0!important;
+    padding:0!important;
+    color:#f3f5f6!important;
+    font-family:"Manrope",sans-serif!important;
+    font-size:.94rem!important;
+    font-weight:700!important;
+    line-height:1.15!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+
+  #dynamicPage .names-route-grid .name-library-link p{
+    grid-area:meaning!important;
+    align-self:start!important;
+    margin:1px 0 4px!important;
+    padding:0!important;
+    color:rgba(211,222,230,.70)!important;
+    font-size:.70rem!important;
+    line-height:1.25!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    display:block!important;
+  }
+
+  #dynamicPage .names-route-grid .name-library-open{
+    grid-area:arrow!important;
+    position:static!important;
+    justify-self:end!important;
+    align-self:center!important;
+    width:28px!important;
+    height:28px!important;
+    min-width:28px!important;
+    margin:0!important;
+    padding:0 0 2px!important;
+  }
+}
+
+@media(max-width:375px){
+  #dynamicPage .names-route-grid .name-library-card,
+  #dynamicPage .names-route-grid .name-library-link{
+    height:86px!important;
+  }
+
+  #dynamicPage .names-route-grid .name-library-link{
+    grid-template-columns:52px minmax(0,1fr) 26px!important;
+    padding:10px 11px!important;
+    column-gap:9px!important;
+  }
+
+  #dynamicPage .names-route-grid .name-library-arabic{
+    font-size:1.48rem!important;
+  }
+
+  #dynamicPage .names-route-grid .name-library-link h3{
+    font-size:.87rem!important;
+  }
+
+  #dynamicPage .names-route-grid .name-library-link p{
+    font-size:.66rem!important;
+  }
+
+  #dynamicPage .names-route-grid .name-library-open{
+    width:26px!important;
+    height:26px!important;
+    min-width:26px!important;
+  }
+}
+
+/* ---- original <style id=rud-unified-focus-reading-final> ---- */
+
+/* ============================================================
+   RISE UPON DEEN — UNIFIED FOCUS READING EXPERIENCE
+   Applies to:
+   - 99 Names detail
+   - Duas detail
+   - Hadith detail
+   - Reminders detail
+   - Articles
+   - For Your Heart reflection
+   Background becomes secondary; reading surface becomes primary.
+   ============================================================ */
+
+/* Detail routes get a quiet atmospheric veil. The underlying
+   Makkah/moonlight environment remains visible but not distracting. */
+#dynamicPage:has(.name-reader),
+#dynamicPage:has(.dua-reader-v2),
+#dynamicPage:has(.compact-hadith-reader),
+#dynamicPage:has(.compact-reminder-reader),
+#dynamicPage:has(.heart-reader),
+#dynamicPage:has(.reader){
+  position:relative!important;
+  isolation:isolate!important;
+  background:transparent!important;
+}
+
+#dynamicPage:has(.name-reader)::before,
+#dynamicPage:has(.dua-reader-v2)::before,
+#dynamicPage:has(.compact-hadith-reader)::before,
+#dynamicPage:has(.compact-reminder-reader)::before,
+#dynamicPage:has(.heart-reader)::before,
+#dynamicPage:has(.reader)::before{
+  content:""!important;
+  position:fixed!important;
+  inset:0!important;
+  z-index:-1!important;
+  pointer-events:none!important;
+  background:
+    radial-gradient(circle at 50% 15%,rgba(93,151,190,.055),transparent 34%),
+    linear-gradient(180deg,rgba(3,12,20,.54),rgba(3,10,17,.72))!important;
+  backdrop-filter:blur(10px) saturate(.82)!important;
+  -webkit-backdrop-filter:blur(10px) saturate(.82)!important;
+}
+
+/* One shared outer reading card language */
+#dynamicPage .name-reader,
+#dynamicPage .dua-reader-v2,
+#dynamicPage .compact-hadith-reader,
+#dynamicPage .compact-reminder-reader,
+#dynamicPage .heart-reader,
+#dynamicPage .reader{
+  position:relative!important;
+  z-index:2!important;
+
+  width:min(920px,calc(100% - 32px))!important;
+  margin:22px auto 72px!important;
+  padding:clamp(22px,3.6vw,38px)!important;
+
+  border:1px solid rgba(216,187,121,.14)!important;
+  border-radius:28px!important;
+
+  background:
+    radial-gradient(circle at 88% 2%,rgba(216,187,121,.055),transparent 28%),
+    radial-gradient(circle at 10% 98%,rgba(110,170,210,.045),transparent 28%),
+    linear-gradient(145deg,rgba(10,25,38,.88),rgba(4,14,23,.94))!important;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.035),
+    0 30px 76px rgba(0,5,12,.34)!important;
+
+  backdrop-filter:blur(22px) saturate(.92)!important;
+  -webkit-backdrop-filter:blur(22px) saturate(.92)!important;
+  overflow:hidden!important;
+}
+
+/* Fine inner frame for a luxury editorial finish */
+#dynamicPage .name-reader::before,
+#dynamicPage .dua-reader-v2::before,
+#dynamicPage .compact-hadith-reader::before,
+#dynamicPage .compact-reminder-reader::before,
+#dynamicPage .heart-reader::before,
+#dynamicPage .reader::before{
+  content:""!important;
+  position:absolute!important;
+  inset:8px!important;
+  z-index:-1!important;
+  pointer-events:none!important;
+  border:1px solid rgba(255,255,255,.025)!important;
+  border-radius:21px!important;
+}
+
+/* Keep headings focused and consistent */
+#dynamicPage .name-reader h1,
+#dynamicPage .dua-reader-v2 h1,
+#dynamicPage .compact-hadith-reader h1,
+#dynamicPage .compact-reminder-reader h1,
+#dynamicPage .heart-reader h1,
+#dynamicPage .reader h1{
+  color:#e7d3a3!important;
+  text-shadow:0 8px 26px rgba(0,0,0,.22)!important;
+}
+
+/* Arabic stays bright and clean */
+#dynamicPage .name-reader-arabic,
+#dynamicPage .dua-sacred-arabic,
+#dynamicPage .compact-arabic{
+  color:#fbfdff!important;
+  text-shadow:0 5px 24px rgba(0,0,0,.18)!important;
+}
+
+/* Sub-panels become quieter so the outer card remains the visual frame */
+#dynamicPage .name-reader-body section,
+#dynamicPage .dua-sacred-frame,
+#dynamicPage .dua-reader-source,
+#dynamicPage .dua-reader-reflection,
+#dynamicPage .compact-sacred-panel,
+#dynamicPage .compact-info-card,
+#dynamicPage .reminder-focus-card,
+#dynamicPage .heart-reader-card,
+#dynamicPage .heart-reader-reflection{
+  border-color:rgba(216,187,121,.10)!important;
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.028),rgba(255,255,255,.012))!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.02)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+
+/* Reading text should be calmer than decorative background */
+#dynamicPage .name-reader-body p,
+#dynamicPage .dua-reader-v2-body p,
+#dynamicPage .compact-translation,
+#dynamicPage .compact-info-card p,
+#dynamicPage .reminder-focus-copy,
+#dynamicPage .heart-reader-reflection p,
+#dynamicPage .reader-body{
+  color:rgba(231,236,240,.86)!important;
+}
+
+/* Shared Back control placement and polish */
+#dynamicPage .compact-reader-back,
+#dynamicPage .dua-reader-back,
+#dynamicPage .heart-reader-back,
+#dynamicPage .detail-back-link,
+#dynamicPage [data-history-back]{
+  position:relative!important;
+  z-index:4!important;
+  border-color:rgba(216,187,121,.17)!important;
+  background:rgba(216,187,121,.035)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+
+/* Remove any excessive visual movement in focused reading pages */
+#dynamicPage .name-reader *,
+#dynamicPage .dua-reader-v2 *,
+#dynamicPage .compact-hadith-reader *,
+#dynamicPage .compact-reminder-reader *,
+#dynamicPage .heart-reader *,
+#dynamicPage .reader *{
+  --rx:0deg;
+  --ry:0deg;
+}
+
+/* Article gets controlled reading width inside the shared card */
+#dynamicPage .reader .reader-head,
+#dynamicPage .reader .reader-body,
+#dynamicPage .reader .reader-actions{
+  width:min(740px,100%)!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+
+#dynamicPage .reader .reader-img{
+  width:min(820px,100%)!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  display:block!important;
+}
+
+/* ==========================================================
+   MOBILE — lighter blur, smaller card, no wasted viewport.
+   ========================================================== */
+@media(max-width:700px){
+  #dynamicPage:has(.name-reader)::before,
+  #dynamicPage:has(.dua-reader-v2)::before,
+  #dynamicPage:has(.compact-hadith-reader)::before,
+  #dynamicPage:has(.compact-reminder-reader)::before,
+  #dynamicPage:has(.heart-reader)::before,
+  #dynamicPage:has(.reader)::before{
+    background:
+      linear-gradient(180deg,rgba(3,12,20,.62),rgba(3,10,17,.78))!important;
+    backdrop-filter:blur(6px) saturate(.82)!important;
+    -webkit-backdrop-filter:blur(6px) saturate(.82)!important;
+  }
+
+  #dynamicPage .name-reader,
+  #dynamicPage .dua-reader-v2,
+  #dynamicPage .compact-hadith-reader,
+  #dynamicPage .compact-reminder-reader,
+  #dynamicPage .heart-reader,
+  #dynamicPage .reader{
+    width:calc(100% - 16px)!important;
+    margin:8px auto 34px!important;
+    padding:16px 12px 22px!important;
+    border-radius:21px!important;
+
+    background:
+      radial-gradient(circle at 90% 0%,rgba(216,187,121,.045),transparent 26%),
+      linear-gradient(145deg,rgba(9,24,37,.94),rgba(4,14,23,.97))!important;
+
+    backdrop-filter:blur(12px) saturate(.9)!important;
+    -webkit-backdrop-filter:blur(12px) saturate(.9)!important;
+
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.03),
+      0 18px 46px rgba(0,5,12,.27)!important;
+  }
+
+  #dynamicPage .name-reader::before,
+  #dynamicPage .dua-reader-v2::before,
+  #dynamicPage .compact-hadith-reader::before,
+  #dynamicPage .compact-reminder-reader::before,
+  #dynamicPage .heart-reader::before,
+  #dynamicPage .reader::before{
+    inset:5px!important;
+    border-radius:16px!important;
+  }
+
+  #dynamicPage .name-reader h1,
+  #dynamicPage .dua-reader-v2 h1,
+  #dynamicPage .compact-hadith-reader h1,
+  #dynamicPage .compact-reminder-reader h1,
+  #dynamicPage .heart-reader h1{
+    max-width:100%!important;
+  }
+}
+
+/* Reduced motion users get the same visual hierarchy without animation. */
+@media(prefers-reduced-motion:reduce){
+  #dynamicPage .name-reader,
+  #dynamicPage .dua-reader-v2,
+  #dynamicPage .compact-hadith-reader,
+  #dynamicPage .compact-reminder-reader,
+  #dynamicPage .heart-reader,
+  #dynamicPage .reader{
+    transition:none!important;
+    animation:none!important;
+  }
+}
+
+/* ---- original <style id=rud-hadith-headings-center-only> ---- */
+
+/* Hadith details only — center headings/labels; no other design changes. */
+#dynamicPage .compact-hadith-reader .compact-reader-heading,
+#dynamicPage .compact-hadith-reader .compact-reader-heading h1,
+#dynamicPage .compact-hadith-reader .compact-panel-label,
+#dynamicPage .compact-hadith-reader .compact-info-label{
+  text-align:center!important;
+}
+#dynamicPage .compact-hadith-reader .compact-reader-heading h1{
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+#dynamicPage .compact-hadith-reader .compact-panel-label,
+#dynamicPage .compact-hadith-reader .compact-info-label{
+  display:block!important;
+  width:100%!important;
+}
+
+/* ---- original <style id=rud-centered-headings-explore-final> ---- */
+
+/* ============================================================
+   PREMIUM HEADING SYSTEM
+   Major headings are centered.
+   Eyebrow/first-line labels use: — LABEL —
+   ============================================================ */
+
+/* Major section heads */
+.section .section-title,
+.minimal-section-head .section-title,
+.names-head .section-title,
+.guidance-ribbon-head .section-title,
+.route-hero h1,
+.reader-head h1,
+.admin-head h1{
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+
+.section .section-copy,
+.minimal-section-head .section-copy,
+.names-head .section-copy,
+.guidance-ribbon-head .section-copy,
+.route-hero .section-copy,
+.reader-head .reader-desc{
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+
+/* Header containers themselves */
+.minimal-section-head,
+.names-head,
+.guidance-ribbon-head,
+.route-hero,
+.reader-head{
+  text-align:center!important;
+}
+
+.names-head{
+  align-items:center!important;
+}
+
+/* Every eyebrow becomes balanced — LABEL — */
+.eyebrow{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:11px!important;
+  width:auto!important;
+  max-width:100%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+
+.eyebrow::before,
+.eyebrow::after{
+  content:""!important;
+  flex:0 0 26px!important;
+  width:26px!important;
+  height:1px!important;
+  opacity:.72!important;
+}
+
+.eyebrow::before{
+  background:linear-gradient(90deg,transparent,rgba(216,187,121,.82))!important;
+}
+
+.eyebrow::after{
+  display:block!important;
+  background:linear-gradient(90deg,rgba(216,187,121,.82),transparent)!important;
+}
+
+/* Ensure eyebrow wrapper is centered even when parent uses flex/grid */
+.section .eyebrow,
+.minimal-section-head .eyebrow,
+.names-head .eyebrow,
+.guidance-ribbon-head .eyebrow,
+.route-hero .eyebrow,
+.reader-head .eyebrow{
+  justify-self:center!important;
+}
+
+/* ------------------------------------------------------------
+   HOMEPAGE EXPLORE CUE
+   Clear enough to teach scrolling, subtle enough not to distract.
+   ------------------------------------------------------------ */
+.hero-explore-cue{
+  position:relative!important;
+  z-index:8!important;
+  display:inline-flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:5px!important;
+
+  margin:24px auto 0!important;
+  padding:5px 13px 3px!important;
+
+  color:rgba(226,211,177,.68)!important;
+  font-family:"Manrope",sans-serif!important;
+  font-size:7px!important;
+  font-weight:700!important;
+  line-height:1!important;
+  letter-spacing:.20em!important;
+  text-transform:uppercase!important;
+  text-align:center!important;
+  text-decoration:none!important;
+
+  transition:color .22s ease,transform .22s ease!important;
+}
+
+.hero-explore-cue:hover{
+  color:#ead7aa!important;
+  transform:translateY(1px)!important;
+}
+
+.hero-explore-arrow{
+  display:block!important;
+  color:#d8bb79!important;
+  font-size:16px!important;
+  font-weight:400!important;
+  line-height:1!important;
+  letter-spacing:0!important;
+  animation:rudExploreFloat 1.8s ease-in-out infinite!important;
+}
+
+@keyframes rudExploreFloat{
+  0%,100%{transform:translateY(0);opacity:.62}
+  50%{transform:translateY(5px);opacity:1}
+}
+
+/* Mobile heading refinement */
+@media(max-width:700px){
+  .section .section-title,
+  .minimal-section-head .section-title,
+  .names-head .section-title,
+  .guidance-ribbon-head .section-title,
+  .route-hero h1,
+  .reader-head h1{
+    text-align:center!important;
+  }
+
+  .section .section-copy,
+  .minimal-section-head .section-copy,
+  .names-head .section-copy,
+  .guidance-ribbon-head .section-copy,
+  .route-hero .section-copy,
+  .reader-head .reader-desc{
+    text-align:center!important;
+  }
+
+  .eyebrow{
+    gap:8px!important;
+    font-size:8px!important;
+    letter-spacing:.16em!important;
+    white-space:nowrap!important;
+  }
+
+  .eyebrow::before,
+  .eyebrow::after{
+    flex-basis:20px!important;
+    width:20px!important;
+  }
+
+  .hero-explore-cue{
+    margin-top:20px!important;
+    font-size:6.4px!important;
+    letter-spacing:.18em!important;
+  }
+
+  .hero-explore-arrow{
+    font-size:15px!important;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .hero-explore-arrow{
+    animation:none!important;
+  }
+}
+
+/* ---- original <style id=rud-heart-heading-absolute-center-final> ---- */
+
+/* Exact center for:
+   — FOR YOUR HEART —
+   Explore with Intention
+*/
+#reminder .shell{
+  width:min(var(--max),calc(100% - 40px))!important;
+  margin-inline:auto!important;
+}
+#reminder .minimal-section-head{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin:0 auto 34px!important;
+  padding:0!important;
+  text-align:center!important;
+}
+#reminder .minimal-section-head .eyebrow{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:max-content!important;
+  max-width:100%!important;
+  margin:0 auto 10px!important;
+  text-align:center!important;
+  align-self:center!important;
+}
+#reminder .minimal-section-head #dailyHeartHeading{
+  display:block!important;
+  width:100%!important;
+  max-width:900px!important;
+  margin:0 auto!important;
+  padding:0!important;
+  text-align:center!important;
+  align-self:center!important;
+}
+@media(max-width:700px){
+  #reminder .shell{width:calc(100% - 28px)!important}
+  #reminder .minimal-section-head{margin-bottom:24px!important}
+  #reminder .minimal-section-head #dailyHeartHeading{max-width:100%!important}
+}
+
+/* ---- original <style id=rud-first-visit-name-intro-live-final> ---- */
+
+#rudWelcomeIntro{
+  position:fixed;inset:0;z-index:20020;display:grid;place-items:center;padding:24px;overflow:hidden;
+  background:radial-gradient(circle at 50% 18%,rgba(216,187,121,.11),transparent 24%),
+  radial-gradient(ellipse at 50% 92%,rgba(210,222,232,.08),transparent 32%),
+  linear-gradient(180deg,#020405 0%,#071019 55%,#030607 100%);
+  opacity:1;visibility:visible;transition:opacity .5s ease,visibility .5s ease;
+}
+#rudWelcomeIntro[hidden]{display:none!important}
+#rudWelcomeIntro.rud-welcome-leave{opacity:0;visibility:hidden;pointer-events:none}
+.rud-welcome-card{
+  position:relative;z-index:2;width:min(520px,100%);padding:44px 36px 36px;text-align:center;
+  border:1px solid rgba(216,187,121,.15);border-radius:30px;
+  background:linear-gradient(145deg,rgba(13,27,38,.95),rgba(5,13,20,.96));
+  box-shadow:0 32px 100px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,255,255,.045);
+}
+.rud-welcome-mark{width:42px;height:1px;margin:0 auto 22px;background:linear-gradient(90deg,transparent,#d8bb79,transparent)}
+.rud-welcome-kicker{margin:0 0 13px;color:#c9b887;font:700 9px/1.2 "Manrope",sans-serif;letter-spacing:.25em;text-transform:uppercase}
+.rud-welcome-card h1{margin:0;color:#f5f3ec;font-family:"Cormorant Garamond",Georgia,serif;font-size:clamp(2.55rem,7vw,4.2rem);font-weight:500;line-height:.96;letter-spacing:-.045em}
+.rud-welcome-copy{max-width:370px;margin:18px auto 28px;color:#98a2a9;font-size:.88rem;line-height:1.7}
+#rudVisitorName{width:min(390px,100%);height:56px;padding:0 18px;border:1px solid rgba(255,255,255,.11);border-radius:16px;outline:none;background:rgba(255,255,255,.035);color:#fff;font:500 15px/1 "Manrope",sans-serif;text-align:center}
+#rudVisitorName::placeholder{color:#68747c}
+#rudVisitorName:focus{border-color:rgba(216,187,121,.42);box-shadow:0 0 0 4px rgba(216,187,121,.035)}
+#rudWelcomeContinue{width:min(390px,100%);min-height:51px;margin-top:12px;border:1px solid rgba(216,187,121,.38);border-radius:16px;background:linear-gradient(135deg,#e1d3ae,#bfa56c);color:#111713;font:750 12px/1 "Manrope",sans-serif;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.rud-welcome-privacy{margin:14px 0 0;color:#5f6b72;font-size:9px;line-height:1.55}
+body.rud-first-visit-open{overflow:hidden!important}
+@media(max-width:600px){.rud-welcome-card{padding:37px 20px 29px;border-radius:24px}.rud-welcome-copy{font-size:.82rem}}
+
+/* ---- original <style id=rud-analytics-log-delete-final> ---- */
+
+#adminApp .analytics-danger-bar{
+  margin-top:18px;
+  padding:16px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  flex-wrap:wrap;
+  border:1px solid rgba(213,112,112,.14);
+  border-radius:16px;
+  background:rgba(151,48,48,.035);
+}
+#adminApp .analytics-danger-copy strong{
+  display:block;
+  color:#d8c8c8;
+  font-size:12px;
+}
+#adminApp .analytics-danger-copy span{
+  display:block;
+  margin-top:4px;
+  color:#777f86;
+  font-size:10px;
+  line-height:1.5;
+}
+#adminApp .analytics-delete-btn{
+  min-height:34px;
+  padding:0 11px;
+  border:1px solid rgba(205,104,104,.22);
+  border-radius:10px;
+  background:rgba(161,57,57,.045);
+  color:#d8aaaa;
+  font-size:10px;
+  cursor:pointer;
+}
+#adminApp .analytics-delete-btn:hover{
+  background:rgba(161,57,57,.08);
+  border-color:rgba(205,104,104,.34);
+}
+#adminApp .analytics-bulk-bar{
+  margin:0 0 14px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+#adminApp .analytics-select-all{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  color:#8f989f;
+  font-size:10px;
+}
+#adminApp .analytics-check{
+  width:15px;
+  height:15px;
+  accent-color:#d8bb79;
+}
+#adminApp .analytics-selected-count{
+  color:#7f8991;
+  font-size:10px;
+}
+#adminApp .analytics-delete-btn[disabled]{
+  opacity:.42;
+  cursor:not-allowed;
+}
+
+/* ---- original <style id=rud-no-zoom-no-horizontal-scroll-final> ---- */
+
+html,body{
+  width:100%!important;
+  max-width:100%!important;
+  overflow-x:hidden!important;
+  overscroll-behavior-x:none!important;
+  -webkit-text-size-adjust:100%!important;
+  text-size-adjust:100%!important;
+}
+
+html{
+  touch-action:pan-y!important;
+}
+
+body{
+  position:relative!important;
+  min-width:0!important;
+}
+
+/* Prevent common layout children from forcing viewport width */
+body *{
+  min-width:0;
+}
+
+/* Media/content must never exceed viewport */
+img,video,canvas,svg,iframe,picture{
+  max-width:100%!important;
+}
+
+/* Long text/URLs should wrap instead of creating side scroll */
+p,span,a,div,td,th,h1,h2,h3,h4,h5,h6,button,input,textarea,select{
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+
+/* Full-width app/site surfaces remain bounded */
+#publicMain,
+#dynamicPage,
+#adminApp,
+.admin-workspace,
+.admin-main,
+.admin-panel,
+.reader,
+.shell{
+  max-width:100%!important;
+  overflow-x:hidden!important;
+}
+
+/* Allow intentionally horizontal internal components to scroll inside themselves
+   without moving the whole page sideways. */
+.table-wrap,
+.popular-track{
+  max-width:100%!important;
+}
+
+/* Keep touch scrolling vertical and prevent pinch gestures on the page surface. */
+@media (pointer:coarse){
+  html,body{
+    touch-action:pan-y!important;
+  }
+  button,a,input,textarea,select{
+    touch-action:auto!important;
+  }
+}
+
+/* ---- original <style id=rud-scroll-reliability-final> ---- */
+
+html{
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  height:auto!important;
+  min-height:100%!important;
+  overscroll-behavior-x:none!important;
+  overscroll-behavior-y:auto!important;
+  touch-action:pan-y!important;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none!important;
+  -ms-overflow-style:none!important;
+}
+body{
+  position:relative!important;
+  inset:auto!important;
+  width:100%!important;
+  max-width:100%!important;
+  overflow-x:hidden!important;
+  overflow-y:visible!important;
+  height:auto!important;
+  min-height:100vh!important;
+  overscroll-behavior-x:none!important;
+  overscroll-behavior-y:auto!important;
+  touch-action:pan-y!important;
+  -webkit-overflow-scrolling:touch;
+}
+/* Public scroll containers keep scrolling but never show a visual track/thumb.
+   Admin keeps its existing dedicated scrollbar styling below. */
+body *{
+  scrollbar-width:none!important;
+  -ms-overflow-style:none!important;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+body *::-webkit-scrollbar{
+  width:0!important;
+  height:0!important;
+  display:none!important;
+}
+
+/* Real overlays may lock the background while they are genuinely open. */
+body.rud-first-visit-open,
+body.rud-broadcast-open,
+body.menu-open{
+  overflow-y:hidden!important;
+}
+
+/* Reader routes themselves remain normal document-flow scrolling surfaces. */
+body.rud-mobile-reading{
+  overflow-y:visible!important;
+  height:auto!important;
+}
+body.rud-mobile-reading #dynamicPage,
+body.rud-mobile-reading #dynamicPage .dua-reader-v2,
+body.rud-mobile-reading #dynamicPage .compact-hadith-reader,
+body.rud-mobile-reading #dynamicPage .compact-reminder-reader{
+  position:relative!important;
+  inset:auto!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow-x:hidden!important;
+  overflow-y:visible!important;
+  overscroll-behavior:auto!important;
+  touch-action:pan-y!important;
+}
+body.rud-mobile-reading #dynamicPage{
+  min-height:100vh!important;
+}
+
+/* Hide internal reader scrollbars without creating another scrolling layer. */
+.reader,
+.search-panel,
+.modal-card,
+#dynamicPage .dua-reader-v2,
+#dynamicPage .compact-hadith-reader,
+#dynamicPage .compact-reminder-reader,
+#dynamicPage .heart-reader,
+#dynamicPage .name-reader{
+  scrollbar-width:none!important;
+  -ms-overflow-style:none!important;
+}
+.reader::-webkit-scrollbar,
+.search-panel::-webkit-scrollbar,
+.modal-card::-webkit-scrollbar,
+#dynamicPage .dua-reader-v2::-webkit-scrollbar,
+#dynamicPage .compact-hadith-reader::-webkit-scrollbar,
+#dynamicPage .compact-reminder-reader::-webkit-scrollbar,
+#dynamicPage .heart-reader::-webkit-scrollbar,
+#dynamicPage .name-reader::-webkit-scrollbar{
+  width:0!important;
+  height:0!important;
+  display:none!important;
+}
+
+#publicMain,
+#dynamicPage,
+#adminApp{
+  max-width:100vw!important;
+  overflow-x:hidden!important;
+}
+
+@media(max-width:700px){
+  body.rud-mobile-reading #dynamicPage{
+    padding-top:108px!important;
+  }
+}
+
+/* ---- original <style id=rud-mobile-navbar-safe-spacing-final> ---- */
+
+/* ============================================================
+   MOBILE NAV SAFE SPACING
+   Public + Admin only. Desktop remains unchanged.
+   ============================================================ */
+@media(max-width:900px){
+
+  .nav{
+    min-height:60px!important;
+    border-radius:18px!important;
+  }
+
+  /* Prevent hero/page content from visually colliding with the lowered navbar */
+  .hero-content{
+    padding-top:calc(126px + env(safe-area-inset-top, 0px))!important;
+  }
+
+  #dynamicPage{
+    padding-top:calc(112px + env(safe-area-inset-top, 0px))!important;
+  }
+
+  /* ADMIN TOP BAR:
+     keep clear space under status bar/notch */
+  #adminApp .admin-topbar{
+    top:0!important;
+    min-height:calc(66px + env(safe-area-inset-top, 0px))!important;
+    padding-top:env(safe-area-inset-top, 0px)!important;
+  }
+
+  /* Admin mobile menu button should sit comfortably below the top edge */
+  #adminApp .admin-mobile-menu{
+    margin-top:2px!important;
+  }
+
+  /* Drawer also keeps safe-area spacing when opened on mobile */
+  #adminApp .admin-sidebar{
+    top:calc(env(safe-area-inset-top, 0px) + 12px)!important;
+    bottom:12px!important;
+  }
+}
+
+@media(max-width:640px){
+
+  .nav{
+    min-height:58px!important;
+  }
+
+  .hero-content{
+    padding-top:calc(124px + env(safe-area-inset-top, 0px))!important;
+  }
+
+  #adminApp .admin-topbar{
+    min-height:calc(64px + env(safe-area-inset-top, 0px))!important;
+  }
+}
+
+/* ---- original <style id=rud-premium-navigation-controls-final> ---- */
+
+#rudUniversalBack[hidden],
+html.light-mode body:has(#dynamicPage .dua-reader-v2) #rudUniversalBack{
+  display:none!important;
+}
+
+#rudUniversalBack:hover{
+  transform:translateY(-1px)!important;
+  border-color:rgba(216,187,121,.30)!important;
+  background:linear-gradient(180deg,rgba(14,34,50,.98),rgba(5,18,28,.99))!important;
+}
+
+#rudUniversalBack>span:first-child{
+  font-size:15px!important;
+  line-height:1!important;
+  transform:translateY(-.5px)!important;
+}
+
+/* True overlay close buttons: one premium X at top-right */
+.search-overlay .icon-btn,
+.app-overlay .modal-close,
+.modal .modal-close,
+#deleteOverlay .modal-close{
+  position:sticky!important;
+  top:0!important;
+  margin-left:auto!important;
+  z-index:12!important;
+
+  width:40px!important;
+  height:40px!important;
+  min-width:40px!important;
+  display:grid!important;
+  place-items:center!important;
+
+  border:1px solid rgba(157,189,207,.12)!important;
+  border-radius:50%!important;
+  background:rgba(255,255,255,.025)!important;
+  color:#9aabb5!important;
+
+  font-size:20px!important;
+  line-height:1!important;
+  cursor:pointer!important;
+
+  transition:
+    color .2s ease,
+    border-color .2s ease,
+    background .2s ease,
+    transform .2s ease!important;
+}
+
+.search-overlay .icon-btn:hover,
+.app-overlay .modal-close:hover,
+.modal .modal-close:hover,
+#deleteOverlay .modal-close:hover{
+  color:#f1e6ca!important;
+  border-color:rgba(216,187,121,.24)!important;
+  background:rgba(216,187,121,.055)!important;
+  transform:rotate(4deg)!important;
+}
+
+/* Ensure overlay cards establish a clean close-control alignment context. */
+.search-panel,
+.app-overlay>div,
+.modal-card{
+  position:relative!important;
+}
+
+/* ---- original <style id=rud-smooth-navigation-transitions-final> ---- */
+
+/* ============================================================
+   SMOOTH BACK / CLOSE TRANSITIONS
+   No layout/design changes, only transition behavior.
+   ============================================================ */
+
+/* Search / app overlays close gracefully */
+.search-overlay,
+.app-overlay,
+.modal{
+  transition:
+    opacity .22s ease,
+    visibility .22s ease!important;
+}
+
+.search-panel,
+.app-overlay>div,
+.modal-card{
+  transition:
+    transform .24s cubic-bezier(.22,.8,.25,1),
+    opacity .20s ease!important;
+}
+
+.search-overlay.open .search-panel,
+.app-overlay.open>div,
+.modal.open .modal-card{
+  opacity:1!important;
+  transform:none!important;
+}
+
+
+/* Universal Back button also transitions softly */
+#rudUniversalBack{
+  transition:
+    opacity .20s ease,
+    transform .20s ease,
+    border-color .20s ease,
+    background .20s ease!important;
+}
+
+/* Respect reduced-motion preference */
+@media(prefers-reduced-motion:reduce){
+  .search-overlay,
+  .app-overlay,
+  .modal,
+  .search-panel,
+  .app-overlay>div,
+  .modal-card{
+    transition:none!important;
+    animation:none!important;
+  }
+}
+
+/* ---- original <style id=rud-centered-reference-card-final> ---- */
+
+/* Center the citation/reference tile inside focused reading pages. */
+#dynamicPage .compact-info-card.reminder-reference,
+#dynamicPage .dua-reader-source{
+  width:min(620px,100%)!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+
+#dynamicPage .compact-info-card.reminder-reference{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:18px 22px!important;
+}
+
+#dynamicPage .compact-info-card.reminder-reference .compact-info-label{
+  display:block!important;
+  width:100%!important;
+  margin:0 0 8px!important;
+  text-align:center!important;
+}
+
+#dynamicPage .compact-info-card.reminder-reference strong{
+  display:block!important;
+  width:100%!important;
+  max-width:560px!important;
+  margin:0 auto!important;
+  text-align:center!important;
+  line-height:1.65!important;
+}
+
+#dynamicPage .dua-reader-source>div{
+  width:100%!important;
+  text-align:center!important;
+}
+
+@media(max-width:700px){
+  #dynamicPage .compact-info-card.reminder-reference,
+  #dynamicPage .dua-reader-source{
+    width:100%!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+
+  #dynamicPage .compact-info-card.reminder-reference{
+    padding:16px 14px!important;
+  }
+}
+
+/* ---- original <style id=rud-all-names-detail-unified-final> ---- */
+
+/* ============================================================
+   ALL 99 NAMES — ONE PREMIUM DETAIL DESIGN
+   Applies to Ar-Rahman and every Name opened from View All.
+   ============================================================ */
+
+#dynamicPage .name-reader{
+  width:min(900px,calc(100% - 30px))!important;
+  margin:20px auto 70px!important;
+  padding:clamp(24px,4vw,40px)!important;
+
+  border:1px solid rgba(216,187,121,.15)!important;
+  border-radius:28px!important;
+
+  background:
+    radial-gradient(circle at 50% 0%,rgba(216,187,121,.055),transparent 30%),
+    radial-gradient(circle at 90% 100%,rgba(92,151,190,.045),transparent 28%),
+    linear-gradient(145deg,rgba(9,25,38,.96),rgba(4,14,23,.985))!important;
+
+  box-shadow:
+    0 32px 90px rgba(0,3,8,.38),
+    inset 0 1px 0 rgba(255,255,255,.035)!important;
+
+  backdrop-filter:blur(18px) saturate(.92)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(.92)!important;
+
+  overflow:hidden!important;
+}
+
+#dynamicPage .name-reader-head{
+  width:min(720px,100%)!important;
+  margin:0 auto 28px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  text-align:center!important;
+}
+
+#dynamicPage .name-reader-label{
+  width:100%!important;
+  display:flex!important;
+  justify-content:center!important;
+  align-items:center!important;
+  margin:0 auto 14px!important;
+  color:#bca66f!important;
+  font-size:8px!important;
+  font-weight:800!important;
+  letter-spacing:.20em!important;
+  text-transform:uppercase!important;
+}
+
+#dynamicPage .name-reader-arabic{
+  display:block!important;
+  width:100%!important;
+  margin:4px auto 14px!important;
+  color:#fbfdff!important;
+  font-size:clamp(2.8rem,7vw,5.1rem)!important;
+  line-height:1.15!important;
+  text-align:center!important;
+}
+
+#dynamicPage .name-reader h1{
+  display:block!important;
+  width:100%!important;
+  margin:0 auto 8px!important;
+  color:#ead7a7!important;
+  font-family:"Cormorant Garamond",Georgia,serif!important;
+  font-size:clamp(2.5rem,5.5vw,4.5rem)!important;
+  font-weight:500!important;
+  line-height:.98!important;
+  letter-spacing:-.045em!important;
+  text-align:center!important;
+}
+
+#dynamicPage .name-reader-meaning{
+  display:block!important;
+  width:100%!important;
+  max-width:620px!important;
+  margin:0 auto!important;
+  color:#8fa0aa!important;
+  font-size:.88rem!important;
+  line-height:1.65!important;
+  text-align:center!important;
+}
+
+#dynamicPage .name-reader-body{
+  width:min(720px,100%)!important;
+  margin:0 auto!important;
+  display:grid!important;
+  gap:12px!important;
+}
+
+#dynamicPage .name-reader-body section{
+  width:100%!important;
+  margin:0!important;
+  padding:18px 20px!important;
+  border:1px solid rgba(150,183,202,.09)!important;
+  border-radius:17px!important;
+  background:rgba(255,255,255,.015)!important;
+  text-align:center!important;
+}
+
+#dynamicPage .name-reader-body section>span{
+  display:block!important;
+  margin:0 0 8px!important;
+  color:#b9a46f!important;
+  font-size:8px!important;
+  font-weight:800!important;
+  letter-spacing:.16em!important;
+  text-transform:uppercase!important;
+}
+
+#dynamicPage .name-reader-body section p{
+  max-width:640px!important;
+  margin:0 auto!important;
+  color:rgba(231,236,240,.86)!important;
+  font-size:.88rem!important;
+  line-height:1.72!important;
+  text-align:center!important;
+}
+
+#dynamicPage .name-reader-actions{
+  width:min(720px,100%)!important;
+  margin:22px auto 0!important;
+  display:flex!important;
+  justify-content:center!important;
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  gap:9px!important;
+}
+
+@media(max-width:700px){
+  #dynamicPage .name-reader{
+    width:calc(100% - 16px)!important;
+    margin:8px auto 36px!important;
+    padding:20px 14px 24px!important;
+    border-radius:21px!important;
+  }
+
+  #dynamicPage .name-reader-head{
+    margin-bottom:20px!important;
+  }
+
+  #dynamicPage .name-reader-arabic{
+    font-size:clamp(2.6rem,14vw,4rem)!important;
+  }
+
+  #dynamicPage .name-reader h1{
+    font-size:clamp(2.25rem,11vw,3.4rem)!important;
+  }
+
+  #dynamicPage .name-reader-body section{
+    padding:15px 13px!important;
+    border-radius:14px!important;
+  }
+
+  #dynamicPage .name-reader-body section p{
+    font-size:.82rem!important;
+    line-height:1.68!important;
+  }
+
+  #dynamicPage .name-reader-actions{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+  }
+
+  #dynamicPage .name-reader-actions .premium-btn{
+    width:100%!important;
+  }
+}
+
+/* ---- original <style id=rud-reference-true-center-final> ---- */
+
+/* Reference card: true horizontal center on every focused reader. */
+#dynamicPage .compact-info-card.reminder-reference,
+#dynamicPage .dua-reader-source,
+#dynamicPage [class*="reference-card"],
+#dynamicPage [class*="source-card"]{
+  box-sizing:border-box!important;
+  width:min(620px,calc(100% - 24px))!important;
+  max-width:620px!important;
+  margin:18px auto!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  position:relative!important;
+  left:auto!important;
+  right:auto!important;
+  transform:none!important;
+  float:none!important;
+  justify-self:center!important;
+  align-self:center!important;
+  text-align:center!important;
+}
+
+#dynamicPage .compact-info-card.reminder-reference{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+
+#dynamicPage .compact-info-card.reminder-reference .compact-info-label,
+#dynamicPage .compact-info-card.reminder-reference strong,
+#dynamicPage .dua-reader-source > div{
+  width:100%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+  justify-content:center!important;
+}
+
+#dynamicPage .compact-info-card.reminder-reference strong{
+  max-width:560px!important;
+}
+
+@media(max-width:700px){
+  #dynamicPage .compact-info-card.reminder-reference,
+  #dynamicPage .dua-reader-source,
+  #dynamicPage [class*="reference-card"],
+  #dynamicPage [class*="source-card"]{
+    width:calc(100% - 20px)!important;
+    max-width:560px!important;
+    margin:16px auto!important;
+  }
+}
+
+/* ---- original <style id=rud-reference-parent-center-final> ---- */
+
+#dynamicPage .compact-reminder-reader .compact-reader-body,
+#dynamicPage .compact-hadith-reader .compact-reader-body,
+#dynamicPage .dua-reader-v2 .dua-reader-content{
+  width:100%!important;
+}
+
+#dynamicPage .compact-reminder-reader .reminder-reference,
+#dynamicPage .compact-hadith-reader .reminder-reference{
+  grid-column:1 / -1!important;
+}
+
+/* ---- original <style id=rud-all-arabic-names-single-line-final> ---- */
+
+/* Keep every Arabic Name of Allah clear on ONE line. */
+.minimal-names-grid .name-card .arabic,
+.name-library-card .arabic,
+.names-grid .name-card .arabic,
+#dynamicPage .name-reader-arabic{
+  white-space:nowrap!important;
+  word-break:keep-all!important;
+  overflow-wrap:normal!important;
+  hyphens:none!important;
+  max-width:100%!important;
+  text-align:center!important;
+  line-height:1.25!important;
+}
+
+/* View All cards: responsive Arabic size prevents longer Names wrapping. */
+.name-library-card .arabic,
+.minimal-names-grid .name-card .arabic,
+.names-grid .name-card .arabic{
+  font-size:clamp(1.45rem,4.2vw,2.45rem)!important;
+}
+
+/* Detail reader: keep even longer Arabic Names on one line. */
+#dynamicPage .name-reader-arabic{
+  width:100%!important;
+  font-size:clamp(2.15rem,7vw,5rem)!important;
+}
+
+/* Smaller phones need a tighter responsive size for long Arabic names. */
+@media(max-width:700px){
+  .name-library-card .arabic,
+  .minimal-names-grid .name-card .arabic,
+  .names-grid .name-card .arabic{
+    font-size:clamp(1.28rem,7vw,1.9rem)!important;
+    letter-spacing:0!important;
+  }
+
+  #dynamicPage .name-reader-arabic{
+    font-size:clamp(2rem,10.5vw,3.6rem)!important;
+    letter-spacing:0!important;
+  }
+}
+
+@media(max-width:390px){
+  .name-library-card .arabic,
+  .minimal-names-grid .name-card .arabic,
+  .names-grid .name-card .arabic{
+    font-size:clamp(1.12rem,6.3vw,1.62rem)!important;
+  }
+
+  #dynamicPage .name-reader-arabic{
+    font-size:clamp(1.82rem,9.5vw,3rem)!important;
+  }
+}
+
+/* ---- original <style id=rud-view-all-arabic-strict-single-line-final> ---- */
+
+/* VIEW ALL — Arabic Names stay on one line when they fit, and wrap between words (never overflow into
+   the next card) when they do not. The old rule forced nowrap with overflow:visible, and its broad
+   [class*="name"] selector also reached unrelated elements; both are fixed below. */
+
+/* Give the View All cards enough usable horizontal room (the Names route grid included). */
+#dynamicPage .names-route-grid,
+#dynamicPage .names-grid,
+#dynamicPage .name-library-grid,
+#dynamicPage .all-names-grid,
+#dynamicPage .minimal-names-grid{
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr))!important;
+}
+
+/* Catch every Arabic-name element inside a Name route card. */
+#dynamicPage a[href^="#name/"] .arabic,
+#dynamicPage .name-card .arabic,
+#dynamicPage .name-library-card .arabic,
+#dynamicPage .name-library-arabic,
+#dynamicPage .name-card .arabic-name{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  box-sizing:border-box!important;
+
+  white-space:normal!important;
+  word-break:normal!important;
+  overflow-wrap:normal!important;
+  hyphens:none!important;
+  text-wrap:balance;
+
+  overflow:hidden!important;
+  text-overflow:clip!important;
+
+  direction:rtl!important;
+  unicode-bidi:isolate!important;
+  text-align:center!important;
+
+  font-size:clamp(1.18rem,2.35vw,1.95rem)!important;
+  line-height:1.35!important;
+  letter-spacing:0!important;
+}
+
+/* Mobile View All: one card per row gives long Arabic Names full width. */
+@media(max-width:700px){
+  /* The phone card is a row [Arabic | name & meaning | ›] whose Arabic column was a fixed 58px with
+     nowrap + overflow:visible, so most Names spilled over the transliteration. The column now sizes
+     to the Name (up to ~42% of the screen) and a very long Name wraps between words instead. */
+  #dynamicPage .names-route-grid .name-library-link{grid-template-columns:minmax(52px,max-content) minmax(0,1fr) 28px!important;height:auto!important;min-height:92px!important}
+  #dynamicPage .names-route-grid .name-library-card{height:auto!important;min-height:92px!important}
+  #dynamicPage .names-route-grid .name-library-arabic{width:max-content!important;max-width:42vw!important;font-size:clamp(1.15rem,5.6vw,1.62rem)!important;line-height:1.45!important}
+  #dynamicPage .names-route-grid,
+  #dynamicPage .names-grid,
+  #dynamicPage .name-library-grid,
+  #dynamicPage .all-names-grid,
+  #dynamicPage .minimal-names-grid{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+
+  #dynamicPage a[href^="#name/"] .arabic,
+  #dynamicPage .name-card .arabic,
+  #dynamicPage .name-library-card .arabic,
+  #dynamicPage .name-library-arabic,
+  #dynamicPage .name-card .arabic-name{
+    font-size:clamp(1.35rem,6.2vw,1.9rem)!important;
+  }
+}
+
+@media(max-width:390px){
+  #dynamicPage a[href^="#name/"] .arabic,
+  #dynamicPage .name-card .arabic,
+  #dynamicPage .name-library-card .arabic,
+  #dynamicPage .name-library-arabic,
+  #dynamicPage .name-card .arabic-name{
+    font-size:clamp(1.18rem,5.8vw,1.58rem)!important;
+  }
+}
+
+/* ---- original <style id=rud-clean-back-x-alignment-final> ---- */
+
+/* Non-search modal cards reserve their own header lane for X. */
+.app-overlay .modal-card,
+.modal .modal-card{
+  position:relative!important;
+  padding-top:max(28px,clamp(28px,4vw,42px))!important;
+}
+.app-overlay .modal-close,
+.modal .modal-close,
+.rud-auto-close{
+  position:absolute!important;
+  top:14px!important;
+  right:14px!important;
+  margin:0!important;
+}
+@media(max-width:600px){
+  .app-overlay .modal-close,
+  .modal .modal-close,
+  .rud-auto-close{
+    top:12px!important;
+    right:12px!important;
+  }
+}

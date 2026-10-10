@@ -1,0 +1,1121 @@
+/* Explore cue, premium controls, detail pages, reflection and Hadith/Dua toolbars.
+   Migrated verbatim from the original index.html; cascade order is preserved by styles/index.css. */
+
+/* ---- original <style id=rud-explore-below-kaaba-final> ---- */
+
+/* Keep Explore cue visually below the Kaaba, centered and clear. */
+.hero-explore,
+.hero-explore-arrow,
+.explore-cue,
+#heroExplore,
+[data-explore-cue]{
+  position:absolute!important;
+  left:50%!important;
+  right:auto!important;
+  bottom:clamp(16px,2.2vh,28px)!important;
+  transform:translateX(-50%)!important;
+  z-index:8!important;
+  text-align:center!important;
+}
+
+/* If Kaaba artwork uses its own positioned wrapper, ensure cue stays lower. */
+.hero-kaaba,
+.kaaba-wrap,
+.kaaba-visual,
+.hero-kaaba-wrap{
+  z-index:6!important;
+}
+
+@media(max-width:700px){
+  .hero-explore,
+  .hero-explore-arrow,
+  .explore-cue,
+  #heroExplore,
+  [data-explore-cue]{
+    bottom:12px!important;
+  }
+}
+
+/* ---- original <style id=rud-final-premium-controls-complete> ---- */
+
+/* ============================================================
+   GLOBAL CONTROL LAYOUT
+   NAVBAR
+   ↓ GAP
+   BACK
+   ↓ GAP
+   DETAIL CARD
+   ============================================================ */
+
+#rudBackLane{
+  width:100%!important;
+  margin:0!important;
+  padding:0!important;
+}
+
+#rudBackLane[hidden]{
+  display:none!important;
+}
+
+#rudBackLane.rud-visible{
+  display:block!important;
+}
+
+#rudBackLane .rud-back-lane-inner{
+  width:min(900px,calc(100% - 30px))!important;
+  margin:0 auto!important;
+  padding:34px 0 20px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+}
+
+#rudUniversalBack{
+  position:static!important;
+  inset:auto!important;
+  transform:none!important;
+
+  min-width:86px!important;
+  min-height:40px!important;
+  padding:0 14px!important;
+
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:8px!important;
+
+  border:1px solid rgba(216,187,121,.18)!important;
+  border-radius:14px!important;
+  background:
+    radial-gradient(circle at 100% 0%,rgba(216,187,121,.06),transparent 40%),
+    linear-gradient(145deg,rgba(10,27,40,.96),rgba(4,14,22,.98))!important;
+  color:#ead9ae!important;
+
+  box-shadow:
+    0 12px 30px rgba(0,4,10,.20),
+    inset 0 1px 0 rgba(255,255,255,.035)!important;
+
+  backdrop-filter:blur(12px)!important;
+  -webkit-backdrop-filter:blur(12px)!important;
+
+  font:700 10px/1 "Manrope",sans-serif!important;
+  letter-spacing:.02em!important;
+
+  cursor:pointer!important;
+  pointer-events:auto!important;
+  opacity:1!important;
+  visibility:visible!important;
+}
+
+#rudUniversalBack .rud-back-arrow{
+  font-size:15px!important;
+  line-height:1!important;
+}
+
+body.rud-detail-back-visible #dynamicPage{
+  padding-top:0!important;
+}
+
+/* Real gap below Back before the detail card begins. */
+body.rud-detail-back-visible #dynamicPage > :first-child{
+  margin-top:0!important;
+}
+
+/* Remove any old Back controls inside detail content. */
+#dynamicPage [data-history-back],
+#dynamicPage .dua-reader-back,
+#dynamicPage .compact-reader-back,
+#dynamicPage .heart-reader-back,
+#dynamicPage .reader-back,
+#dynamicPage .back-link,
+#dynamicPage .detail-back-link{
+  display:none!important;
+}
+
+/* ============================================================
+   DETAIL X — inside every opened detail card
+   ============================================================ */
+#dynamicPage .name-reader,
+#dynamicPage .dua-reader-v2,
+#dynamicPage .compact-hadith-reader,
+#dynamicPage .compact-reminder-reader,
+#dynamicPage .heart-reader,
+#dynamicPage .reader{
+  position:relative!important;
+}
+
+#dynamicPage .rud-detail-close{
+  position:absolute!important;
+  top:14px!important;
+  right:14px!important;
+  z-index:40!important;
+
+  width:38px!important;
+  height:38px!important;
+  min-width:38px!important;
+
+  display:grid!important;
+  place-items:center!important;
+
+  padding:0!important;
+  margin:0!important;
+
+  border:1px solid rgba(216,187,121,.18)!important;
+  border-radius:50%!important;
+  background:rgba(5,18,28,.84)!important;
+  color:#d7dee2!important;
+
+  font:300 19px/1 "Manrope",sans-serif!important;
+  cursor:pointer!important;
+  pointer-events:auto!important;
+
+  box-shadow:
+    0 8px 22px rgba(0,4,10,.20),
+    inset 0 1px 0 rgba(255,255,255,.025)!important;
+
+  backdrop-filter:blur(10px)!important;
+  -webkit-backdrop-filter:blur(10px)!important;
+}
+
+/* Give detail headings a safe zone under the X. */
+#dynamicPage .compact-reader-head,
+#dynamicPage .dua-reader-head,
+#dynamicPage .heart-reader-head{
+  padding-right:48px!important;
+}
+
+/* No detail X on cards in main page / libraries. */
+#namesGrid .rud-detail-close,
+.minimal-names-grid .rud-detail-close,
+.name-library-card .rud-detail-close,
+.dua-library-card .rud-detail-close,
+.hadith-preview-card .rud-detail-close,
+.reminder-preview-card .rud-detail-close{
+  display:none!important;
+}
+
+/* ============================================================
+   EXPLORE DUAS / EXPLORE HADITH X
+   no Back — one X at top-right
+   ============================================================ */
+#rudLibraryClose{
+  position:fixed!important;
+  top:calc(env(safe-area-inset-top,0px) + 92px)!important;
+  right:max(14px,calc((100vw - 900px)/2))!important;
+  z-index:5200!important;
+
+  width:38px!important;
+  height:38px!important;
+  min-width:38px!important;
+
+  display:grid!important;
+  place-items:center!important;
+
+  padding:0!important;
+  margin:0!important;
+
+  border:1px solid rgba(216,187,121,.18)!important;
+  border-radius:50%!important;
+  background:
+    radial-gradient(circle at 100% 0%,rgba(216,187,121,.05),transparent 42%),
+    linear-gradient(145deg,rgba(9,25,38,.96),rgba(4,14,23,.98))!important;
+
+  color:#d7dee2!important;
+
+  box-shadow:
+    0 10px 28px rgba(0,4,10,.20),
+    inset 0 1px 0 rgba(255,255,255,.03)!important;
+
+  backdrop-filter:blur(12px)!important;
+  -webkit-backdrop-filter:blur(12px)!important;
+
+  font:300 19px/1 "Manrope",sans-serif!important;
+  cursor:pointer!important;
+}
+
+#rudLibraryClose[hidden]{
+  display:none!important;
+}
+
+/* Give library header enough breathing space under navbar/X. */
+body.rud-library-x-visible #dynamicPage{
+  padding-top:92px!important;
+}
+
+@media(max-width:900px){
+  #rudBackLane .rud-back-lane-inner{
+    width:calc(100% - 22px)!important;
+    padding:28px 0 17px!important;
+  }
+
+  #rudLibraryClose{
+    top:calc(env(safe-area-inset-top,0px) + 82px)!important;
+    right:12px!important;
+  }
+
+  body.rud-library-x-visible #dynamicPage{
+    padding-top:84px!important;
+  }
+}
+
+@media(max-width:600px){
+  #rudBackLane .rud-back-lane-inner{
+    width:calc(100% - 18px)!important;
+    padding:24px 0 15px!important;
+  }
+
+  #rudUniversalBack{
+    min-width:80px!important;
+    min-height:37px!important;
+    padding:0 12px!important;
+    font-size:9px!important;
+  }
+
+  #dynamicPage .rud-detail-close{
+    top:11px!important;
+    right:11px!important;
+    width:35px!important;
+    height:35px!important;
+    min-width:35px!important;
+  }
+
+  #rudLibraryClose{
+    top:calc(env(safe-area-inset-top,0px) + 76px)!important;
+    right:11px!important;
+    width:35px!important;
+    height:35px!important;
+    min-width:35px!important;
+  }
+
+  body.rud-library-x-visible #dynamicPage{
+    padding-top:76px!important;
+  }
+}
+
+/* ---- original <style id=rud-read-reflection-centered-only-final> ---- */
+
+/* ============================================================
+   READ REFLECTION DETAIL ONLY
+   Center all headings/content consistently.
+   No other reader/page is affected.
+   ============================================================ */
+
+#dynamicPage .heart-reader{
+  position:relative!important;
+  text-align:center!important;
+}
+
+#dynamicPage .heart-reader-header{
+  width:min(720px,100%)!important;
+  margin:0 auto 24px!important;
+  padding-left:48px!important;
+  padding-right:48px!important;
+  text-align:center!important;
+}
+
+#dynamicPage .heart-reader-header .eyebrow,
+#dynamicPage .heart-reader-header span,
+#dynamicPage .heart-reader-header small{
+  display:block!important;
+  width:100%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+
+#dynamicPage .heart-reader h1,
+#dynamicPage .heart-reader h2,
+#dynamicPage .heart-reader h3{
+  width:100%!important;
+  max-width:720px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+
+#dynamicPage .heart-reader p,
+#dynamicPage .heart-reader blockquote,
+#dynamicPage .heart-reader .heart-reader-copy,
+#dynamicPage .heart-reader .heart-reader-body,
+#dynamicPage .heart-reader .heart-reader-text,
+#dynamicPage .heart-reader .heart-reader-reference{
+  width:min(720px,100%)!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+
+#dynamicPage .heart-reader section,
+#dynamicPage .heart-reader .compact-info-card,
+#dynamicPage .heart-reader .reminder-reference,
+#dynamicPage .heart-reader .dua-reader-source{
+  width:min(680px,100%)!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+
+#dynamicPage .heart-reader .compact-info-card,
+#dynamicPage .heart-reader .reminder-reference{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+
+#dynamicPage .heart-reader .compact-info-label,
+#dynamicPage .heart-reader .reminder-reference strong,
+#dynamicPage .heart-reader .dua-reader-source>div{
+  width:100%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+
+#dynamicPage .heart-reader .dua-reader-actions,
+#dynamicPage .heart-reader .reader-actions,
+#dynamicPage .heart-reader .heart-reader-actions{
+  width:100%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  display:flex!important;
+  justify-content:center!important;
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  gap:9px!important;
+}
+
+/* X remains inside the card, top-right. */
+#dynamicPage .heart-reader .rud-detail-close{
+  position:absolute!important;
+  top:14px!important;
+  right:14px!important;
+  z-index:40!important;
+  display:grid!important;
+  place-items:center!important;
+}
+
+@media(max-width:700px){
+  #dynamicPage .heart-reader-header{
+    padding-left:42px!important;
+    padding-right:42px!important;
+  }
+
+  #dynamicPage .heart-reader p,
+  #dynamicPage .heart-reader blockquote,
+  #dynamicPage .heart-reader .heart-reader-copy,
+  #dynamicPage .heart-reader .heart-reader-body,
+  #dynamicPage .heart-reader .heart-reader-text,
+  #dynamicPage .heart-reader .heart-reader-reference,
+  #dynamicPage .heart-reader section,
+  #dynamicPage .heart-reader .compact-info-card,
+  #dynamicPage .heart-reader .reminder-reference,
+  #dynamicPage .heart-reader .dua-reader-source{
+    width:100%!important;
+  }
+
+  #dynamicPage .heart-reader .rud-detail-close{
+    top:11px!important;
+    right:11px!important;
+  }
+}
+
+/* ---- original <style id=rud-heart-reflection-detail-final-fix> ---- */
+
+/* Read Reflection detail only */
+#dynamicPage .heart-reader{
+  position:relative!important;
+  width:min(920px,calc(100% - 32px))!important;
+  margin:22px auto 72px!important;
+  text-align:center!important;
+}
+
+/* Make the X unquestionably visible/clickable inside the card */
+#dynamicPage .heart-reader .rud-heart-close{
+  position:absolute!important;
+  top:14px!important;
+  right:14px!important;
+  z-index:999!important;
+
+  width:40px!important;
+  height:40px!important;
+  min-width:40px!important;
+  display:grid!important;
+  place-items:center!important;
+
+  margin:0!important;
+  padding:0!important;
+
+  border:1px solid rgba(216,187,121,.22)!important;
+  border-radius:50%!important;
+  background:rgba(5,18,28,.92)!important;
+  color:#e1e7ea!important;
+
+  font:300 20px/1 "Manrope",sans-serif!important;
+  cursor:pointer!important;
+  pointer-events:auto!important;
+
+  box-shadow:
+    0 10px 26px rgba(0,4,10,.24),
+    inset 0 1px 0 rgba(255,255,255,.03)!important;
+
+  backdrop-filter:blur(10px)!important;
+  -webkit-backdrop-filter:blur(10px)!important;
+}
+
+/* Center all Reflection detail headings/content consistently */
+#dynamicPage .heart-reader .heart-reader-header,
+#dynamicPage .heart-reader .heart-reader-body,
+#dynamicPage .heart-reader .heart-reader-content{
+  width:min(720px,100%)!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+
+#dynamicPage .heart-reader .heart-reader-header{
+  padding-left:50px!important;
+  padding-right:50px!important;
+}
+
+#dynamicPage .heart-reader h1,
+#dynamicPage .heart-reader h2,
+#dynamicPage .heart-reader h3,
+#dynamicPage .heart-reader p,
+#dynamicPage .heart-reader blockquote,
+#dynamicPage .heart-reader .eyebrow,
+#dynamicPage .heart-reader .compact-info-label,
+#dynamicPage .heart-reader .heart-reader-reference,
+#dynamicPage .heart-reader .reminder-reference,
+#dynamicPage .heart-reader .dua-reader-source{
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+
+#dynamicPage .heart-reader section,
+#dynamicPage .heart-reader .compact-info-card,
+#dynamicPage .heart-reader .reminder-reference,
+#dynamicPage .heart-reader .dua-reader-source{
+  width:min(680px,100%)!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+
+#dynamicPage .heart-reader .heart-reader-actions,
+#dynamicPage .heart-reader .reader-actions,
+#dynamicPage .heart-reader .dua-reader-actions{
+  display:flex!important;
+  justify-content:center!important;
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  gap:9px!important;
+}
+
+@media(max-width:700px){
+  #dynamicPage .heart-reader{
+    width:calc(100% - 18px)!important;
+  }
+
+  #dynamicPage .heart-reader .rud-heart-close{
+    top:11px!important;
+    right:11px!important;
+    width:36px!important;
+    height:36px!important;
+    min-width:36px!important;
+    font-size:18px!important;
+  }
+
+  #dynamicPage .heart-reader .heart-reader-header{
+    padding-left:44px!important;
+    padding-right:44px!important;
+  }
+}
+
+/* ---- original <style id=rud-heart-inline-full-final> ---- */
+
+/* For Your Heart — full daily reflection directly on the main page */
+.heart-reflection{
+  text-align:center!important;
+}
+
+.heart-reflection .reflection-label,
+.heart-reflection blockquote,
+.heart-reflection .heart-inline-arabic,
+.heart-reflection .heart-inline-full,
+.heart-reflection .heart-inline-reference{
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+}
+
+.heart-reflection blockquote{
+  max-width:760px!important;
+}
+
+.heart-reflection .heart-inline-arabic{
+  max-width:760px!important;
+  margin-top:14px!important;
+  font-size:clamp(1.15rem,2vw,1.55rem)!important;
+  line-height:1.8!important;
+}
+
+.heart-reflection .heart-inline-full{
+  max-width:760px!important;
+  margin-top:14px!important;
+  font-size:clamp(.82rem,1.15vw,.94rem)!important;
+  line-height:1.75!important;
+}
+
+.heart-reflection .heart-inline-reference{
+  max-width:680px!important;
+  margin-top:16px!important;
+  padding-top:13px!important;
+  border-top:1px solid rgba(216,187,121,.13)!important;
+  font-size:clamp(.7rem,.95vw,.8rem)!important;
+  line-height:1.65!important;
+}
+
+.heart-reflection .heart-inline-reference span{
+  display:block!important;
+  margin-bottom:4px!important;
+  font-size:.62rem!important;
+  letter-spacing:.12em!important;
+  text-transform:uppercase!important;
+  color:var(--gold)!important;
+}
+
+.heart-reflection .heart-inline-reference strong{
+  display:block!important;
+  font-weight:500!important;
+}
+
+@media(max-width:700px){
+  .heart-reflection .heart-inline-full{
+    max-width:100%!important;
+    font-size:.8rem!important;
+    line-height:1.68!important;
+  }
+
+  .heart-reflection .heart-inline-arabic{
+    max-width:100%!important;
+    font-size:1.15rem!important;
+  }
+
+  .heart-reflection .heart-inline-reference{
+    max-width:100%!important;
+    font-size:.7rem!important;
+  }
+}
+
+/* ---- original <style id=rud-heart-inline-actual-final> ---- */
+
+/* MAIN PAGE ONLY — full Daily Reflection, no detail button */
+.heart-reflection{
+  text-align:center!important;
+  padding-left:clamp(18px,3vw,34px)!important;
+  padding-right:clamp(18px,3vw,34px)!important;
+}
+
+.heart-reflection .reflection-label{
+  display:block!important;
+  width:100%!important;
+  text-align:center!important;
+}
+
+.heart-reflection blockquote{
+  width:min(760px,100%)!important;
+  margin:12px auto 10px!important;
+  text-align:center!important;
+  font-size:clamp(1.35rem,2.8vw,2rem)!important;
+  line-height:1.22!important;
+}
+
+.heart-reflection .heart-inline-arabic{
+  width:min(760px,100%)!important;
+  margin:10px auto 0!important;
+  text-align:center!important;
+  font-size:clamp(1.05rem,2vw,1.35rem)!important;
+  line-height:1.75!important;
+}
+
+.heart-reflection .heart-inline-full{
+  width:min(760px,100%)!important;
+  margin:10px auto 0!important;
+  text-align:center!important;
+  font-size:clamp(.76rem,1.05vw,.88rem)!important;
+  line-height:1.65!important;
+}
+
+.heart-reflection .heart-inline-reference{
+  width:min(680px,100%)!important;
+  margin:13px auto 0!important;
+  padding-top:11px!important;
+  border-top:1px solid rgba(216,187,121,.12)!important;
+  text-align:center!important;
+}
+
+.heart-reflection .heart-inline-reference span{
+  display:block!important;
+  margin-bottom:3px!important;
+  color:var(--gold)!important;
+  font-size:.58rem!important;
+  letter-spacing:.12em!important;
+  text-transform:uppercase!important;
+}
+
+.heart-reflection .heart-inline-reference strong{
+  display:block!important;
+  text-align:center!important;
+  font-size:clamp(.67rem,.9vw,.76rem)!important;
+  line-height:1.55!important;
+  font-weight:500!important;
+}
+
+/* Explicitly suppress any old button/link that might survive from static markup. */
+.heart-reflection a.heart-read-btn,
+.heart-reflection #dailyHeartOpen,
+.heart-reflection a[href^="#heart/"],
+.heart-reflection a[href^="#reminder/"]{
+  display:none!important;
+}
+
+@media(max-width:700px){
+  .heart-reflection blockquote{
+    font-size:1.28rem!important;
+  }
+
+  .heart-reflection .heart-inline-full{
+    font-size:.74rem!important;
+    line-height:1.6!important;
+  }
+
+  .heart-reflection .heart-inline-arabic{
+    font-size:1rem!important;
+  }
+
+  .heart-reflection .heart-inline-reference strong{
+    font-size:.65rem!important;
+  }
+}
+
+/* ---- original <style id=rud-hide-navbar-on-detail-only> ---- */
+
+
+/* Since navbar is hidden, keep the detail Back row cleanly positioned at top. */
+body.rud-individual-detail-open #rudBackLane .rud-back-lane-inner{
+  padding-top:max(24px,calc(env(safe-area-inset-top,0px) + 18px))!important;
+}
+
+/* ---- original <style id=rud-analytics-online-offline-only> ---- */
+
+#adminApp .analytics-visitor-name{display:inline-flex;align-items:center;gap:8px;font-weight:800!important}
+#adminApp .analytics-visitor-name.is-online{color:#76e39a!important}
+#adminApp .analytics-visitor-name.is-offline{color:#ef7777!important}
+#adminApp .analytics-presence-dot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}
+#adminApp .analytics-presence-text{display:block;margin-top:4px;color:#758791;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+#adminApp .analytics-visitor-name.is-online + .analytics-presence-text{color:#76c88e}
+#adminApp .analytics-visitor-name.is-offline + .analytics-presence-text{color:#c66f6f}
+
+/* ---- original <style id=rud-hadith-title-center-download-only> ---- */
+
+#dynamicPage .compact-hadith-reader .compact-reader-head{position:relative!important;}
+#dynamicPage .compact-hadith-reader .compact-reader-heading{width:100%!important;text-align:center!important;}
+#dynamicPage .compact-hadith-reader .compact-reader-chip{display:flex!important;width:max-content!important;margin-left:auto!important;margin-right:auto!important;justify-content:center!important;}
+#dynamicPage .compact-hadith-reader .compact-reader-heading h1{width:100%!important;margin-left:auto!important;margin-right:auto!important;text-align:center!important;}
+
+/* ---- original <style id=rud-download-premium-center-only> ---- */
+
+/* Existing Download / Make Available Offline actions — alignment and spacing only. */
+#dynamicPage .dua-reader-actions,
+#dynamicPage .compact-reader-actions:has([data-download]){
+  width:100%!important;max-width:100%!important;box-sizing:border-box!important;
+  display:grid!important;align-items:stretch!important;justify-items:stretch!important;
+  gap:8px!important;overflow:hidden!important;
+}
+#dynamicPage .dua-reader-actions{grid-template-columns:repeat(6,minmax(0,1fr))!important;}
+#dynamicPage .dua-reader-actions>[data-copy],
+#dynamicPage .dua-reader-actions>[data-save],
+#dynamicPage .dua-reader-actions>[data-share]{grid-column:span 2;}
+#dynamicPage .dua-reader-actions>[data-download],
+#dynamicPage .dua-reader-actions>[data-offline]{grid-column:span 3;}
+#dynamicPage .compact-reader-actions:has([data-download]){grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+#dynamicPage .dua-reader-actions .premium-btn,
+#dynamicPage .compact-reader-actions:has([data-download]) .premium-btn{
+  width:100%!important;min-width:0!important;max-width:none!important;
+  height:52px!important;min-height:52px!important;max-height:52px!important;
+  margin:0!important;padding:0 14px!important;box-sizing:border-box!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;
+  text-align:center!important;white-space:nowrap!important;line-height:1.15!important;
+}
+#dynamicPage [data-offline]{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;
+  box-sizing:border-box!important;min-width:0!important;margin:0!important;text-align:center!important;white-space:nowrap!important;
+}
+#dynamicPage [data-download]{
+  position:relative!important;isolation:isolate!important;overflow:hidden!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;text-align:center!important;
+  width:100%!important;max-width:100%!important;min-width:0!important;min-height:52px!important;margin:0!important;
+  padding:0 14px!important;
+  border:1px solid rgba(239,218,166,.88)!important;
+  border-radius:15px!important;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(255,255,255,.30),transparent 48%),
+    linear-gradient(135deg,#ead7a6 0%,#d9bd7b 46%,#b9944e 100%)!important;
+  color:#17130b!important;font-weight:800!important;letter-spacing:.018em!important;
+  text-shadow:0 1px 0 rgba(255,255,255,.22)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.48),
+    inset 0 -1px 0 rgba(91,66,23,.24),
+    0 8px 22px rgba(0,0,0,.20)!important;
+  transition:transform .3s var(--ease),border-color .3s ease,background .3s ease,color .3s ease,box-shadow .3s ease!important;
+}
+#dynamicPage [data-download]::before{
+  content:"";position:absolute;inset:0;z-index:-1;opacity:0;
+  background:radial-gradient(circle at 50% 0%,rgba(255,244,205,.28),transparent 52%);
+  transition:opacity .3s ease!important;
+}
+#dynamicPage [data-download]:hover{
+  transform:translateY(-1px)!important;
+  border-color:rgba(230,205,147,.72)!important;
+  background:linear-gradient(180deg,rgba(224,201,151,.22),rgba(188,154,91,.11))!important;
+  color:#fffaf0!important;
+  box-shadow:0 10px 28px rgba(0,0,0,.24),0 0 22px rgba(210,179,111,.08),inset 0 1px 0 rgba(255,255,255,.16)!important;
+}
+#dynamicPage [data-download]:hover::before{opacity:1!important;}
+#dynamicPage [data-download]:focus-visible{outline:2px solid #e0c98f!important;outline-offset:3px!important;}
+@media(max-width:620px){
+  #dynamicPage .dua-reader-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+  #dynamicPage .dua-reader-actions>[data-copy],
+  #dynamicPage .dua-reader-actions>[data-save],
+  #dynamicPage .dua-reader-actions>[data-download],
+  #dynamicPage .dua-reader-actions>[data-offline]{grid-column:auto!important;}
+  #dynamicPage .dua-reader-actions>[data-share]{grid-column:1/-1!important;}
+  #dynamicPage .compact-reader-actions:has([data-download]){grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+}
+@media(max-width:340px){
+  #dynamicPage .dua-reader-actions,
+  #dynamicPage .compact-reader-actions:has([data-download]){grid-template-columns:1fr!important;}
+  #dynamicPage .dua-reader-actions>[data-share]{grid-column:auto!important;}
+}
+
+/* ---- original <style id=rud-daily-reflection-premium-main-only> ---- */
+
+/* MAIN PAGE ONLY — premium Daily Reflection visual treatment. Content/structure unchanged. */
+#reminder.minimal-reflection-section{position:relative;overflow:hidden;background:transparent!important;background-color:transparent!important;}
+#reminder .minimal-section-head{position:relative;z-index:2;text-align:center!important;max-width:820px;margin-inline:auto!important;}
+#reminder .minimal-section-head .eyebrow{color:#d8bb79!important;letter-spacing:.22em!important;font-weight:700!important;}
+#reminder .minimal-section-head .section-title{margin:15px auto 30px!important;color:#f7f5ee!important;font-family:"Cormorant Garamond",Georgia,serif!important;font-size:clamp(2.65rem,5.5vw,5rem)!important;font-weight:600!important;line-height:.96!important;letter-spacing:-.035em!important;text-shadow:0 12px 38px rgba(0,0,0,.28);}
+#reminder .heart-reflection{position:relative!important;z-index:2!important;width:min(880px,100%)!important;margin-inline:auto!important;padding:clamp(38px,6vw,66px) clamp(24px,6vw,72px)!important;border:1px solid var(--line);border-radius:30px!important;}
+#reminder .heart-reflection::before{content:none;display:none;}
+#reminder .heart-reflection .geo-pattern{opacity:.055!important;}
+#reminder .heart-reflection .reflection-label{position:relative;z-index:1;color:#d8bb79!important;font-family:"Manrope",sans-serif!important;font-size:.64rem!important;font-weight:800!important;letter-spacing:.24em!important;}
+#reminder .heart-reflection blockquote{position:relative;z-index:1;margin:18px auto 16px!important;color:#fffdf7!important;font-family:"Cormorant Garamond",Georgia,serif!important;font-size:clamp(2rem,4vw,3.25rem)!important;font-weight:600!important;line-height:1.08!important;letter-spacing:-.028em!important;text-shadow:0 14px 42px rgba(0,0,0,.28);}
+#reminder .heart-reflection .heart-inline-arabic{position:relative;z-index:1;margin-top:20px!important;color:#f2e9d4!important;font-family:"Noto Naskh Arabic","Amiri",serif!important;font-size:clamp(1.35rem,2.7vw,1.95rem)!important;line-height:1.9!important;font-weight:500!important;}
+#reminder .heart-reflection .heart-inline-full{position:relative;z-index:1;margin-top:18px!important;max-width:720px!important;color:#c3cbd0!important;font-family:"Manrope",sans-serif!important;font-size:clamp(.92rem,1.35vw,1.04rem)!important;line-height:1.82!important;font-weight:450!important;}
+#reminder .heart-reflection .heart-inline-reference{position:relative;z-index:1;margin-top:24px!important;padding-top:18px!important;border-top:1px solid rgba(216,187,121,.16)!important;color:#aeb7bc!important;}
+#reminder .heart-reflection .heart-inline-reference span{color:#d8bb79!important;font-size:.6rem!important;font-weight:800!important;letter-spacing:.18em!important;}
+#reminder .heart-reflection .heart-inline-reference strong{margin-top:6px!important;color:#e4ded0!important;font-family:"Cormorant Garamond",Georgia,serif!important;font-size:clamp(.86rem,1.2vw,1rem)!important;font-weight:600!important;letter-spacing:.015em!important;}
+@media(max-width:700px){#reminder .minimal-section-head .section-title{font-size:clamp(2.35rem,11vw,3.25rem)!important;}#reminder .heart-reflection{padding:34px 20px!important;border-radius:24px!important;}#reminder .heart-reflection blockquote{font-size:clamp(1.8rem,8vw,2.5rem)!important;}#reminder .heart-reflection .heart-inline-full{font-size:.9rem!important;line-height:1.76!important;}}
+
+/* ---- original <style id=rud-serious-requested-fixes-final> ---- */
+
+/* HADITH DETAILS — clear premium vertical reading layout */
+#dynamicPage .rud-hadith-premium{
+  width:min(980px,calc(100% - 28px))!important;
+  margin:0 auto!important;
+  padding:clamp(24px,4vw,42px)!important;
+  border:1px solid rgba(216,187,121,.14)!important;
+  border-radius:32px!important;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(216,187,121,.06),transparent 26%),
+    linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.014))!important;
+  box-shadow:0 28px 82px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.055)!important;
+  overflow:visible!important;
+}
+
+#dynamicPage .rud-hadith-premium .compact-reader-head{
+  position:relative!important;
+  display:block!important;
+  padding:0 56px!important;
+  margin-bottom:34px!important;
+  text-align:center!important;
+}
+#dynamicPage .rud-hadith-premium .compact-reader-back{
+  position:absolute!important;
+  left:0!important;
+  top:2px!important;
+}
+#dynamicPage .rud-hadith-premium .compact-reader-heading{
+  width:100%!important;
+  text-align:center!important;
+}
+#dynamicPage .rud-hadith-premium .compact-reader-chip{
+  display:inline-flex!important;
+  margin:0 auto 15px!important;
+  color:#d8bb79!important;
+}
+#dynamicPage .rud-hadith-premium .compact-reader-heading h1{
+  width:min(800px,100%)!important;
+  margin:0 auto!important;
+  color:#faf7ef!important;
+  font-family:"Cormorant Garamond",Georgia,serif!important;
+  font-size:clamp(2.4rem,5.2vw,4.5rem)!important;
+  font-weight:600!important;
+  line-height:1.02!important;
+  letter-spacing:-.035em!important;
+  text-align:center!important;
+}
+
+#dynamicPage .rud-hadith-premium .hadith-detail-stack{
+  display:grid!important;
+  gap:16px!important;
+  width:min(850px,100%)!important;
+  margin:0 auto!important;
+}
+#dynamicPage .rud-hadith-premium .hadith-detail-block{
+  width:100%!important;
+  padding:clamp(24px,3.5vw,36px)!important;
+  border:1px solid rgba(255,255,255,.075)!important;
+  border-radius:22px!important;
+  background:rgba(255,255,255,.018)!important;
+  overflow:visible!important;
+}
+#dynamicPage .rud-hadith-premium .hadith-detail-label{
+  display:block!important;
+  margin:0 0 16px!important;
+  color:#d8bb79!important;
+  font-size:.65rem!important;
+  font-weight:800!important;
+  letter-spacing:.19em!important;
+  line-height:1.2!important;
+  text-align:center!important;
+  text-transform:uppercase!important;
+}
+#dynamicPage .rud-hadith-premium .compact-arabic{
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+  color:#fffdf7!important;
+  font-family:"Amiri","Noto Naskh Arabic",serif!important;
+  font-size:clamp(2rem,4.3vw,3.45rem)!important;
+  line-height:1.9!important;
+  text-align:center!important;
+  white-space:normal!important;
+  overflow:visible!important;
+}
+#dynamicPage .rud-hadith-premium .compact-translation,
+#dynamicPage .rud-hadith-premium .compact-transliteration,
+#dynamicPage .rud-hadith-premium .hadith-reflection-block p{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:0!important;
+  color:#e1e1e4!important;
+  font-size:clamp(1rem,1.6vw,1.15rem)!important;
+  line-height:1.9!important;
+  text-align:center!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  -webkit-line-clamp:unset!important;
+  -webkit-box-orient:initial!important;
+}
+#dynamicPage .rud-hadith-premium .compact-transliteration{
+  border:0!important;
+  color:#c8c8cd!important;
+  font-style:italic!important;
+}
+#dynamicPage .rud-hadith-premium .hadith-reference-block{
+  text-align:center!important;
+}
+#dynamicPage .rud-hadith-premium .hadith-reference-block strong{
+  display:block!important;
+  color:#f1ecdf!important;
+  font-size:1rem!important;
+  font-weight:650!important;
+  line-height:1.65!important;
+  overflow-wrap:anywhere!important;
+}
+#dynamicPage .rud-hadith-premium .hadith-reference-block small{
+  display:block!important;
+  margin-top:7px!important;
+  color:#97979c!important;
+  font-size:.82rem!important;
+  line-height:1.55!important;
+  overflow-wrap:anywhere!important;
+}
+#dynamicPage .rud-hadith-premium .hadith-detail-actions{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:10px!important;
+  width:min(850px,100%)!important;
+  margin:18px auto 0!important;
+}
+#dynamicPage .rud-hadith-premium .hadith-detail-actions .premium-btn{
+  width:100%!important;
+  min-width:0!important;
+}
+
+
+@media(max-width:700px){
+  #dynamicPage .rud-hadith-premium{
+    width:min(100% - 16px,980px)!important;
+    padding:22px 14px!important;
+    border-radius:24px!important;
+  }
+  #dynamicPage .rud-hadith-premium .compact-reader-head{
+    padding:50px 4px 0!important;
+  }
+  #dynamicPage .rud-hadith-premium .compact-reader-back{
+    left:4px!important;
+    top:0!important;
+  }
+  #dynamicPage .rud-hadith-premium .hadith-detail-block{
+    padding:24px 18px!important;
+  }
+  #dynamicPage .rud-hadith-premium .hadith-detail-actions{
+    grid-template-columns:1fr!important;
+  }
+}
+
+/* ---- original <style id=rud-detail-and-names-x-final-fix> ---- */
+
+/* Detail page X: visible like before whenever Search itself is not open. */
+body:not(.search-open) #dynamicPage .dua-reader-v2 > .rud-detail-close,
+body:not(.search-open) #dynamicPage .compact-hadith-reader > .rud-detail-close{
+  display:grid!important;
+  visibility:visible!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  z-index:80!important;
+}
+
+/* ---- original <style id=rud-names-viewall-x-same-position-final> ---- */
+
+#dynamicPage .names-route-hero-shell{
+  position:relative!important;
+}
+
+#dynamicPage .names-route-hero-shell #namesRouteClose.names-route-close{
+  position:absolute!important;
+  top:0!important;
+  right:0!important;
+  left:auto!important;
+  bottom:auto!important;
+  z-index:120!important;
+
+  width:38px!important;
+  height:38px!important;
+  min-width:38px!important;
+  min-height:38px!important;
+  padding:0!important;
+  margin:0!important;
+
+  display:grid!important;
+  place-items:center!important;
+
+  border:1px solid rgba(216,187,121,.18)!important;
+  border-radius:50%!important;
+  background:rgba(5,18,28,.84)!important;
+  color:#d7dee2!important;
+
+  font:300 19px/1 "Manrope",sans-serif!important;
+  text-align:center!important;
+
+  box-shadow:
+    0 8px 22px rgba(0,4,10,.20),
+    inset 0 1px 0 rgba(255,255,255,.025)!important;
+
+  backdrop-filter:blur(10px)!important;
+  -webkit-backdrop-filter:blur(10px)!important;
+
+  cursor:pointer!important;
+  pointer-events:auto!important;
+  visibility:visible!important;
+  opacity:1!important;
+  transform:none!important;
+}
+
+#dynamicPage .names-route-hero-shell #namesRouteClose.names-route-close:hover{
+  border-color:rgba(216,187,121,.34)!important;
+  background:rgba(216,187,121,.08)!important;
+  color:#fff!important;
+}
+
+@media(max-width:700px){
+  #dynamicPage .names-route-hero-shell #namesRouteClose.names-route-close{
+    top:0!important;
+    right:0!important;
+    width:38px!important;
+    height:38px!important;
+    min-width:38px!important;
+    min-height:38px!important;
+  }
+}
+
+/* ---- original <style id=rud-all-names-viewall-center-only> ---- */
+
+#allNamesModal .all-names-head,
+#allNamesModal .all-names-head > div{
+  text-align:center;
+}
+#allNamesModal .all-names-head > div{
+  width:100%;
+}
+#allNamesModal .all-names-head .eyebrow,
+#allNamesModal #allNamesTitle{
+  display:block;
+  width:100%;
+  text-align:center;
+}
+#allNamesModal .all-names-card,
+#allNamesModal .all-names-card h3,
+#allNamesModal .all-names-card .name-title,
+#allNamesModal .all-name-card,
+#allNamesModal .all-name-card h3,
+#allNamesModal .name-card,
+#allNamesModal .name-card h3{
+  text-align:center;
+}
+
+/* ---- original <style id=rud-names-viewall-center-final> ---- */
+
+#dynamicPage .names-route-hero-shell{
+  text-align:center!important;
+}
+#dynamicPage .names-route-hero-shell .eyebrow,
+#dynamicPage .names-route-hero-shell h1,
+#dynamicPage .names-route-hero-shell .route-hero-copy,
+#dynamicPage .names-route-hero-shell p{
+  margin-left:auto!important;
+  margin-right:auto!important;
+  text-align:center!important;
+  justify-content:center!important;
+}
+#dynamicPage .names-route-grid .name-card,
+#dynamicPage .names-route-grid .name-card .index,
+#dynamicPage .names-route-grid .name-card .arabic-name,
+#dynamicPage .names-route-grid .name-card .translit,
+#dynamicPage .names-route-grid .name-card .meaning{
+  text-align:center!important;
+}
+#dynamicPage .names-route-grid .name-card .arabic-name,
+#dynamicPage .names-route-grid .name-card .translit,
+#dynamicPage .names-route-grid .name-card .meaning{
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+
+/* ---- original <style id=rud-dua-hadith-simple-toolbar-only> ---- */
+
+#dynamicPage .rud-simple-library-toolbar{
+  justify-content:flex-end!important;
+  gap:10px!important;
+}
+@media(max-width:700px){
+  #dynamicPage .rud-simple-library-toolbar{
+    justify-content:center!important;
+  }
+}

@@ -1,0 +1,60 @@
+/* Nearby Masjid map, Rise map overlay, iOS stability, Deen challenges.
+   Migrated verbatim from the original index.html; cascade order is preserved by styles/index.css. */
+
+/* ---- original <style id=rud-prayer-nearby-masjid-fresh> ---- */
+
+/* Fresh Nearby Masjids: deterministic map handoff; no directory API, no background lookup. */
+.rud-nearby-masjid-fresh{margin-top:14px;padding:14px;border:1px solid rgba(222,198,132,.14);border-radius:16px;background:linear-gradient(145deg,rgba(222,198,132,.055),rgba(255,255,255,.018));}
+.rud-nearby-masjid-fresh-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.rud-nearby-masjid-fresh-title{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#d9c895;}
+.rud-nearby-masjid-fresh-copy{margin:5px 0 0;color:#8f9198;font-size:10px;line-height:1.5;}
+.rud-nearby-masjid-fresh-btn{position:relative;z-index:2;display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;gap:7px;min-height:38px;min-width:126px;padding:0 14px;border:1px solid rgba(222,198,132,.3);border-radius:999px;background:linear-gradient(180deg,rgba(222,198,132,.16),rgba(222,198,132,.07));color:#e4d3a1;text-decoration:none;font-size:10px;font-weight:800;line-height:1;white-space:nowrap;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .2s ease,border-color .2s ease,background .2s ease;}
+.rud-nearby-masjid-fresh-btn:hover{transform:translateY(-1px);border-color:rgba(222,198,132,.5);background:linear-gradient(180deg,rgba(222,198,132,.22),rgba(222,198,132,.1));}
+.rud-nearby-masjid-fresh-btn:active{transform:scale(.98);}
+.rud-nearby-masjid-fresh-btn .map-pin{font-size:13px;line-height:1;}
+.rud-nearby-masjid-fresh-foot{display:flex;align-items:center;gap:7px;margin-top:11px;color:#777a82;font-size:9px;line-height:1.4;}
+.rud-nearby-masjid-fresh-foot::before{content:"";width:5px;height:5px;border-radius:50%;background:#cdb77d;box-shadow:0 0 0 4px rgba(205,183,125,.08);flex:0 0 auto;}
+html.light-mode body #dynamicPage .rud-nearby-masjid-fresh{border-color:rgba(168,121,31,.16);background:linear-gradient(145deg,#fcfaf4,#f7f5ef);}
+html.light-mode body #dynamicPage .rud-nearby-masjid-fresh-title{color:#806021;}
+html.light-mode body #dynamicPage .rud-nearby-masjid-fresh-copy,html.light-mode body #dynamicPage .rud-nearby-masjid-fresh-foot{color:#777168;}
+html.light-mode body #dynamicPage .rud-nearby-masjid-fresh-btn{border-color:rgba(168,121,31,.3);background:#fffdf8;color:#805f20;box-shadow:0 4px 16px rgba(80,60,20,.06);}
+@media(max-width:520px){.rud-nearby-masjid-fresh{padding:13px}.rud-nearby-masjid-fresh-head{display:grid;grid-template-columns:minmax(0,1fr);align-items:stretch;gap:10px}.rud-nearby-masjid-fresh-copy{max-width:none}.rud-nearby-masjid-fresh-btn{width:100%;min-height:42px;padding-inline:13px;font-size:11px}.rud-nearby-masjid-fresh-btn span:last-child{white-space:nowrap}}
+
+/* ---- original <style id=rud-rise-map-free-google-css> ---- */
+
+#rudRiseMapOverlay{position:fixed;inset:0;z-index:12000;display:none;background:rgba(8,10,9,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+#rudRiseMapOverlay.open{display:flex;align-items:center;justify-content:center}
+.rud-free-map-shell{position:relative;width:min(1180px,calc(100vw - 20px));height:min(860px,calc(100vh - 20px));overflow:hidden;border-radius:28px;background:#f4f5f2;box-shadow:0 35px 100px rgba(0,0,0,.45);border:1px solid rgba(197,164,81,.28);display:grid;grid-template-rows:auto 1fr auto}
+.rud-free-map-head{position:absolute;z-index:3;top:14px;left:14px;right:14px;display:flex;align-items:center;gap:9px}.rud-free-map-back,.rud-free-map-pill,.rud-free-map-search{height:46px;border:1px solid rgba(35,38,34,.12);background:rgba(255,255,255,.96);box-shadow:0 8px 26px rgba(0,0,0,.14);backdrop-filter:blur(14px)}
+.rud-free-map-back{width:46px;border-radius:50%;font-size:29px;line-height:1;color:#242822;cursor:pointer}.rud-free-map-search{flex:1;display:flex;align-items:center;gap:8px;border-radius:999px;padding:0 7px 0 14px}.rud-free-map-search span{font-size:18px;color:#73776f}.rud-free-map-search input{min-width:0;flex:1;border:0;outline:0;background:transparent;font:600 12px Manrope,system-ui;color:#252923}.rud-free-map-search button,.rud-free-map-action{border:0;border-radius:999px;background:#20261f;color:#fff;padding:9px 13px;font:800 10px Manrope;cursor:pointer}.rud-free-map-pill{display:flex;align-items:center;padding:0 13px;border-radius:999px;font:900 9px Manrope;letter-spacing:.12em;color:#31362f;white-space:nowrap}.rud-free-map-pill i{width:7px;height:7px;border-radius:50%;background:#c5a653;margin-right:6px}
+.rud-free-map-main{display:flex;align-items:center;justify-content:center;padding:90px 18px 18px;background:radial-gradient(circle at 50% 25%,rgba(201,174,98,.12),transparent 42%),linear-gradient(145deg,#e9ede7,#dce4dc)}
+.rud-free-map-card{width:min(720px,100%);border:1px solid rgba(255,255,255,.8);border-radius:30px;background:rgba(255,255,255,.83);box-shadow:0 22px 70px rgba(39,48,40,.18);padding:30px;text-align:center;backdrop-filter:blur(16px)}
+.rud-free-map-icon{width:68px;height:68px;border-radius:22px;margin:0 auto 16px;display:grid;place-items:center;background:linear-gradient(145deg,#d5bd78,#a98a3e);font-size:30px;box-shadow:0 12px 28px rgba(130,101,35,.22)}
+.rud-free-map-card h2{margin:0;color:#252a25;font-size:25px;letter-spacing:-.02em}.rud-free-map-card p{margin:9px auto 20px;max-width:520px;color:#70756d;font-size:12px;line-height:1.65}.rud-free-map-location{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;background:#eef2eb;color:#5f685e;font-size:10px;font-weight:800;margin-bottom:20px}.rud-free-map-dot{width:7px;height:7px;border-radius:50%;background:#668d67}
+.rud-free-map-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-width:560px;margin:auto}.rud-free-map-action{min-height:48px;background:#20261f}.rud-free-map-action.primary{background:linear-gradient(135deg,#c5a653,#a48336);color:#fff}.rud-free-map-action.secondary{background:#fff;color:#30362f;border:1px solid rgba(40,50,40,.12)}
+.rud-free-map-note{margin-top:18px;color:#8a8f87;font-size:9px;line-height:1.5}.rud-free-map-note b{color:#6d756b}.rud-free-map-bottom{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;background:rgba(255,255,255,.96);border-top:1px solid rgba(30,40,30,.08);font-size:9px;color:#81867e}.rud-free-map-bottom strong{color:#5d655b}.rud-free-map-close-link{border:0;background:transparent;color:#77612a;font-weight:800;cursor:pointer}
+@media(max-width:700px){#rudRiseMapOverlay.open{align-items:stretch}.rud-free-map-shell{width:100%;height:100%;border-radius:0;border:0}.rud-free-map-head{top:10px;left:10px;right:10px}.rud-free-map-pill{display:none}.rud-free-map-search button{padding:9px 11px}.rud-free-map-main{padding:82px 12px 12px}.rud-free-map-card{padding:24px 16px;border-radius:24px}.rud-free-map-card h2{font-size:22px}.rud-free-map-actions{grid-template-columns:1fr}.rud-free-map-bottom{padding:11px 12px}}
+html:not(.light-mode) .rud-free-map-shell{background:#111513;border-color:rgba(214,190,112,.22)}html:not(.light-mode) .rud-free-map-head .rud-free-map-back,html:not(.light-mode) .rud-free-map-head .rud-free-map-search,html:not(.light-mode) .rud-free-map-head .rud-free-map-pill{background:rgba(17,21,19,.94);color:#eee9dc;border-color:rgba(255,255,255,.1)}html:not(.light-mode) .rud-free-map-search input{color:#eee9dc}html:not(.light-mode) .rud-free-map-main{background:radial-gradient(circle at 50% 25%,rgba(199,169,87,.11),transparent 42%),linear-gradient(145deg,#17201a,#0c120f)}html:not(.light-mode) .rud-free-map-card{background:rgba(19,24,21,.94);border-color:rgba(255,255,255,.08)}html:not(.light-mode) .rud-free-map-card h2{color:#f0ede4}html:not(.light-mode) .rud-free-map-card p,.html:not(.light-mode) .rud-free-map-note{color:#a3a89f}html:not(.light-mode) .rud-free-map-location{background:rgba(255,255,255,.06);color:#bfc5bc}html:not(.light-mode) .rud-free-map-action.secondary{background:rgba(255,255,255,.06);color:#eee9dc;border-color:rgba(255,255,255,.1)}html:not(.light-mode) .rud-free-map-bottom{background:rgba(15,19,17,.96);border-color:rgba(255,255,255,.08);color:#9ca39a}
+
+/* Nearby Masjids results list (V2; overlay markup in features/prayer/NearbyMasjids.tsx). */
+body.rud-masjid-open{overflow:hidden}
+.rud-masjid-main{align-items:stretch;overflow-y:auto;min-height:0}
+.rud-masjid-results{width:min(720px,100%);margin:0 auto}
+.rud-masjid-summary{margin:0 4px 10px;color:#6d756b;font-size:11px;font-weight:700}
+.rud-masjid-list{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.rud-masjid-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid rgba(40,50,40,.1);border-radius:16px;background:rgba(255,255,255,.9)}
+.rud-masjid-copy{display:grid;gap:3px;min-width:0}
+.rud-masjid-copy strong{color:#252a25;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rud-masjid-copy small{color:#70756d;font-size:11px}
+.rud-masjid-item .rud-free-map-action{flex:0 0 auto;min-height:40px}
+html:not(.light-mode) .rud-masjid-item{background:rgba(19,24,21,.94);border-color:rgba(255,255,255,.08)}
+html:not(.light-mode) .rud-masjid-copy strong{color:#f0ede4}
+html:not(.light-mode) .rud-masjid-copy small,html:not(.light-mode) .rud-masjid-summary{color:#a3a89f}
+
+/* ---- original <style id=rud-ios-stability-canonical> ---- */
+
+/* Canonical iOS stability layer: one final source of truth for viewport/chat/audio. */
+html,body{width:100%;min-width:0;max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{overscroll-behavior-x:none}
+/* The V1 Deen Friends page, chat and challenge-form rules that lived here were removed with the V1
+   controller; Deen Friends V2 is styled only by 08-deen-friends.css (class prefix df2-). */

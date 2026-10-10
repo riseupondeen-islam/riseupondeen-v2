@@ -1,0 +1,37 @@
+{
+  "name": "rise-upon-deen",
+  "private": true,
+  "version": "2.1.0",
+  "type": "module",
+  "description": "Rise Upon Deen V2 — React + Vite + TypeScript",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --port 4173",
+    "typecheck": "tsc -b",
+    "format": "prettier --write \"src/**/*.{js,ts,tsx}\" \"tests/**/*.{js,ts}\"",
+    "build:e2e": "vite build --mode e2e",
+    "preview:e2e": "vite preview --outDir dist-e2e --port 4174 --strictPort",
+    "test:e2e": "playwright test",
+    "test:scheduler": "node push-scheduler/test/deenFriends.test.js",
+    "deploy:hosting": "npm run build && firebase deploy --only hosting"
+  },
+  "dependencies": {
+    "firebase": "^12.16.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^22.18.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "prettier": "^3.6.2",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.0"
+  }
+}

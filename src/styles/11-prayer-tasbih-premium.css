@@ -1,0 +1,880 @@
+/* Prayer/Tasbih premium overrides, 3D skin, device-only and tool page styles (originally in <body>).
+   Migrated verbatim from the original index.html; cascade order is preserved by styles/index.css. */
+
+/* ---- original <style id=rud-prayer-tasbih-premium-overrides> ---- */
+
+
+.rud-next-prayer{margin-top:16px;padding:16px 18px;border:1px solid rgba(226,201,141,.22);border-radius:18px;background:linear-gradient(135deg,rgba(226,201,141,.07),rgba(255,255,255,.018));display:flex;align-items:center;justify-content:space-between;gap:16px}
+.rud-next-prayer small{display:block;color:#8d8e94;font-size:9px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px}.rud-next-prayer strong{font-size:1.12rem}.rud-next-countdown{color:#d9c895;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rud-compass-shell{display:grid;place-items:center;width:100%}.rud-compass{overflow:hidden;background:radial-gradient(circle at 50% 48%,rgba(255,255,255,.055),rgba(255,255,255,.018) 49%,rgba(0,0,0,.06) 50% 100%),repeating-conic-gradient(from -1deg,rgba(255,255,255,.24) 0 1deg,transparent 1deg 10deg)!important;box-shadow:inset 0 0 0 8px rgba(255,255,255,.012),inset 0 0 55px rgba(0,0,0,.42),0 20px 52px rgba(0,0,0,.30)!important}
+.rud-compass:before{content:"";position:absolute;inset:8%;border-radius:50%;border:1px solid rgba(255,255,255,.085);pointer-events:none}
+.rud-compass::after{top:16px!important;color:#f0ede5!important;letter-spacing:.12em}
+.rud-compass-cardinals{position:absolute;inset:0;pointer-events:none;color:#777980;font-size:9px;font-weight:800;letter-spacing:.08em}.rud-compass-cardinals .e{position:absolute;right:15px;top:50%;transform:translateY(-50%)}.rud-compass-cardinals .s{position:absolute;bottom:15px;left:50%;transform:translateX(-50%)}.rud-compass-cardinals .w{position:absolute;left:15px;top:50%;transform:translateY(-50%)}
+.rud-kaaba-marker{position:absolute;left:50%;top:1.5%;transform:translateX(-50%);width:30px;height:25px;border-radius:3px;background:linear-gradient(145deg,#171717,#050505);border:1px solid rgba(222,198,132,.42);box-shadow:0 0 16px rgba(222,198,132,.13);z-index:2}.rud-kaaba-marker:before{content:"";position:absolute;left:0;right:0;top:7px;height:3px;background:linear-gradient(90deg,#8f7641,#d9c17c,#8f7641)}
+.rud-qibla-arrow{transition:transform .16s cubic-bezier(.2,.75,.3,1)!important;will-change:transform}.rud-qibla-arrow::before{border-left-width:11px!important;border-right-width:11px!important;border-bottom-width:34px!important}.rud-compass-center{width:14px!important;height:14px!important;background:#f3efe6!important;border:4px solid #595b60!important;box-shadow:0 0 0 5px rgba(255,255,255,.035)}
+.rud-aligned .rud-compass{border-color:rgba(222,198,132,.55)!important;box-shadow:inset 0 0 55px rgba(0,0,0,.40),0 0 0 4px rgba(222,198,132,.10),0 0 34px rgba(222,198,132,.16)!important}.rud-aligned .rud-kaaba-marker{box-shadow:0 0 22px rgba(222,198,132,.32)}
+.rud-compass-status{margin-top:10px;min-height:38px;text-align:center;color:#9c9da3;font-size:11px;line-height:1.5;max-width:360px}.rud-compass-status strong{color:#e5d39d;font-weight:700}.rud-calibration{display:none;margin-top:8px;color:#777980;font-size:10px;line-height:1.45;text-align:center;max-width:340px}.rud-calibration.show{display:block}.rud-sensor-badge{margin-top:10px;padding:6px 10px;border:1px solid rgba(255,255,255,.08);border-radius:999px;color:#7f8086;font-size:9px;letter-spacing:.09em;text-transform:uppercase}
+@media(max-width:780px){.rud-prayer-page,.rud-tasbih-page{padding-top:88px!important}.rud-prayer-page .rud-compass{width:min(300px,78vw)!important}.rud-prayer-page .rud-next-prayer{padding:14px 15px}}
+
+/* ---- original <style id=rud-prayer-tasbih-3d-lightweight> ---- */
+
+/* Premium 3D redesign scoped ONLY to Prayer/Qibla + Tasbih. Lightweight CSS/SVG-free effects. */
+.rud-prayer-page,.rud-tasbih-page{--rud-ice:rgba(214,228,242,.92);--rud-moon:rgba(226,201,141,.92);--rud-blue:rgba(119,158,194,.18);--rud-deep:#07090c}
+.rud-prayer-page .rud-feature-head,.rud-tasbih-page .rud-feature-head{position:relative;margin-bottom:14px!important;padding:0 2px}
+.rud-prayer-page .rud-feature-head h1,.rud-tasbih-page .rud-feature-head h1{font-family:"Cormorant Garamond",serif;font-weight:600!important;letter-spacing:-.035em!important;text-shadow:0 8px 28px rgba(0,0,0,.35)}
+.rud-prayer-page .rud-feature-head p,.rud-tasbih-page .rud-feature-head p{color:#8f989f!important}
+.rud-prayer-page .rud-feature-card,.rud-tasbih-page .rud-dhikr-card,.rud-tasbih-page .rud-tasbih-counter{position:relative;isolation:isolate;overflow:hidden;border-color:rgba(214,228,242,.105)!important;background:linear-gradient(145deg,rgba(255,255,255,.058),rgba(255,255,255,.018) 42%,rgba(94,130,162,.026)),#090b0e!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),inset 0 -1px 0 rgba(0,0,0,.32),0 18px 48px rgba(0,0,0,.26)!important}
+.rud-prayer-page .rud-feature-card::before,.rud-tasbih-page .rud-tasbih-counter::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(360px 190px at 20% -8%,rgba(196,219,239,.075),transparent 66%),radial-gradient(280px 180px at 100% 100%,rgba(226,201,141,.035),transparent 70%)}
+.rud-card-kicker{color:#aeb8c0!important}
+
+/* 3D compass: compact multi-layer physical dial, GPU-friendly rotation only on .rud-qibla-arrow */
+.rud-prayer-page .rud-qibla-wrap{perspective:800px}
+.rud-prayer-page .rud-compass-shell{position:relative;padding:8px;filter:drop-shadow(0 20px 24px rgba(0,0,0,.26))}
+.rud-prayer-page .rud-compass-shell::before{content:"";position:absolute;inset:5px;border-radius:50%;background:linear-gradient(145deg,rgba(226,236,246,.13),rgba(255,255,255,.015) 38%,rgba(0,0,0,.28) 74%),#11151a;box-shadow:inset 2px 2px 3px rgba(255,255,255,.09),inset -4px -5px 9px rgba(0,0,0,.4),0 1px 0 rgba(255,255,255,.08);pointer-events:none}
+.rud-prayer-page .rud-compass{width:clamp(220px,23vw,248px)!important;overflow:visible!important;border:1px solid rgba(207,222,236,.18)!important;background:radial-gradient(circle at 50% 42%,rgba(214,228,242,.075) 0 5%,transparent 26%),radial-gradient(circle at 50% 50%,#11151a 0 56%,#0a0d11 57% 68%,#151a20 69% 72%,#090b0e 73% 100%),repeating-conic-gradient(from -1deg,rgba(221,231,240,.36) 0 .55deg,transparent .55deg 5deg)!important;box-shadow:inset 0 0 0 3px rgba(255,255,255,.018),inset 0 0 0 9px rgba(0,0,0,.22),inset 0 16px 24px rgba(255,255,255,.018),inset 0 -22px 34px rgba(0,0,0,.48),0 4px 10px rgba(0,0,0,.35)!important;transform:rotateX(1.6deg);transform-style:preserve-3d}
+.rud-prayer-page .rud-compass::before{inset:10%!important;border:1px solid rgba(209,225,239,.105)!important;box-shadow:inset 0 0 0 1px rgba(0,0,0,.28),0 0 18px rgba(130,169,203,.025)}
+.rud-prayer-page .rud-compass::after{top:12px!important;color:#eef4f8!important;font-size:9px!important;text-shadow:0 2px 7px rgba(0,0,0,.7)}
+.rud-prayer-page .rud-compass-cardinals{color:#747f89!important;font-size:7px!important;text-shadow:0 2px 6px rgba(0,0,0,.7)}
+.rud-prayer-page .rud-qibla-arrow{inset:13%!important;transition:transform .13s cubic-bezier(.18,.72,.22,1)!important;will-change:transform;transform:translateZ(0);backface-visibility:hidden}
+.rud-prayer-page .rud-qibla-arrow::before{top:2%!important;border-left-width:9px!important;border-right-width:9px!important;border-bottom-width:30px!important;border-bottom-color:#e0c98e!important;filter:drop-shadow(0 3px 5px rgba(0,0,0,.35)) drop-shadow(0 0 7px rgba(224,201,142,.18))}
+.rud-prayer-page .rud-qibla-arrow::after{top:17%!important;bottom:49%!important;width:2px!important;background:linear-gradient(#e3cb8d,rgba(202,222,239,.38),rgba(202,222,239,.08))!important;box-shadow:1px 0 0 rgba(255,255,255,.08)}
+.rud-prayer-page .rud-kaaba-marker{top:-1%!important;width:26px!important;height:23px!important;border-radius:3px!important;background:linear-gradient(145deg,#1a1c1f,#030405 66%)!important;border:1px solid rgba(231,207,146,.5)!important;box-shadow:inset 1px 1px 0 rgba(255,255,255,.055),0 4px 10px rgba(0,0,0,.55),0 0 10px rgba(224,201,142,.08)!important}
+.rud-prayer-page .rud-kaaba-marker::before{top:6px!important;height:3px!important;background:linear-gradient(90deg,#816b3e,#e0c77d 48%,#8b7440)!important}
+.rud-prayer-page .rud-compass-center{width:16px!important;height:16px!important;border:3px solid #545d65!important;background:radial-gradient(circle at 34% 28%,#f8fbfd,#b5c1cb 55%,#76838e)!important;box-shadow:inset 0 1px 1px rgba(255,255,255,.8),0 2px 7px rgba(0,0,0,.7),0 0 0 5px rgba(166,192,214,.035)!important}
+.rud-prayer-page .rud-aligned .rud-compass{border-color:rgba(226,201,141,.46)!important;box-shadow:inset 0 0 0 3px rgba(255,255,255,.018),inset 0 0 0 9px rgba(0,0,0,.22),inset 0 -22px 34px rgba(0,0,0,.46),0 0 0 3px rgba(226,201,141,.065),0 0 22px rgba(226,201,141,.11)!important}
+.rud-prayer-page .rud-aligned .rud-kaaba-marker{box-shadow:inset 1px 1px 0 rgba(255,255,255,.055),0 4px 10px rgba(0,0,0,.5),0 0 16px rgba(226,201,141,.24)!important}
+.rud-prayer-page .rud-aligned #rudQiblaText{color:#dac98f!important}
+.rud-prayer-page .rud-qibla-readout{margin-top:9px!important}
+.rud-prayer-page .rud-qibla-readout strong{font-size:1.35rem!important;color:#e7edf2;font-variant-numeric:tabular-nums;text-shadow:0 5px 14px rgba(0,0,0,.4)}
+.rud-prayer-page .rud-qibla-readout span{color:#8f9aa3!important}
+.rud-prayer-page .rud-sensor-badge{background:rgba(120,155,185,.035)!important;border-color:rgba(180,207,229,.08)!important;color:#7f909d!important}
+.rud-prayer-page #rudEnableCompass{background:linear-gradient(180deg,rgba(215,228,239,.095),rgba(255,255,255,.025))!important;border-color:rgba(202,220,235,.14)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 7px 18px rgba(0,0,0,.2)}
+.rud-prayer-page #rudEnableCompass:hover{transform:translateY(-1px);border-color:rgba(226,201,141,.28)!important}
+
+/* Right prayer panel: compact, layered, app-like */
+.rud-prayer-page .rud-next-prayer{position:relative;overflow:hidden;border-color:rgba(226,201,141,.18)!important;background:linear-gradient(145deg,rgba(226,201,141,.07),rgba(121,160,194,.026) 66%,rgba(255,255,255,.018))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 8px 20px rgba(0,0,0,.16)}
+.rud-prayer-page .rud-next-prayer::before{content:"";position:absolute;left:0;top:22%;bottom:22%;width:2px;border-radius:2px;background:linear-gradient(#e0c98e,rgba(224,201,142,.18))}
+.rud-prayer-page .rud-next-prayer strong{color:#edf2f5!important}
+.rud-prayer-page .rud-next-countdown{color:#dac78e!important;text-shadow:0 3px 10px rgba(0,0,0,.35)}
+.rud-prayer-page .rud-prayer-list{border-color:rgba(205,221,234,.075)!important;background:linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,.009))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}
+.rud-prayer-page .rud-prayer-row{transition:background .24s ease,box-shadow .24s ease,transform .24s ease}
+.rud-prayer-page .rud-prayer-row.next{background:linear-gradient(90deg,rgba(226,201,141,.085),rgba(112,151,185,.026))!important;box-shadow:inset 2px 0 0 rgba(226,201,141,.62),inset 0 1px 0 rgba(255,255,255,.02)!important}
+.rud-prayer-page .rud-prayer-row strong{font-variant-numeric:tabular-nums;color:#e9eef1}
+
+/* Zikr list: premium elevated tiles, compact and fast */
+.rud-tasbih-page .rud-dhikr-card{min-height:105px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 10px 26px rgba(0,0,0,.18)!important;transform:translateZ(0);transition:transform .22s var(--ease),border-color .22s ease,box-shadow .22s ease!important}
+.rud-tasbih-page .rud-dhikr-card::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(160px 90px at 12% 0,rgba(193,218,239,.065),transparent 68%)}
+.rud-tasbih-page .rud-dhikr-card:hover{transform:translateY(-2px)!important;border-color:rgba(190,213,232,.18)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 14px 30px rgba(0,0,0,.24)!important}
+.rud-tasbih-page .rud-dhikr-card:active{transform:translateY(0) scale(.985)!important}
+.rud-tasbih-page .rud-dhikr-card .ar{color:#eef3f5;text-shadow:0 4px 12px rgba(0,0,0,.34)}
+.rud-tasbih-page .rud-dhikr-card strong{color:#d6dde2}
+.rud-tasbih-page .rud-dhikr-card span{color:#818d96!important}
+.rud-tasbih-page .rud-dhikr-card small{display:block;margin-top:5px;color:#65727c;font-size:8px;line-height:1.35}
+
+/* Digital Tasbih device: one compact physical card, no heavy DOM */
+.rud-tasbih-page .rud-tasbih-counter{width:min(480px,100%)!important;max-width:480px!important;padding:19px 20px 20px!important;border-radius:28px!important;background:linear-gradient(150deg,rgba(255,255,255,.066),rgba(255,255,255,.018) 36%,rgba(99,135,165,.028)),#090c10!important;box-shadow:inset 1px 1px 0 rgba(255,255,255,.075),inset -1px -1px 0 rgba(0,0,0,.35),0 20px 54px rgba(0,0,0,.3)!important}
+.rud-tasbih-page .rud-tasbih-counter::after{content:"";position:absolute;left:12%;right:12%;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(218,232,242,.22),transparent);pointer-events:none}
+.rud-tasbih-page .rud-tasbih-ar{color:#f0f4f6;text-shadow:0 6px 18px rgba(0,0,0,.4)}
+.rud-tasbih-page .rud-tasbih-trans{color:#d4dde3!important}
+.rud-tasbih-page .rud-tasbih-meaning{max-width:390px;color:#88949d!important}
+.rud-tasbih-page .rud-tasbih-reference{margin-top:5px;max-width:390px;color:#67747e;font-size:9px;line-height:1.4}
+.rud-tasbih-page .rud-count-stage{position:relative;width:190px;height:112px;margin:18px 0 13px;display:grid;place-items:center;border:1px solid rgba(185,210,230,.11);border-radius:28px;background:radial-gradient(circle at 50% 34%,rgba(150,190,220,.07),transparent 44%),linear-gradient(180deg,#090d11,#06080b);box-shadow:inset 0 8px 18px rgba(255,255,255,.018),inset 0 -14px 24px rgba(0,0,0,.5),0 10px 28px rgba(0,0,0,.24)}
+.rud-tasbih-page .rud-count-stage::before{content:"COUNT";position:absolute;top:10px;left:0;right:0;color:#53616b;font-size:7px;font-weight:800;letter-spacing:.22em}
+.rud-tasbih-page .rud-count{margin:8px 0 0!important;font-size:clamp(3.3rem,8vw,4.6rem)!important;color:#edf4f7;text-shadow:0 0 18px rgba(154,194,224,.07);font-variant-numeric:tabular-nums;transform:translateZ(0)}
+.rud-count-pulse{animation:rudCountPulse .16s ease-out}
+@keyframes rudCountPulse{0%{transform:scale(.96)}55%{transform:scale(1.035)}100%{transform:scale(1)}}
+.rud-tasbih-page .rud-tap-btn{position:relative;width:146px!important;max-width:46vw!important;border:1px solid rgba(194,216,233,.19)!important;background:radial-gradient(circle at 35% 25%,rgba(232,241,247,.15),transparent 24%),radial-gradient(circle at 50% 60%,rgba(115,153,186,.075),transparent 58%),linear-gradient(145deg,#151b21,#090c10 70%)!important;box-shadow:inset 2px 2px 2px rgba(255,255,255,.07),inset -7px -9px 15px rgba(0,0,0,.38),0 16px 32px rgba(0,0,0,.3),0 0 0 7px rgba(122,160,191,.022)!important;transition:transform .08s ease,box-shadow .16s ease,border-color .16s ease!important;transform:translateZ(0);touch-action:manipulation}
+.rud-tasbih-page .rud-tap-btn::before{content:"";position:absolute;inset:10px;border-radius:50%;border:1px dashed rgba(213,228,239,.085);pointer-events:none}
+.rud-tasbih-page .rud-tap-btn::after{content:"";position:absolute;inset:-11px;border-radius:50%;pointer-events:none;background:repeating-conic-gradient(from 0deg,rgba(186,207,224,.17) 0 2deg,transparent 2deg 15deg);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));opacity:.45}
+.rud-tasbih-page .rud-tap-btn:active{transform:scale(.965) translateY(2px)!important;box-shadow:inset 4px 5px 10px rgba(0,0,0,.38),inset -1px -1px 2px rgba(255,255,255,.04),0 8px 18px rgba(0,0,0,.24)!important}
+.rud-tasbih-page .rud-tasbih-controls .rud-mini-btn{background:rgba(255,255,255,.025)!important;border-color:rgba(205,223,236,.09)!important}
+
+@media (hover:hover) and (pointer:fine){.rud-prayer-page .rud-feature-card:hover{border-color:rgba(190,211,229,.15)!important}.rud-tasbih-page .rud-tap-btn:hover{border-color:rgba(226,201,141,.25)!important;box-shadow:inset 2px 2px 2px rgba(255,255,255,.075),inset -7px -9px 15px rgba(0,0,0,.38),0 19px 36px rgba(0,0,0,.32),0 0 0 7px rgba(226,201,141,.022)!important}}
+
+@media(max-width:899px){.rud-prayer-page .rud-compass{width:218px!important}.rud-tasbih-page .rud-tasbih-counter{width:min(470px,100%)!important}}
+@media(max-width:600px){.rud-prayer-page .rud-compass{width:clamp(182px,51vw,204px)!important}.rud-prayer-page .rud-compass-shell{padding:7px}.rud-prayer-page .rud-feature-card{box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 12px 32px rgba(0,0,0,.22)!important}.rud-tasbih-page .rud-tasbih-counter{padding:16px 14px 17px!important;border-radius:22px!important}.rud-tasbih-page .rud-count-stage{width:172px;height:100px;margin:14px 0 11px;border-radius:24px}.rud-tasbih-page .rud-count{font-size:clamp(3rem,16vw,4rem)!important}.rud-tasbih-page .rud-tap-btn{width:132px!important}.rud-tasbih-page .rud-dhikr-card{min-height:86px!important}}
+@media(max-width:360px){.rud-prayer-page .rud-compass{width:178px!important}.rud-tasbih-page .rud-count-stage{width:158px;height:94px}.rud-tasbih-page .rud-tap-btn{width:122px!important}}
+@media(min-width:1400px){.rud-prayer-page,.rud-tasbih-page{width:min(1000px,calc(100% - 40px))!important}.rud-prayer-page .rud-compass{width:244px!important}}
+
+/* Reduced motion: retain functionality, remove decorative motion. */
+@media(prefers-reduced-motion:reduce){.rud-prayer-page .rud-qibla-arrow{transition:none!important}.rud-count-pulse{animation:none!important}.rud-tasbih-page .rud-dhikr-card,.rud-tasbih-page .rud-tap-btn,.rud-prayer-page #rudEnableCompass{transition:none!important}}
+
+/* ---- original <style id=rud-tasbih-premium-device-only> ---- */
+
+/* ============================================================
+   TASBIH VISUAL UPGRADE ONLY — no routing/data/counter changes
+   ============================================================ */
+#dynamicPage:has(> .rud-tasbih-primary){
+  min-height:100svh!important;
+  padding-top:72px!important;
+  display:flex!important;
+  align-items:stretch!important;
+}
+#dynamicPage .rud-tasbih-primary{
+  width:min(520px,calc(100% - 24px))!important;
+  min-height:calc(100svh - 72px)!important;
+  margin:0 auto!important;
+  padding:12px 0 24px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-tasbih-counter{
+  width:min(430px,100%)!important;
+  max-width:430px!important;
+  margin:0 auto!important;
+  padding:12px 14px 16px!important;
+  gap:4px!important;
+  border:0!important;
+  border-radius:0!important;
+  background:none!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-tasbih-counter::before,
+#dynamicPage .rud-tasbih-primary .rud-tasbih-counter::after{display:none!important}
+#dynamicPage .rud-tasbih-primary [data-rud-feature-back]{
+  position:absolute!important;
+  left:0!important;
+  top:0!important;
+  align-self:flex-start!important;
+  min-height:31px!important;
+  padding:0 10px!important;
+  margin:0!important;
+  border-color:rgba(194,216,235,.10)!important;
+  background:rgba(255,255,255,.022)!important;
+  color:#9aa7b1!important;
+  font-size:10px!important;
+}
+#dynamicPage .rud-tasbih-primary>.rud-tasbih-counter>.eyebrow{
+  margin:0 0 1px!important;
+  font-size:8px!important;
+  letter-spacing:.16em!important;
+  color:#71808c!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-tasbih-ar{
+  max-width:390px!important;
+  margin:0!important;
+  color:#f2f6f8!important;
+  font-size:clamp(1.65rem,5.7vw,2.35rem)!important;
+  line-height:1.32!important;
+  text-shadow:0 5px 18px rgba(0,0,0,.35)!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-tasbih-trans{
+  margin:1px 0 0!important;
+  color:#d4dde4!important;
+  font-size:.88rem!important;
+  line-height:1.35!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-tasbih-meaning{
+  max-width:360px!important;
+  margin:2px 0 0!important;
+  color:#84919b!important;
+  font-size:.68rem!important;
+  line-height:1.4!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-tasbih-reference{
+  max-width:360px!important;
+  margin:2px 0 0!important;
+  color:#65727d!important;
+  font-size:.58rem!important;
+  line-height:1.35!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-tasbih-title{
+  max-width:390px!important;
+  margin:1px 0 0!important;
+  color:#e7d7ad!important;
+  font-size:.76rem!important;
+  line-height:1.35!important;
+  font-weight:700!important;
+  letter-spacing:.02em!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-tasbih-count-note{
+  margin:3px 0 0!important;
+  color:#9f8c61!important;
+  font-size:.58rem!important;
+  line-height:1.3!important;
+}
+
+/* Crafted handheld body */
+#dynamicPage .rud-tasbih-primary .rud-digital-tasbih{
+
+  position:relative!important;
+  isolation:isolate!important;
+  width:min(286px,76vw)!important;
+  height:294px!important;
+  min-height:294px!important;
+  margin:8px auto 4px!important;
+  padding:24px 24px 20px!important;
+  border:1px solid rgba(221,190,112,.52)!important;
+  border-radius:86px 86px 68px 68px / 74px 74px 58px 58px!important;
+  background:
+    radial-gradient(170px 90px at 50% -4%,rgba(255,229,157,.13),transparent 70%),
+    linear-gradient(145deg,#171717 0%,#0c0c0d 48%,#050506 100%)!important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.14),
+    inset 10px 10px 24px rgba(255,224,146,.025),
+    inset -16px -18px 30px rgba(0,0,0,.52),
+    0 24px 46px rgba(0,0,0,.42),
+    0 0 0 1px rgba(166,124,43,.08)!important;
+  overflow:hidden!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-digital-tasbih::before{
+
+  content:"";
+  position:absolute;
+  z-index:-1;
+  left:17px;right:17px;top:14px;height:44%;
+  border-radius:66px 66px 46% 46%;
+  border-top:1px solid rgba(255,232,173,.20);
+  background:linear-gradient(180deg,rgba(255,218,128,.055),transparent 72%);
+  pointer-events:none;
+}
+#dynamicPage .rud-tasbih-primary .rud-digital-tasbih::after{
+
+  content:"";
+  position:absolute;
+  left:50%;bottom:-24px;
+  width:72%;height:40px;
+  transform:translateX(-50%);
+  border-radius:50%;
+  background:rgba(0,0,0,.40);
+  filter:blur(14px);
+  z-index:-2;
+  pointer-events:none;
+}
+
+/* Recessed digital window */
+#dynamicPage .rud-tasbih-primary .rud-device-screen{
+
+  position:relative!important;
+  width:76%!important;
+  height:79px!important;
+  margin:0 auto 19px!important;
+  padding:10px 12px 8px!important;
+  border:1px solid rgba(226,201,141,.40)!important;
+  border-radius:17px!important;
+  background:
+    radial-gradient(circle at 50% 15%,rgba(224,190,106,.12),transparent 62%),
+    linear-gradient(180deg,#15130e 0%,#0d0c09 100%)!important;
+  box-shadow:
+    inset 0 3px 10px rgba(0,0,0,.68),
+    inset 0 0 0 1px rgba(255,226,154,.045),
+    0 1px 0 rgba(255,255,255,.05)!important;
+  overflow:hidden!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-device-screen::after{
+
+  content:"";
+  position:absolute;
+  left:9%;right:9%;top:5px;height:18px;
+  border-radius:50%;
+  background:linear-gradient(180deg,rgba(255,229,164,.075),transparent);
+  pointer-events:none;
+}
+#dynamicPage .rud-tasbih-primary .rud-device-screen>span{
+
+  display:block!important;
+  margin-bottom:2px!important;
+  color:#c79f4e!important;
+  font-size:6px!important;
+  font-weight:800!important;
+  letter-spacing:.22em!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-count-stage{
+  width:auto!important;
+  height:auto!important;
+  min-height:0!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:none!important;
+  box-shadow:none!important;
+  display:grid!important;
+  place-items:center!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-count-stage::before{display:none!important}
+#dynamicPage .rud-tasbih-primary .rud-count{
+
+  margin:0!important;
+  color:#f1d98f!important;
+  font-family:"Manrope",system-ui,sans-serif!important;
+  font-size:2.55rem!important;
+  font-weight:700!important;
+  line-height:1!important;
+  letter-spacing:.12em!important;
+  font-variant-numeric:tabular-nums!important;
+  text-shadow:0 0 18px rgba(226,201,141,.18)!important;
+}
+
+/* Primary tactile thumb control */
+#dynamicPage .rud-tasbih-primary .rud-tap-btn{
+
+  position:absolute!important;
+  left:50%!important;
+  bottom:45px!important;
+  width:126px!important;
+  height:126px!important;
+  min-height:126px!important;
+  max-width:none!important;
+  margin:0!important;
+  transform:translateX(-50%) translateY(0)!important;
+  border:1px solid rgba(226,201,141,.55)!important;
+  border-radius:50%!important;
+  background:
+    radial-gradient(circle at 34% 24%,rgba(255,238,190,.12),transparent 27%),
+    linear-gradient(145deg,#25211a 0%,#15130f 52%,#090908 100%)!important;
+  color:#f1ddaa!important;
+  box-shadow:
+    inset 2px 2px 3px rgba(255,255,255,.11),
+    inset -8px -10px 16px rgba(0,0,0,.46),
+    0 12px 20px rgba(0,0,0,.42),
+    0 0 0 6px rgba(176,131,44,.025)!important;
+  font-size:.70rem!important;
+  font-weight:700!important;
+  letter-spacing:.13em!important;
+  text-transform:none!important;
+  transition:transform .065s ease,box-shadow .08s ease,border-color .12s ease,background .12s ease!important;
+  touch-action:manipulation!important;
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  overflow:visible!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-tap-btn::before{
+
+  content:""!important;
+  position:absolute!important;
+  inset:10px!important;
+  border-radius:50%!important;
+  border:1px solid rgba(238,211,148,.10)!important;
+  background:radial-gradient(circle at 50% 20%,rgba(255,235,181,.055),transparent 46%)!important;
+  pointer-events:none!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-tap-btn::after{
+
+  content:""!important;
+  position:absolute!important;
+  inset:-8px!important;
+  border-radius:50%!important;
+  border:1px solid rgba(190,146,58,.10)!important;
+  background:none!important;
+  opacity:1!important;
+  -webkit-mask:none!important;
+  mask:none!important;
+  pointer-events:none!important;
+  transition:border-color .12s ease,opacity .12s ease!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-tap-btn:active{
+  transform:translateX(-50%) translateY(3px) scale(.992)!important;
+  border-color:rgba(206,226,241,.17)!important;
+  box-shadow:
+    inset 3px 5px 10px rgba(0,0,0,.33),
+    inset 0 1px 1px rgba(255,255,255,.04),
+    0 5px 9px rgba(0,0,0,.30)!important;
+}
+@media(hover:hover) and (pointer:fine){
+  #dynamicPage .rud-tasbih-primary .rud-tap-btn:hover{
+    border-color:rgba(216,234,247,.32)!important;
+    background:
+      radial-gradient(circle at 34% 24%,rgba(244,249,252,.18),transparent 27%),
+      linear-gradient(148deg,#1d3044 0%,#112130 48%,#0a1520 100%)!important;
+    box-shadow:
+      inset 2px 2px 3px rgba(255,255,255,.12),
+      inset -8px -10px 16px rgba(0,0,0,.36),
+      0 13px 22px rgba(0,0,0,.40),
+      0 2px 5px rgba(95,143,181,.16)!important;
+  }
+}
+
+/* Small physical reset button on device */
+#dynamicPage .rud-tasbih-primary .rud-device-reset{
+
+  position:absolute!important;
+  right:36px!important;
+  bottom:30px!important;
+  width:34px!important;
+  height:34px!important;
+  min-height:34px!important;
+  padding:0!important;
+  margin:0!important;
+  border:1px solid rgba(226,201,141,.32)!important;
+  border-radius:50%!important;
+  background:linear-gradient(145deg,#211d16,#0c0b09)!important;
+  color:#cba95f!important;
+  box-shadow:inset 1px 1px 1px rgba(255,255,255,.07),inset -3px -4px 6px rgba(0,0,0,.36),0 4px 7px rgba(0,0,0,.30)!important;
+  font-size:6px!important;
+  font-weight:700!important;
+  letter-spacing:.04em!important;
+  text-transform:none!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-device-reset:active{transform:translateY(1px)!important;box-shadow:inset 2px 3px 5px rgba(0,0,0,.30),0 2px 4px rgba(0,0,0,.22)!important}
+
+/* Quiet secondary actions */
+#dynamicPage .rud-tasbih-primary .rud-tasbih-controls{
+  margin-top:3px!important;
+  gap:7px!important;
+}
+#dynamicPage .rud-tasbih-primary .rud-tasbih-controls .rud-mini-btn{
+
+  min-height:38px!important;
+  padding:0 16px!important;
+  border-color:rgba(226,201,141,.38)!important;
+  background:linear-gradient(180deg,rgba(226,201,141,.10),rgba(255,255,255,.018))!important;
+  color:#e1c98d!important;
+  font-size:10px!important;
+  font-weight:700!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045)!important;
+  transition:transform .2s ease,border-color .2s ease,background .2s ease!important;
+}
+@media(hover:hover) and (pointer:fine){
+  #dynamicPage .rud-tasbih-primary .rud-tasbih-controls .rud-mini-btn:hover{
+    transform:translateY(-1px)!important;
+    border-color:rgba(226,201,141,.56)!important;
+    background:linear-gradient(180deg,rgba(226,201,141,.16),rgba(255,255,255,.035))!important;
+  }
+}
+
+/* Zikr chooser remains compact and visually related, but secondary */
+#dynamicPage .rud-tasbih-chooser{width:min(720px,calc(100% - 24px))!important;padding:12px 0 42px!important}
+#dynamicPage .rud-tasbih-chooser .rud-feature-head{margin-bottom:9px!important}
+#dynamicPage .rud-tasbih-chooser .rud-feature-head h1{font-size:clamp(1.45rem,3vw,2rem)!important}
+#dynamicPage .rud-tasbih-chooser .rud-dhikr-grid{gap:8px!important}
+#dynamicPage .rud-tasbih-chooser .rud-dhikr-card{padding:11px 12px!important;min-height:82px!important;border-radius:14px!important}
+#dynamicPage .rud-tasbih-chooser .rud-dhikr-card .ar{font-size:1.2rem!important;margin-bottom:4px!important}
+
+/* Mobile-first comfort */
+@media(max-width:600px){
+  #dynamicPage:has(> .rud-tasbih-primary){padding-top:64px!important}
+  #dynamicPage .rud-tasbih-primary{width:calc(100% - 18px)!important;min-height:calc(100svh - 64px)!important;padding:8px 0 16px!important}
+  #dynamicPage .rud-tasbih-primary .rud-tasbih-counter{padding:8px 8px 12px!important;gap:3px!important}
+  #dynamicPage .rud-tasbih-primary .rud-tasbih-ar{font-size:clamp(1.45rem,7.2vw,2rem)!important;line-height:1.28!important}
+  #dynamicPage .rud-tasbih-primary .rud-tasbih-trans{font-size:.80rem!important}
+  #dynamicPage .rud-tasbih-primary .rud-tasbih-meaning{font-size:.63rem!important}
+  #dynamicPage .rud-tasbih-primary .rud-digital-tasbih{width:min(248px,72vw)!important;height:260px!important;min-height:260px!important;padding:20px 20px 17px!important;border-radius:74px 74px 58px 58px / 64px 64px 52px 52px!important}
+  #dynamicPage .rud-tasbih-primary .rud-device-screen{width:77%!important;height:70px!important;margin-bottom:15px!important;padding:8px 10px 7px!important}
+  #dynamicPage .rud-tasbih-primary .rud-count{font-size:2.2rem!important}
+  #dynamicPage .rud-tasbih-primary .rud-tap-btn{width:112px!important;height:112px!important;min-height:112px!important;bottom:39px!important}
+  #dynamicPage .rud-tasbih-primary .rud-device-reset{right:31px!important;bottom:26px!important;width:31px!important;height:31px!important;min-height:31px!important}
+}
+@media(max-width:360px){
+  #dynamicPage .rud-tasbih-primary .rud-digital-tasbih{width:224px!important;height:242px!important;min-height:242px!important}
+  #dynamicPage .rud-tasbih-primary .rud-device-screen{height:65px!important}
+  #dynamicPage .rud-tasbih-primary .rud-count{font-size:2rem!important}
+  #dynamicPage .rud-tasbih-primary .rud-tap-btn{width:102px!important;height:102px!important;min-height:102px!important;bottom:36px!important}
+  #dynamicPage .rud-tasbih-primary .rud-device-reset{right:27px!important;bottom:24px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  #dynamicPage .rud-tasbih-primary .rud-tap-btn,
+  #dynamicPage .rud-tasbih-primary .rud-device-reset,
+  #dynamicPage .rud-tasbih-chooser .rud-dhikr-card{transition:none!important}
+}
+
+/* ---- original <style id=rud-dua-hadith-names-top-clearance-final> ---- */
+
+/* Final local overlap correction: only these rendered routes move down. */
+/* Qur'an owns its mobile top clearance; never inherit spacing from another route. */
+#dynamicPage:has(> .rud-quran-page.reading){padding-top:0!important;margin-top:0!important}
+@media(max-width:820px){#dynamicPage:has(> .rud-quran-page.reading){padding-top:0!important;margin-top:0!important}}
+
+#dynamicPage:has(> .dua-reader-v2),
+#dynamicPage:has(> .compact-hadith-reader),
+#dynamicPage:has(> .name-reader),
+#dynamicPage:has(.route-library-section #routeGrid.textual-grid),
+#dynamicPage:has(.route-library-section #routeGrid.names-route-grid){
+  padding-top:98px!important;
+}
+@media(max-width:700px){
+  #dynamicPage:has(> .dua-reader-v2),
+  #dynamicPage:has(> .compact-hadith-reader),
+  #dynamicPage:has(> .name-reader),
+  #dynamicPage:has(.route-library-section #routeGrid.textual-grid),
+  #dynamicPage:has(.route-library-section #routeGrid.names-route-grid){
+    padding-top:104px!important;
+  }
+}
+
+/* ---- original <style id=rud-user-provided-tasbih-page-final> ---- */
+
+.rud-tool-page{
+  width:min(980px,calc(100% - 28px));
+  margin:0 auto;
+  padding:20px 0 78px;
+}
+
+.rud-tool-head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:18px;
+}
+
+.rud-tool-head h1{
+  margin:7px 0 0;
+  font-size:clamp(2rem,5vw,4rem);
+  line-height:.95;
+  letter-spacing:-.05em;
+}
+
+.rud-tool-sub{
+  margin:8px 0 0;
+  color:#92949a;
+  font-size:.9rem;
+  line-height:1.6;
+  max-width:620px;
+}
+
+.rud-compact-btn{
+  min-height:39px;
+  padding:0 14px;
+  border:1px solid rgba(216,187,121,.22);
+  border-radius:11px;
+  background:rgba(216,187,121,.055);
+  color:#e9d7ad;
+  cursor:pointer;
+  font-size:11px;
+  font-weight:700;
+}
+
+.rud-tasbih-shell{
+  width:min(560px,100%);
+  margin:0 auto;
+  min-height:min(650px,calc(100svh - 170px));
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  padding:18px 0 34px;
+}
+
+.rud-selected-zikr{
+  width:min(520px,100%);
+  padding:15px 18px;
+  margin-bottom:14px;
+  border:1px solid rgba(216,187,121,.14);
+  border-radius:17px;
+  background:rgba(216,187,121,.025);
+}
+
+.rud-selected-zikr.empty{
+  color:#85878d;
+  font-size:.78rem;
+}
+
+.rud-zikr-title{
+  font-size:.82rem;
+  color:#d8bb79;
+  font-weight:750;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.rud-zikr-arabic{
+  margin:9px 0 5px;
+  font-family:"Noto Naskh Arabic",serif;
+  font-size:clamp(1.65rem,6vw,2.35rem);
+  line-height:1.5;
+  direction:rtl;
+  color:#f6f2e9;
+}
+
+.rud-zikr-translit{
+  color:#d8d8da;
+  font-size:.85rem;
+}
+
+.rud-zikr-meaning{
+  margin-top:5px;
+  color:#8f9197;
+  font-size:.78rem;
+  line-height:1.5;
+}
+
+.rud-zikr-ref{
+  margin-top:8px;
+  color:#6f7177;
+  font-size:.68rem;
+}
+
+.rud-zikr-count-target{
+  display:inline-flex;
+  margin-top:8px;
+  padding:4px 8px;
+  border:1px solid rgba(216,187,121,.15);
+  border-radius:999px;
+  color:#cdb77f;
+  font-size:.65rem;
+}
+
+.rud-tasbih-device{
+  --rud-tasbih-progress:0deg;
+  position:relative;
+  width:min(306px,78vw);
+  aspect-ratio:1;
+  padding:66px 38px 54px;
+  display:grid;
+  place-items:center;
+  align-content:center;
+  gap:9px;
+  border-radius:50%;
+  border:1px solid rgba(216,187,121,.24);
+  background:radial-gradient(circle at 50% 40%,rgba(216,187,121,.065),transparent 38%),linear-gradient(145deg,#131619,#07090b 72%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),inset 0 -18px 34px rgba(0,0,0,.34),0 24px 54px rgba(0,0,0,.36);
+  color:#ead497;
+  cursor:pointer;
+  touch-action:manipulation;
+  user-select:none;
+  -webkit-user-select:none;
+  isolation:isolate;
+  transition:transform .08s ease,border-color .18s ease,box-shadow .18s ease;
+}
+.rud-tasbih-device::before{
+  content:"";position:absolute;inset:13px;border-radius:50%;pointer-events:none;
+  background:repeating-conic-gradient(from -2deg,rgba(216,187,121,.48) 0 5deg,transparent 5deg 11deg);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 9px),#000 calc(100% - 8px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 9px),#000 calc(100% - 8px));
+  opacity:.52;
+}
+.rud-tasbih-device::after{
+  content:"";position:absolute;inset:10px;border-radius:50%;pointer-events:none;
+  background:conic-gradient(from -90deg,#d8bb79 var(--rud-tasbih-progress),transparent 0);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));
+  mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));
+  opacity:.9;
+}
+.rud-tasbih-device-label{position:relative;z-index:1;color:#8e8370;font-size:8px;font-weight:850;letter-spacing:.19em}
+.rud-tasbih-screen{
+  position:relative;z-index:1;height:auto;display:block;border:0;border-radius:0;background:none;box-shadow:none;color:#ead497;
+  font:800 clamp(3.9rem,17vw,5.8rem)/.92 "Manrope",system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.055em;
+}
+.rud-tasbih-target{position:relative;z-index:1;min-height:18px;color:#9d9586;font-size:10px;font-weight:650;letter-spacing:.015em}
+.rud-tasbih-device.pressed{transform:scale(.982);border-color:rgba(216,187,121,.38);box-shadow:inset 0 3px 12px rgba(0,0,0,.32),0 13px 28px rgba(0,0,0,.30)}
+
+.rud-tasbih-actions{
+  display:flex;
+  justify-content:center;
+  gap:8px;
+  margin-top:18px;
+  flex-wrap:wrap;
+}
+
+.rud-zikr-selector{
+  position:fixed;
+  inset:0;
+  z-index:4300;
+  display:grid;
+  place-items:center;
+  padding:18px;
+  background:rgba(0,0,0,.82);
+  backdrop-filter:blur(12px);
+  opacity:0;
+  visibility:hidden;
+  transition:.2s ease;
+}
+
+.rud-zikr-selector.open{
+  opacity:1;
+  visibility:visible;
+}
+
+.rud-zikr-selector-panel{
+  width:min(680px,100%);
+  max-height:min(78vh,720px);
+  overflow:auto;
+  padding:20px;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:22px;
+  background:#08090a;
+  box-shadow:0 30px 80px rgba(0,0,0,.48);
+}
+
+.rud-zikr-selector-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:14px;
+  margin-bottom:14px;
+}
+
+.rud-zikr-selector-head h2{
+  margin:0;
+  font-size:1.5rem;
+}
+
+.rud-zikr-list{
+  display:grid;
+  gap:8px;
+}
+
+.rud-zikr-option{
+  width:100%;
+  padding:14px;
+  text-align:left;
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:14px;
+  background:rgba(255,255,255,.02);
+  color:#fff;
+  cursor:pointer;
+}
+
+.rud-zikr-option:hover{
+  border-color:rgba(216,187,121,.28);
+  background:rgba(216,187,121,.035);
+}
+
+.rud-zikr-option strong{
+  display:block;
+  color:#e6d09b;
+}
+
+.rud-zikr-option .arabic{
+  font-size:1.35rem;
+  margin:5px 0;
+  direction:rtl;
+  text-align:right;
+}
+
+.rud-zikr-option small{
+  color:#85878d;
+  line-height:1.45;
+}
+
+.rud-tool-page.rud-tasbih-page{
+  position:relative;
+  width:min(980px,calc(100% - 28px))!important;
+  padding:20px 0 78px!important;
+  margin:0 auto!important;
+  min-height:calc(100svh - 126px);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+}
+
+.rud-tasbih-page .rud-tool-head{
+  width:100%;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  padding-inline:54px;
+}
+
+.rud-tasbih-page .rud-tool-head > div{
+  margin-inline:auto;
+}
+
+.rud-tasbih-page .rud-tool-sub{
+  margin-left:auto;
+  margin-right:auto;
+}
+
+.rud-tasbih-page .eyebrow{
+  justify-content:center;
+}
+
+.rud-tasbih-page .rud-tasbih-shell{
+  width:min(570px,100%);
+  margin:auto;
+  min-height:0;
+  justify-content:center;
+  padding:10px 0 26px;
+}
+
+.rud-tasbih-page .rud-selected-zikr{
+  margin-left:auto;
+  margin-right:auto;
+}
+
+#dynamicPage .rud-tasbih-page .rud-detail-close{
+  position:absolute!important;
+  top:14px!important;
+  right:14px!important;
+  z-index:40!important;
+  width:38px!important;
+  height:38px!important;
+  min-width:38px!important;
+  display:grid!important;
+  place-items:center!important;
+  padding:0!important;
+  margin:0!important;
+  border:1px solid rgba(216,187,121,.18)!important;
+  border-radius:50%!important;
+  background:rgba(5,18,28,.84)!important;
+  color:#d7dee2!important;
+  font:300 19px/1 "Manrope",sans-serif!important;
+  cursor:pointer!important;
+  pointer-events:auto!important;
+  box-shadow:
+    0 8px 22px rgba(0,4,10,.20),
+    inset 0 1px 0 rgba(255,255,255,.025)!important;
+  backdrop-filter:blur(10px)!important;
+  -webkit-backdrop-filter:blur(10px)!important;
+}
+
+@media(max-width:760px){
+  .rud-tool-page.rud-tasbih-page{
+    width:min(980px,calc(100% - 28px))!important;
+    padding:12px 0 78px!important;
+    min-height:calc(100svh - 108px);
+    justify-content:flex-start;
+    padding-top:12px;
+  }
+
+  .rud-tasbih-page .rud-tool-head{
+    align-items:center!important;
+    padding-inline:46px;
+    text-align:center;
+  }
+
+  .rud-tasbih-page .rud-tasbih-shell{
+    justify-content:center!important;
+    padding-top:4px;
+  }
+
+  .rud-tasbih-device{
+    width:min(280px,76vw);
+  }
+}
+
+@media(max-width:430px){
+  .rud-tasbih-page .rud-tool-head{
+    padding-inline:42px;
+  }
+
+  .rud-tasbih-device{
+    width:min(270px,82vw);
+  }
+
+  .rud-selected-zikr{
+    padding:12px;
+  }
+
+  .rud-zikr-arabic{
+    font-size:1.65rem;
+  }
+}
+
+@media(max-width:340px){
+  .rud-tasbih-device{
+    width:264px;
+    max-width:94vw;
+  }
+
+  .rud-tool-head h1{
+    font-size:1.9rem;
+  }
+}
+
+/* Tasbih stability on Android (V2).
+   Root cause of the bouncing: the Tasbih page is slightly taller than a phone viewport, and the
+   counter only had touch-action:manipulation, so the tiny finger movement of rapid taps panned the
+   page (and pulled the Android address bar / overscroll glow in and out) — the whole counter jumped.
+   Touches that start on the counter now never scroll, select text or open the long-press menu. */
+#dynamicPage .rud-tasbih-page .rud-tasbih-device{touch-action:none!important;-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
+body:has(#dynamicPage .rud-tasbih-page){overscroll-behavior-y:none}
+
+/* Layout stability (V2): the Prayer status line grows from one line ("Requesting precise location…")
+   to three (permission / error help) a moment after the page opens, which pushed the whole Qibla and
+   prayer-time grid down (measured layout shift 0.045). Reserve the space up front. */
+#dynamicPage .rud-prayer-page>#rudPrayerState{min-height:70px!important}
