@@ -759,7 +759,10 @@ html.light-mode .rud-tour-shade { background: rgba(20, 16, 8, 0.42); }
   border-radius: 16px;
   will-change: transform;
   backface-visibility: hidden;
-  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+  contain: layout style;
+  /* Only the position animates (compositor); the size changes in one step. Animating width/height
+     re-painted the full-screen shade on every frame, which is what made the guide stutter on phones. */
+  transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .rud-tour-shade.has-hole { background: transparent; box-shadow: 0 0 0 200vmax rgba(2, 6, 8, 0.58); }
 html.light-mode .rud-tour-shade.has-hole { box-shadow: 0 0 0 200vmax rgba(20, 16, 8, 0.42); background: transparent; }
@@ -1244,7 +1247,6 @@ html body .df2-root .df2-btn-xs { min-height: 30px; padding: 0 12px; font-size: 
 .df2-icon-btn-xs { width: 30px; height: 30px; min-width: 30px; flex: 0 0 auto; }
 .df2-people-more { justify-self: center; margin-top: 6px; }
 /* Friend requests: one small button; the list opens inside it. */
-.df2-requests-wrap { display: grid; gap: 8px; }
 .df2-requests-toggle { display: inline-flex; align-items: center; gap: 8px; justify-self: start; min-height: 38px; padding: 0 14px; border: 1px solid var(--df2-line); border-radius: 999px; background: var(--df2-surface); color: var(--df2-text); font-size: 0.84rem; font-weight: 700; cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease; }
 .df2-requests-toggle small { color: var(--df2-muted); font-weight: 700; }
 .df2-requests-toggle.is-open { border-color: var(--df2-line-strong); background: var(--df2-raised); }
@@ -1494,19 +1496,19 @@ html body #preloader.rud-intro.hide { opacity: 0; transform: scale(1.03); }
     radial-gradient(90% 60% at 50% 110%, rgba(40, 70, 90, 0.35), transparent 70%),
     linear-gradient(180deg, #05070a 0%, #0a1014 60%, #06080b 100%);
 }
-.rud-intro-star {
+/* A single mihrab arch frames the greeting — simple, still, Islamic. */
+.rud-intro-arch {
   position: absolute;
-  top: 38%;
+  top: 50%;
   left: 50%;
   z-index: -1;
-  width: min(620px, 135vw);
+  width: min(380px, 84vw);
   height: auto;
-  color: rgba(230, 200, 130, 0.13);
-  transform: translate(-50%, -50%);
-  animation: rudIntroSpin 60s linear infinite;
-  will-change: transform;
+  color: rgba(217, 186, 114, 0.32);
+  transform: translate(-50%, -52%);
+  animation: rudIntroFade 1.2s ease-out both;
 }
-@keyframes rudIntroSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes rudIntroFade { from { opacity: 0; } }
 .rud-intro-inner { display: grid; justify-items: center; gap: 10px; padding: 24px; text-align: center; }
 .rud-intro-mark {
   position: relative;
@@ -1524,7 +1526,7 @@ html body #preloader.rud-intro.hide { opacity: 0; transform: scale(1.03); }
 .rud-intro-mark img { width: 100%; height: 100%; object-fit: cover; border-radius: 27px; background: #fefefd; }
 .rud-intro-mark::after { content: ''; position: absolute; inset: -14px; border-radius: 40px; border: 1px solid rgba(217, 186, 114, 0.25); animation: rudIntroHalo 2.4s ease-out infinite; }
 @keyframes rudIntroHalo { from { opacity: 0.9; transform: scale(0.94); } to { opacity: 0; transform: scale(1.18); } }
-.rud-intro-arabic { font-family: 'Noto Naskh Arabic', 'Amiri', serif; font-size: clamp(1.5rem, 5vw, 2rem); line-height: 1.6; color: #e9cf8b; animation: rudIntroRise 0.7s 0.12s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.rud-intro-arabic { font-family: 'Noto Naskh Arabic', 'Amiri', serif; font-size: clamp(1.5rem, 5vw, 2rem); line-height: 1.6; color: #e9cf8b !important; animation: rudIntroRise 0.7s 0.12s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 html body #preloader .rud-intro-title {
   margin: 0;
   font-family: 'Cormorant Garamond', Georgia, serif;
@@ -1546,46 +1548,202 @@ html body #preloader .rud-intro-brand { margin: 0; color: #d9ba72; font-size: 0.
 @keyframes rudIntroLoad { to { transform: translateX(100%); } }
 @keyframes rudIntroRise { from { opacity: 0; transform: translateY(12px); } }
 @media (prefers-reduced-motion: reduce) {
-  .rud-intro-star, .rud-intro-mark, .rud-intro-mark::after, .rud-intro-arabic, html body #preloader .rud-intro-title, .rud-intro-sub, .rud-intro-rule, html body #preloader .rud-intro-brand, .rud-intro-progress::after { animation: none; }
+  .rud-intro-arch, .rud-intro-mark, .rud-intro-mark::after, .rud-intro-arabic, html body #preloader .rud-intro-title, .rud-intro-sub, .rud-intro-rule, html body #preloader .rud-intro-brand, .rud-intro-progress::after { animation: none; }
 }
 
-/* First-visit name card (V3.1) — continues the intro: night sky, gold ink, glass card. */
-html body #rudWelcomeIntro {
+/* First-visit name card (V3.2) — continues the intro in the visitor's own theme (dark: night sky,
+   light: ivory). Scrollable so the on-screen keyboard can never hide the field or the button. */
+html body #rudWelcomeIntro { overflow-y: auto !important; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; align-content: center; }
+html body #rudWelcomeIntro .rud-welcome-card { margin: auto 0; animation: rudIntroRise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+html body #rudWelcomeIntro .rud-welcome-mark { width: 64px; height: 64px; margin: 0 auto 18px; border-radius: 20px; background: url('/icon-192.png') center / cover no-repeat, #fefefd !important; box-shadow: 0 0 0 2px rgba(217, 186, 114, 0.7), 0 14px 34px rgba(201, 154, 62, 0.25); }
+html body #rudWelcomeIntro #rudWelcomeForm { display: grid; justify-items: center; gap: 12px; }
+html body #rudWelcomeIntro #rudVisitorName { height: 54px; border-radius: 16px; text-align: center; font-size: 16px; outline: none; }
+html body #rudWelcomeIntro #rudWelcomeContinue { margin-top: 0; min-height: 52px; border-radius: 16px; border: 0 !important; color: #1a1408 !important; background: linear-gradient(135deg, #f0d892, #c09a4c) !important; box-shadow: 0 12px 28px rgba(192, 154, 76, 0.28) !important; cursor: pointer; }
+html body #rudWelcomeIntro #rudWelcomeContinue:active { transform: scale(0.98); }
+/* dark */
+html:not(.light-mode) body #rudWelcomeIntro {
   background:
     radial-gradient(60% 45% at 50% 30%, rgba(217, 186, 114, 0.18), transparent 70%),
-    linear-gradient(180deg, #05070a 0%, #0a1014 60%, #06080b 100%) !important;
+    linear-gradient(180deg, #05070a 0%, #0a1014 60%, #06080b 100%);
 }
-html body #rudWelcomeIntro .rud-welcome-card {
-  position: relative;
-  border: 1px solid rgba(217, 186, 114, 0.3) !important;
-  background: linear-gradient(160deg, rgba(22, 28, 32, 0.92), rgba(10, 14, 16, 0.94)) !important;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
-  color: #f4ecd8 !important;
-  animation: rudIntroRise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+html:not(.light-mode) body #rudWelcomeIntro .rud-welcome-card { border: 1px solid rgba(217, 186, 114, 0.3); background: linear-gradient(160deg, rgba(22, 28, 32, 0.94), rgba(10, 14, 16, 0.96)); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+html:not(.light-mode) body #rudWelcomeIntro .rud-welcome-kicker { color: #d9ba72; }
+html:not(.light-mode) body #rudWelcomeIntro .rud-welcome-card h1 { background: linear-gradient(180deg, #fff6dc 0%, #e9cf8b 55%, #b8862e 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+html:not(.light-mode) body #rudWelcomeIntro .rud-welcome-copy { color: rgba(244, 236, 216, 0.72); }
+html:not(.light-mode) body #rudWelcomeIntro .rud-welcome-privacy { color: rgba(244, 236, 216, 0.45); }
+html:not(.light-mode) body #rudWelcomeIntro #rudVisitorName { border: 1px solid rgba(217, 186, 114, 0.35); background: rgba(255, 255, 255, 0.04); color: #fff7e6; box-shadow: none; }
+html:not(.light-mode) body #rudWelcomeIntro #rudVisitorName::placeholder { color: rgba(244, 236, 216, 0.4); }
+html:not(.light-mode) body #rudWelcomeIntro #rudVisitorName:focus { border-color: rgba(233, 207, 139, 0.85); box-shadow: 0 0 0 4px rgba(217, 186, 114, 0.14); }
+/* light */
+html.light-mode body #rudWelcomeIntro {
+  background:
+    radial-gradient(60% 45% at 50% 30%, rgba(201, 160, 78, 0.16), transparent 70%),
+    linear-gradient(180deg, #fffdf8 0%, #f7f1e4 100%) !important;
 }
-html body #rudWelcomeIntro .rud-welcome-mark { width: 64px; height: 64px; margin: 0 auto 18px; border-radius: 20px; background: url('/icon-192.png') center / cover no-repeat, #fefefd; box-shadow: 0 0 0 2px rgba(217, 186, 114, 0.7), 0 14px 34px rgba(201, 154, 62, 0.25); }
-html body #rudWelcomeIntro :is(.rud-welcome-kicker) { color: #d9ba72 !important; }
-html body #rudWelcomeIntro .rud-welcome-card h1 {
-  background: linear-gradient(180deg, #fff6dc 0%, #e9cf8b 55%, #b8862e 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent !important;
-}
-html body #rudWelcomeIntro :is(.rud-welcome-copy) { color: rgba(244, 236, 216, 0.72) !important; }
-html body #rudWelcomeIntro :is(.rud-welcome-privacy) { color: rgba(244, 236, 216, 0.45) !important; }
-html body #rudWelcomeIntro #rudVisitorName {
-  border: 1px solid rgba(217, 186, 114, 0.35) !important;
-  background: rgba(255, 255, 255, 0.04) !important;
-  color: #fff7e6 !important;
-  box-shadow: none !important;
-}
-html body #rudWelcomeIntro #rudVisitorName::placeholder { color: rgba(244, 236, 216, 0.4) !important; }
-html body #rudWelcomeIntro #rudVisitorName:focus { border-color: rgba(233, 207, 139, 0.85) !important; box-shadow: 0 0 0 4px rgba(217, 186, 114, 0.14) !important; }
-html body #rudWelcomeIntro #rudWelcomeContinue {
-  border: 0 !important;
-  color: #1a1408 !important;
-  background: linear-gradient(135deg, #f0d892, #c09a4c) !important;
-  box-shadow: 0 12px 28px rgba(192, 154, 76, 0.28) !important;
-}
+html.light-mode body #rudWelcomeIntro .rud-welcome-card { border: 1px solid rgba(160, 120, 40, 0.28) !important; background: #fffdf8 !important; box-shadow: 0 26px 70px rgba(60, 45, 15, 0.14) !important; color: #2a2418 !important; }
+html.light-mode body #rudWelcomeIntro .rud-welcome-kicker { color: #94701f !important; }
+html.light-mode body #rudWelcomeIntro .rud-welcome-card h1 { color: #8a6519 !important; -webkit-text-fill-color: #8a6519 !important; }
+html.light-mode body #rudWelcomeIntro .rud-welcome-copy { color: #4a443a !important; }
+html.light-mode body #rudWelcomeIntro .rud-welcome-privacy { color: #8a8478 !important; }
+html.light-mode body #rudWelcomeIntro #rudVisitorName { border: 1px solid rgba(160, 120, 40, 0.3) !important; background: #ffffff !important; color: #2a2418 !important; box-shadow: none !important; }
+html.light-mode body #rudWelcomeIntro #rudVisitorName::placeholder { color: #a39c8d !important; }
+html.light-mode body #rudWelcomeIntro #rudVisitorName:focus { border-color: #b8913f !important; box-shadow: 0 0 0 4px rgba(184, 145, 63, 0.14) !important; }
+html.light-mode body #rudWelcomeIntro #rudWelcomeContinue { color: #fff !important; background: linear-gradient(135deg, #b8913f, #8a6519) !important; }
 .rud-saw { font-family: 'Noto Naskh Arabic', 'Amiri', serif; }
 html body .df2-root .df2-requests-toggle { font-size: 0.84rem; line-height: 1.2; }
+
+/* Intro in light mode (it follows the visitor's theme). */
+html.light-mode body #preloader.rud-intro { background: #fbf8f1; color: #2a2418; }
+html.light-mode .rud-intro-sky {
+  background:
+    radial-gradient(60% 45% at 50% 40%, rgba(201, 160, 78, 0.18), transparent 70%),
+    linear-gradient(180deg, #fffdf8 0%, #f7f1e4 100%);
+}
+html.light-mode .rud-intro-arch { color: rgba(148, 112, 31, 0.32); }
+html.light-mode .rud-intro-arabic { color: #94701f !important; }
+html.light-mode body #preloader .rud-intro-title { background: linear-gradient(180deg, #a07a27 0%, #7c5b14 100%); -webkit-background-clip: text; background-clip: text; }
+html.light-mode .rud-intro-sub { color: rgba(42, 36, 24, 0.66); }
+html.light-mode body #preloader .rud-intro-brand { color: #94701f; }
+html.light-mode .rud-intro-progress { background: rgba(148, 112, 31, 0.14); }
+html.light-mode .rud-intro-progress::after { background: linear-gradient(90deg, transparent, #b8913f, transparent); }
+html.light-mode .rud-intro-mark { box-shadow: 0 18px 40px rgba(148, 112, 31, 0.22), 0 0 0 8px rgba(148, 112, 31, 0.06); }
+
+/* iOS zooms (and shakes) the whole page when a field with text under 16px gets focus. On touch
+   screens every text field uses at least 16px, so opening the keyboard never zooms the site. */
+@media (pointer: coarse) {
+  html body input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
+  html body textarea,
+  html body select { font-size: max(16px, 1em) !important; }
+}
+
+/* A legacy light-mode rule paints every <article> white; chat bubbles are articles, so in light mode
+   your own messages and RISE's replies looked identical. Bubbles keep their own colours. */
+html.light-mode body .df2-root article.df2-msg-bubble { background: var(--df2-bubble-theirs) !important; color: var(--df2-bubble-theirs-text) !important; box-shadow: 0 1px 2px rgba(60, 45, 15, 0.08) !important; }
+html.light-mode body .df2-root article.df2-msg-bubble.mine { background: var(--df2-bubble-mine) !important; color: var(--df2-bubble-mine-text) !important; }
+html.light-mode body .df2-root article.df2-msg-bubble.automated { background: transparent !important; }
+/* Friends tab tools: two small buttons, one panel at a time. */
+.df2-tools { display: grid; gap: 8px; }
+.df2-tools-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.df2-add-toggle svg { color: var(--df2-gold); }
+.df2-tools-panel { animation: df2PanelIn 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+html body .df2-root .df2-add-card.df2-tools-panel { padding: 12px; }
+@keyframes df2PanelIn { from { opacity: 0; transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .df2-tools-panel { animation: none; } }
+
+/* Home sections (Daily Reminder, Spotlight, 99 Names, Reflection) scrolled inside themselves: their
+   .shell had overflow-x:hidden, which by CSS rules turns overflow-y into "auto". clip hides the
+   sideways overflow without creating an inner scroller. */
+@supports (overflow: clip) {
+  html body .shell { overflow-x: clip !important; overflow-y: visible !important; }
+}
+@supports not (overflow: clip) {
+  html body .shell { overflow: visible !important; }
+}
+
+/* The hero entrance plays once per visit (see homeInteractions.js) — never again on returning Home. */
+html.rud-home-played .hero :is(.hero-reveal, .hero-kicker, .hero-tagline, .hero-support, .hero-actions, .hero-title-line, .hero-title-line-accent, .hero-scroll, .hero-title-simple) {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+  clip-path: none !important;
+  filter: none !important;
+}
+
+/* =========================================================================================
+   Nearby Masjids (V3.2) — launcher card on the Prayer page and the full-screen finder.
+   ========================================================================================= */
+html body .rud-nearby-masjid-fresh.rud-mq-launch {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 14px 14px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(217, 186, 114, 0.3);
+  background: radial-gradient(90% 140% at 0% 0%, rgba(217, 186, 114, 0.14), transparent 60%), rgba(255, 255, 255, 0.03);
+}
+html.light-mode body .rud-nearby-masjid-fresh.rud-mq-launch { background: radial-gradient(90% 140% at 0% 0%, rgba(201, 160, 78, 0.12), transparent 60%), #fffdf8; border-color: rgba(160, 120, 40, 0.24); }
+.rud-mq-launch-icon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 15px; color: #2a1e08; background: linear-gradient(135deg, #f6dc94, #c99a3e); box-shadow: 0 8px 20px rgba(201, 154, 62, 0.25); }
+.rud-mq-launch-copy { min-width: 0; }
+html body .rud-mq-launch .rud-nearby-masjid-fresh-title { margin: 0; font-size: 1rem; font-weight: 800; }
+html body .rud-mq-launch .rud-nearby-masjid-fresh-copy { margin: 2px 0 0; font-size: 0.8rem; opacity: 0.7; }
+html body .rud-mq-launch .rud-nearby-masjid-fresh-btn { min-height: 42px; padding: 0 16px; gap: 6px; border-radius: 999px; border: 0; color: #1a1408; background: linear-gradient(135deg, #e6cd8b, #c09a4c); font-weight: 800; font-size: 0.82rem; box-shadow: 0 8px 18px rgba(192, 154, 76, 0.24); }
+html.light-mode body #dynamicPage .rud-mq-launch .rud-nearby-masjid-fresh-btn { color: #fff; background: linear-gradient(135deg, #b8913f, #8a6519); border: 0; }
+@media (max-width: 420px) {
+  html body .rud-nearby-masjid-fresh.rud-mq-launch { grid-template-columns: auto minmax(0, 1fr); }
+  html body .rud-mq-launch .rud-nearby-masjid-fresh-btn { grid-column: 1 / -1; width: 100%; justify-content: center; }
+}
+
+#rudRiseMapOverlay.rud-mq {
+  --mq-bg: #0c0f12;
+  --mq-surface: #14181c;
+  --mq-surface-2: #1b2025;
+  --mq-line: rgba(217, 186, 114, 0.16);
+  --mq-text: #f3eee2;
+  --mq-muted: #a6acb2;
+  --mq-gold: #d9ba72;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background: rgba(4, 6, 8, 0.7);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  animation: rudFadeIn 0.18s ease-out both;
+}
+html.light-mode #rudRiseMapOverlay.rud-mq {
+  --mq-bg: #fbf8f1;
+  --mq-surface: #ffffff;
+  --mq-surface-2: #f6efe1;
+  --mq-line: rgba(120, 92, 40, 0.16);
+  --mq-text: #24201a;
+  --mq-muted: #6c665b;
+  --mq-gold: #94701f;
+  background: rgba(40, 32, 18, 0.35);
+}
+.rud-mq-shell {
+  display: flex;
+  flex-direction: column;
+  width: min(720px, 100%);
+  height: 100%;
+  background: var(--mq-bg);
+  color: var(--mq-text);
+  font-family: 'Manrope', system-ui, sans-serif;
+  animation: rudSheetUp 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@media (min-width: 760px) { .rud-mq-shell { height: min(86vh, 820px); margin: auto; border-radius: 26px; border: 1px solid var(--mq-line); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4); overflow: hidden; } }
+.rud-mq-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: max(12px, env(safe-area-inset-top)) 14px 10px; }
+.rud-mq-icon-btn { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; border: 1px solid var(--mq-line); background: var(--mq-surface); color: var(--mq-text); cursor: pointer; }
+.rud-mq-title { min-width: 0; }
+.rud-mq-kicker { display: block; color: var(--mq-gold); font-size: 0.6rem; font-weight: 800; letter-spacing: 0.2em; }
+.rud-mq-title h2 { margin: 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.5rem; font-weight: 600; line-height: 1.1; }
+.rud-mq-maps { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--mq-line); background: var(--mq-surface); color: var(--mq-text); font-size: 0.76rem; font-weight: 800; cursor: pointer; }
+.rud-mq-maps svg { color: var(--mq-gold); }
+.rud-mq-search { display: flex; align-items: center; gap: 8px; margin: 0 14px 6px; padding: 0 14px; min-height: 46px; border-radius: 15px; border: 1px solid var(--mq-line); background: var(--mq-surface); color: var(--mq-muted); }
+.rud-mq-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--mq-text); font: 600 16px/1.2 'Manrope', system-ui, sans-serif; }
+.rud-mq-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 6px 14px 16px; }
+.rud-mq-summary { margin: 4px 2px 10px; color: var(--mq-muted); font-size: 0.76rem; font-weight: 700; }
+.rud-mq-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.rud-mq-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px; border-radius: 18px; border: 1px solid var(--mq-line); background: var(--mq-surface); animation: rudIntroRise 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.rud-mq-badge { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 13px; color: var(--mq-gold); background: var(--mq-surface-2); }
+.rud-mq-copy { display: grid; gap: 3px; min-width: 0; }
+html body .rud-mq-copy strong { color: var(--mq-text); font-size: 0.95rem; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body .rud-mq-copy small { color: var(--mq-muted); font-size: 0.76rem; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rud-mq-copy small b { color: var(--mq-gold); }
+.rud-mq-go { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 0; border-radius: 999px; color: #1a1408; background: linear-gradient(135deg, #e6cd8b, #c09a4c); font: 800 0.78rem/1 'Manrope', system-ui, sans-serif; cursor: pointer; }
+html.light-mode .rud-mq-go { color: #fff; background: linear-gradient(135deg, #b8913f, #8a6519); }
+.rud-mq-go:active, .rud-mq-btn:active, .rud-mq-maps:active { transform: scale(0.97); }
+@media (max-width: 380px) { .rud-mq-go span { display: none; } .rud-mq-go { width: 40px; padding: 0; justify-content: center; } }
+.rud-mq-skel { height: 68px; margin-bottom: 8px; border-radius: 18px; background: linear-gradient(90deg, var(--mq-surface), var(--mq-surface-2), var(--mq-surface)); background-size: 200% 100%; animation: rudMqShimmer 1.2s ease-in-out infinite; }
+@keyframes rudMqShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.rud-mq-state { display: grid; justify-items: center; gap: 8px; max-width: 420px; margin: 8vh auto 0; text-align: center; }
+.rud-mq-medallion { display: grid; place-items: center; width: 64px; height: 64px; margin-bottom: 6px; border-radius: 20px; color: #2a1e08; background: linear-gradient(135deg, #f6dc94, #c99a3e); box-shadow: 0 12px 28px rgba(201, 154, 62, 0.25); }
+.rud-mq-state h3 { margin: 0; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.5rem; font-weight: 600; }
+.rud-mq-state p { margin: 0; color: var(--mq-muted); font-size: 0.86rem; line-height: 1.55; }
+.rud-mq-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 10px; }
+.rud-mq-btn { min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--mq-line); background: var(--mq-surface); color: var(--mq-text); font: 800 0.82rem/1 'Manrope', system-ui, sans-serif; cursor: pointer; }
+.rud-mq-btn.is-primary { border: 0; color: #1a1408; background: linear-gradient(135deg, #e6cd8b, #c09a4c); }
+html.light-mode .rud-mq-btn.is-primary { color: #fff; background: linear-gradient(135deg, #b8913f, #8a6519); }
+.rud-mq-foot { display: flex; justify-content: space-between; gap: 10px; padding: 10px 16px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--mq-line); color: var(--mq-muted); font-size: 0.68rem; }
+.rud-mq-loc { display: inline-flex; align-items: center; gap: 6px; }
+.rud-mq-loc i { width: 7px; height: 7px; border-radius: 50%; background: var(--mq-gold); box-shadow: 0 0 0 3px rgba(217, 186, 114, 0.2); }
+@media (prefers-reduced-motion: reduce) { .rud-mq-item, .rud-mq-shell, .rud-mq-skel { animation: none; } }

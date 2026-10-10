@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { getLastCoords } from './prayerQibla';
+import { lockPageScroll } from '../../services/ui/scrollLock';
 
 interface Masjid {
   id: string;
@@ -98,11 +99,39 @@ function directionsUrl(lat: number, lng: number, name: string): string {
     : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 }
 
-function mapSearchUrl(lat?: number, lng?: number): string {
-  return typeof lat === 'number' && typeof lng === 'number'
-    ? `https://www.google.com/maps/search/masjid/@${lat},${lng},14z`
-    : 'https://www.google.com/maps/search/?api=1&query=masjid%20near%20me';
+/** Google Maps searching "masjids near me" (opens the Maps app on phones; it uses the device's own
+ *  location, so it works even when this site has no location permission). */
+function mapSearchUrl(): string {
+  return 'https://www.google.com/maps/search/?api=1&query=masjids%20near%20me';
 }
+
+function distanceLabel(km: number): string {
+  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+}
+
+/** Walking time at ~5 km/h, shown for nearby places. */
+function walkLabel(km: number): string {
+  const min = Math.max(1, Math.round((km / 5) * 60));
+  return min <= 45 ? `${min} min walk` : '';
+}
+
+const DomeIcon = ({ size = 26 }: { size?: number }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 20V12.5c1.6-3.8 4.6-5.9 8-5.9s6.4 2.1 8 5.9V20Z" />
+    <path d="M12 2.6v2.4M2.5 20h19M9.6 20v-4a2.4 2.4 0 0 1 4.8 0v4" />
+  </svg>
+);
+const PinIcon = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z" />
+    <circle cx="12" cy="10" r="2.3" />
+  </svg>
+);
+const RouteIcon = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 11.5 21 3l-8.5 18-2-7.5Z" />
+  </svg>
+);
 
 function openExternal(url: string) {
   // A new tab/window keeps the installed app (and its state) open behind the map.
@@ -162,9 +191,11 @@ function NearbyMasjidsOverlay({ onClose }: { onClose: () => void }) {
     };
     document.addEventListener('keydown', onKey);
     document.body.classList.add('rud-masjid-open');
+    const release = lockPageScroll();
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.classList.remove('rud-masjid-open');
+      release();
     };
   }, [onClose]);
 
@@ -176,141 +207,122 @@ function NearbyMasjidsOverlay({ onClose }: { onClose: () => void }) {
 
   const coords = 'lat' in status ? { lat: status.lat, lng: status.lng } : null;
 
+  const busy = status.kind === 'locating' || status.kind === 'searching';
   return (
-    <div id="rudRiseMapOverlay" className="open" role="dialog" aria-modal="true" aria-label="Nearby masjids">
-      <div className="rud-free-map-shell">
-        <div className="rud-free-map-head">
-          <button type="button" className="rud-free-map-back" onClick={onClose} aria-label="Close nearby masjids">
-            ‹
+    <div id="rudRiseMapOverlay" className="open rud-mq" role="dialog" aria-modal="true" aria-label="Nearby masjids">
+      <div className="rud-mq-shell">
+        <header className="rud-mq-head">
+          <button type="button" className="rud-mq-icon-btn" onClick={onClose} aria-label="Close nearby masjids">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="m15 5-7 7 7 7" />
+            </svg>
           </button>
-          <label className="rud-free-map-search">
-            <span aria-hidden="true">⌕</span>
-            <input
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              placeholder="Filter masjids by name"
-              aria-label="Filter masjids by name"
-            />
+          <div className="rud-mq-title">
+            <span className="rud-mq-kicker">NEARBY</span>
+            <h2>Masjids near you</h2>
+          </div>
+          <button type="button" className="rud-mq-maps" onClick={() => openExternal(mapSearchUrl())} aria-label="Search masjids near me in Google Maps">
+            <PinIcon />
+            <span>Google Maps</span>
+          </button>
+        </header>
+
+        {status.kind === 'results' && status.masjids.length ? (
+          <label className="rud-mq-search">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="6.5" />
+              <path d="m16 16 4 4" />
+            </svg>
+            <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search by name" aria-label="Filter masjids by name" />
           </label>
-          <span className="rud-free-map-pill">
-            <i />
-            NEARBY MASJIDS
-          </span>
-        </div>
-        <div className="rud-free-map-main rud-masjid-main">
-          {status.kind === 'results' && status.masjids.length ? (
+        ) : null}
+
+        <div className="rud-mq-body rud-masjid-main">
+          {busy ? (
+            <div className="rud-mq-loading" aria-live="polite">
+              <p className="rud-mq-summary">{status.kind === 'locating' ? 'Finding your location…' : 'Looking for masjids around you…'}</p>
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="rud-mq-skel" style={{ animationDelay: `${i * 0.12}s` }} />
+              ))}
+            </div>
+          ) : status.kind === 'results' && status.masjids.length ? (
             <div className="rud-masjid-results">
-              <p className="rud-masjid-summary">
-                {status.masjids.length} masjid{status.masjids.length === 1 ? '' : 's'} within {status.radiusKm} km ·
-                nearest first
+              <p className="rud-mq-summary rud-masjid-summary">
+                {status.masjids.length} masjid{status.masjids.length === 1 ? '' : 's'} within {status.radiusKm} km · nearest first
               </p>
-              <ul className="rud-masjid-list">
-                {shown.map((m) => (
-                  <li key={m.id} className="rud-masjid-item">
-                    <span className="rud-masjid-copy">
+              <ul className="rud-mq-list rud-masjid-list">
+                {shown.map((m, i) => (
+                  <li key={m.id} className="rud-mq-item rud-masjid-item" style={{ animationDelay: `${Math.min(i, 8) * 0.03}s` }}>
+                    <span className="rud-mq-badge" aria-hidden="true">
+                      <DomeIcon size={20} />
+                    </span>
+                    <span className="rud-mq-copy rud-masjid-copy">
                       <strong>{m.name}</strong>
                       <small>
-                        {m.distanceKm < 1 ? `${Math.round(m.distanceKm * 1000)} m` : `${m.distanceKm.toFixed(1)} km`}
+                        <b>{distanceLabel(m.distanceKm)}</b>
+                        {walkLabel(m.distanceKm) ? ` · ${walkLabel(m.distanceKm)}` : ''}
                         {m.address ? ` · ${m.address}` : ''}
                       </small>
                     </span>
-                    <button
-                      type="button"
-                      className="rud-free-map-action primary"
-                      onClick={() => openExternal(directionsUrl(m.lat, m.lng, m.name))}
-                    >
-                      Directions
+                    <button type="button" className="rud-mq-go" onClick={() => openExternal(directionsUrl(m.lat, m.lng, m.name))}>
+                      <RouteIcon />
+                      <span>Directions</span>
                     </button>
                   </li>
                 ))}
               </ul>
-              {!shown.length ? <p className="rud-masjid-summary">No masjid matches that name.</p> : null}
+              {!shown.length ? <p className="rud-mq-summary">No masjid matches that name.</p> : null}
             </div>
           ) : (
-            <div className="rud-free-map-card">
-              <div className="rud-free-map-icon" aria-hidden="true">
-                🕌
-              </div>
-              {status.kind === 'locating' ? (
-                <>
-                  <h2>Finding your location…</h2>
-                  <p>Allow location access when your browser asks, so we can list masjids near you.</p>
-                </>
-              ) : null}
-              {status.kind === 'searching' ? (
-                <>
-                  <h2>Looking for nearby masjids…</h2>
-                  <p>Searching around your current location.</p>
-                </>
-              ) : null}
+            <div className="rud-mq-state">
+              <span className="rud-mq-medallion">
+                <DomeIcon />
+              </span>
               {status.kind === 'denied' ? (
                 <>
-                  <h2>Location access is off</h2>
-                  <p>
-                    To list masjids near you, allow location for this site in your browser or phone settings, then try
-                    again. You can also search the map yourself.
-                  </p>
+                  <h3>Location access is off</h3>
+                  <p>Allow location for this site in your browser or phone settings, then try again — or search in Google Maps.</p>
                 </>
               ) : null}
               {status.kind === 'no-location' ? (
                 <>
-                  <h2>Location unavailable</h2>
+                  <h3>Location unavailable</h3>
                   <p>{status.message} Check that location services are on, then try again.</p>
                 </>
               ) : null}
               {status.kind === 'error' ? (
                 <>
-                  <h2>Masjid search is unavailable</h2>
-                  <p>
-                    The free masjid directory could not be reached. Check your connection and try again, or open the map
-                    search.
-                  </p>
+                  <h3>Masjid search is unavailable</h3>
+                  <p>The free masjid directory could not be reached. Check your connection, or search in Google Maps.</p>
                 </>
               ) : null}
               {status.kind === 'results' ? (
                 <>
-                  <h2>No masjids found nearby</h2>
-                  <p>
-                    Nothing is listed within {status.radiusKm} km in the free OpenStreetMap directory. Try the map
-                    search instead.
-                  </p>
+                  <h3>No masjids listed nearby</h3>
+                  <p>Nothing is listed within {status.radiusKm} km in the free directory. Google Maps may know more.</p>
                 </>
               ) : null}
-              {coords ? (
-                <div className="rud-free-map-location">
-                  <span className="rud-free-map-dot" />
-                  {coords.lat.toFixed(3)}, {coords.lng.toFixed(3)}
-                </div>
-              ) : null}
-              {status.kind !== 'locating' && status.kind !== 'searching' ? (
-                <div className="rud-free-map-actions">
-                  <button
-                    type="button"
-                    className="rud-free-map-action primary"
-                    onClick={() => setAttempt((a) => a + 1)}
-                  >
-                    Try again
-                  </button>
-                  <button
-                    type="button"
-                    className="rud-free-map-action secondary"
-                    onClick={() => openExternal(mapSearchUrl(coords?.lat, coords?.lng))}
-                  >
-                    Open map search
-                  </button>
-                </div>
-              ) : null}
+              <div className="rud-mq-actions">
+                <button type="button" className="rud-mq-btn is-primary" onClick={() => openExternal(mapSearchUrl())}>
+                  Open map search
+                </button>
+                <button type="button" className="rud-mq-btn" onClick={() => setAttempt((a) => a + 1)}>
+                  Try again
+                </button>
+              </div>
             </div>
           )}
         </div>
-        <div className="rud-free-map-bottom">
-          <span>
-            Masjid data © <strong>OpenStreetMap</strong> contributors · free directory, may be incomplete
-          </span>
-          <button type="button" className="rud-free-map-close-link" onClick={onClose}>
-            Close
-          </button>
-        </div>
+        <footer className="rud-mq-foot">
+          {coords ? (
+            <span className="rud-mq-loc">
+              <i /> Near {coords.lat.toFixed(3)}, {coords.lng.toFixed(3)}
+            </span>
+          ) : (
+            <span />
+          )}
+          <span>© OpenStreetMap contributors</span>
+        </footer>
       </div>
     </div>
   );

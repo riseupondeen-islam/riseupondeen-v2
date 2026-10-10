@@ -49,6 +49,12 @@ export function init() {
       hidePreloader();
     } else setTimeout(hidePreloader, Math.max(0, introDuration() - (Date.now() - introStartedAt)));
 
+    /* V3.2: the hero's entrance animation plays once. Without this, CSS restarted it every time Home
+       was shown again (display none → block), so returning to Home made the title and buttons jump. */
+    const markHomePlayed = () => document.documentElement.classList.add('rud-home-played');
+    setTimeout(markHomePlayed, introSeen ? 1600 : introDuration() + 1600);
+    window.addEventListener('hashchange', markHomePlayed, { once: true });
+
     /* ---------------- DYNAMIC YEAR ---------------- */
     $('#year').textContent = new Date().getFullYear();
 

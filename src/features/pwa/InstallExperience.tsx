@@ -155,10 +155,17 @@ export function InstallExperience() {
     const mobile = isIOS() || isAndroid();
     let shown = false;
     let tries = 0;
+    let lastBusy = 0;
     const consider = () => {
       if (shown || viewRef.current || !installCardAllowed() || sessionSeen()) return;
       if (busyElsewhere()) {
-        if (++tries < 40) timers.push(window.setTimeout(consider, 2500));
+        lastBusy = Date.now();
+        if (++tries < 40) timers.push(window.setTimeout(consider, 1500));
+        return;
+      }
+      // A calm moment: never straight after the intro, the name card or a guide closes.
+      if (lastBusy && Date.now() - lastBusy < 4000) {
+        timers.push(window.setTimeout(consider, 4000 - (Date.now() - lastBusy)));
         return;
       }
       if (isIOS()) {

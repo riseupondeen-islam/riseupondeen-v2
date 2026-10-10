@@ -30,17 +30,41 @@ export function FullScreen({
     const viewport = window.visualViewport;
     if (!panel) return;
     let frame = 0;
+    let lastH = -1;
+    let lastTop = -1;
     const fit = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         if (!viewport) return;
-        panel.style.setProperty('--df2-vh', `${Math.round(viewport.height)}px`);
-        panel.style.setProperty('--df2-vtop', `${Math.round(viewport.offsetTop)}px`);
+        const h = Math.round(viewport.height);
+        const top = Math.max(0, Math.round(viewport.offsetTop));
+        // Write only real changes: repeated identical writes during the keyboard animation made the
+        // conversation shake.
+        if (h !== lastH) {
+          lastH = h;
+          panel.style.setProperty('--df2-vh', `${h}px`);
+        }
+        if (top !== lastTop) {
+          lastTop = top;
+          panel.style.setProperty('--df2-vtop', `${top}px`);
+        }
+        // The page behind is pinned; if the browser still scrolled the window for the keyboard, put
+        // it back so nothing behind the chat moves.
+        if (window.scrollY !== 0 && document.body.style.position === 'fixed') window.scrollTo(0, 0);
       });
     };
     fit();
     viewport?.addEventListener('resize', fit);
     viewport?.addEventListener('scroll', fit);
+    // Keep the newest message in view when the keyboard opens.
+    const onFocus = (event: FocusEvent) => {
+      if (!(event.target instanceof HTMLElement) || !event.target.matches('textarea, input')) return;
+      window.setTimeout(() => {
+        const list = panel.querySelector<HTMLElement>('.df2-chat-body');
+        if (list) list.scrollTop = list.scrollHeight;
+      }, 320);
+    };
+    panel.addEventListener('focusin', onFocus);
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !document.querySelector('.df2-sheet-backdrop')) onCloseRef.current();
     };
@@ -49,6 +73,7 @@ export function FullScreen({
       cancelAnimationFrame(frame);
       viewport?.removeEventListener('resize', fit);
       viewport?.removeEventListener('scroll', fit);
+      panel.removeEventListener('focusin', onFocus);
       document.removeEventListener('keydown', onKey);
     };
   }, []);

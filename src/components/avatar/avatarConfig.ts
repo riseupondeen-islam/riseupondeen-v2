@@ -8,6 +8,9 @@ import type { AvatarConfig } from '../../features/deen-friends/types';
 export const AVATAR_SHAPES = ['circle', 'arch', 'octagon', 'star'] as const;
 export const AVATAR_PATTERNS = ['none', 'stars', 'girih', 'arches', 'dots', 'mashrabiya', 'rays'] as const;
 export const AVATAR_FIGURES = ['none', 'hijab', 'niqab', 'kufi', 'ghutra', 'turban', 'shawl'] as const;
+/** Figures grouped for the builder (V3.2): clearly brothers' and sisters' styles. */
+export const MEN_FIGURES = ['kufi', 'ghutra', 'turban'] as const;
+export const WOMEN_FIGURES = ['hijab', 'niqab', 'shawl'] as const;
 export const AVATAR_MOTIFS = ['none', 'crescent', 'lantern', 'mosque', 'kaaba', 'book', 'tasbih', 'star'] as const;
 
 export const BACKGROUNDS: Record<string, string> = {
@@ -49,7 +52,7 @@ export const ACCENTS: Record<string, string> = {
 export const LABELS = {
   shape: { circle: 'Circle', arch: 'Arch', octagon: 'Octagon', star: 'Eight-point star' },
   pattern: { none: 'Plain', stars: 'Stars', girih: 'Girih', arches: 'Arches', dots: 'Dots', mashrabiya: 'Mashrabiya', rays: 'Light rays' },
-  figure: { none: 'Motif only', hijab: 'Hijab', niqab: 'Niqab', kufi: 'Kufi', ghutra: 'Ghutra', turban: 'Imamah', shawl: 'Shawl' },
+  figure: { none: 'Motif only', hijab: 'Hijab', niqab: 'Niqab', kufi: 'Kufi', ghutra: 'Ghutra', turban: 'Imamah', shawl: 'Khimar' },
   motif: { none: 'None', crescent: 'Crescent', lantern: 'Lantern', mosque: 'Masjid', kaaba: 'Kaaba', book: 'Qur’an', tasbih: 'Tasbih', star: 'Star' },
 } as const;
 

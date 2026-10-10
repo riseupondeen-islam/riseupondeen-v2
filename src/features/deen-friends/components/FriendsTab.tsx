@@ -18,12 +18,49 @@ import { goToDeenFriends } from '../deenFriendsRoute';
 import { Avatar, Badge, EmptyState, Icon, SkeletonRows, useToast } from './ui';
 import { SuggestionsSection } from './SuggestionsSection';
 
+/** "+ Add friend" and "Requests": two small buttons; each opens its panel right below (one at a time). */
+function FriendTools({ onOpenProfile }: { onOpenProfile: (uid: string) => void }) {
+  const s = useDeenFriends();
+  const invited = typeof location !== 'undefined' && new URLSearchParams(location.search).has('deen_friend');
+  const [panel, setPanel] = useState<'' | 'add' | 'requests'>(invited ? 'add' : '');
+  const toggle = (p: 'add' | 'requests') => setPanel((x) => (x === p ? '' : p));
+  const total = s.incoming.length + s.outgoing.length;
+  return (
+    <div className="df2-tools">
+      <div className="df2-tools-row">
+        <button
+          type="button"
+          className={`df2-requests-toggle df2-add-toggle${panel === 'add' ? ' is-open' : ''}`}
+          aria-expanded={panel === 'add'}
+          aria-controls="df2-add-panel"
+          onClick={() => toggle('add')}
+        >
+          <Icon name="plus" size={17} />
+          <span>Add friend</span>
+        </button>
+        <button
+          type="button"
+          className={`df2-requests-toggle${panel === 'requests' ? ' is-open' : ''}`}
+          aria-expanded={panel === 'requests'}
+          aria-controls="df2-requests"
+          onClick={() => toggle('requests')}
+        >
+          <Icon name="people" size={17} />
+          <span>Requests</span>
+          {s.incoming.length ? <Badge count={s.incoming.length} /> : <small>{total}</small>}
+        </button>
+      </div>
+      {panel === 'add' ? <AddFriendCard onOpenProfile={onOpenProfile} /> : null}
+      {panel === 'requests' ? <RequestsSection onOpenProfile={onOpenProfile} /> : null}
+    </div>
+  );
+}
+
 export function FriendsTab({ onOpenProfile }: { onOpenProfile: (uid: string) => void }) {
   const s = useDeenFriends();
   return (
     <div className="df2-stack">
-      <AddFriendCard onOpenProfile={onOpenProfile} />
-      <RequestsSection onOpenProfile={onOpenProfile} />
+      <FriendTools onOpenProfile={onOpenProfile} />
       <section className="df2-section" aria-labelledby="df2-circle-title">
         <div className="df2-section-head">
           <h2 id="df2-circle-title">My circle</h2>
@@ -188,13 +225,7 @@ function AddFriendCard({ onOpenProfile }: { onOpenProfile: (uid: string) => void
   const actionLabel = status === 'outgoing' ? 'Cancel request' : status ? STATUS_ACTION[status] : '';
 
   return (
-    <section className="df2-card df2-add-card" aria-labelledby="df2-add-title">
-      <div className="df2-add-head">
-        <span className="df2-add-icon">
-          <Icon name="plus" />
-        </span>
-        <h2 id="df2-add-title">Add a friend</h2>
-      </div>
+    <section className="df2-card df2-add-card df2-tools-panel" id="df2-add-panel" aria-label="Add a friend">
       <form className="df2-search-row" onSubmit={submit} role="search">
         <label className="df2-input-with-prefix">
           <span aria-hidden="true">@</span>
@@ -208,6 +239,7 @@ function AddFriendCard({ onOpenProfile }: { onOpenProfile: (uid: string) => void
             autoComplete="off"
             spellCheck={false}
             enterKeyHint="search"
+            autoFocus={!new URLSearchParams(location.search).get('deen_friend')}
           />
         </label>
         <button className="df2-btn df2-btn-primary" type="submit" disabled={searching}>
@@ -242,7 +274,6 @@ function RequestsSection({ onOpenProfile }: { onOpenProfile: (uid: string) => vo
   const s = useDeenFriends();
   const toast = useToast();
   const [busyId, setBusyId] = useState('');
-  const [open, setOpen] = useState(false);
   const total = s.incoming.length + s.outgoing.length;
 
   async function run(request: FriendRequest, action: 'accept' | 'decline' | 'cancel') {
@@ -316,31 +347,15 @@ function RequestsSection({ onOpenProfile }: { onOpenProfile: (uid: string) => vo
   };
 
   return (
-    <div className="df2-requests-wrap">
-      <button
-        type="button"
-        className={`df2-requests-toggle${open ? ' is-open' : ''}`}
-        aria-expanded={open}
-        aria-controls="df2-requests"
-        onClick={() => setOpen((x) => !x)}
-      >
-        <Icon name="people" size={17} />
-        <span>Requests</span>
-        {s.incoming.length ? <Badge count={s.incoming.length} /> : <small>{total}</small>}
-        <Icon name={open ? 'chevronUp' : 'chevronDown'} size={16} />
-      </button>
-      {open ? (
-        <section className="df2-requests-panel" id="df2-requests" aria-label="Friend requests">
-          {total ? (
-            <ul className="df2-request-list">
-              {s.incoming.map((r) => row(r, r.fromUid, true))}
-              {s.outgoing.map((r) => row(r, r.toUid, false))}
-            </ul>
-          ) : (
-            <p className="df2-inline-note">No requests.</p>
-          )}
-        </section>
-      ) : null}
-    </div>
+    <section className="df2-requests-panel df2-tools-panel" id="df2-requests" aria-label="Friend requests">
+      {total ? (
+        <ul className="df2-request-list">
+          {s.incoming.map((r) => row(r, r.fromUid, true))}
+          {s.outgoing.map((r) => row(r, r.toUid, false))}
+        </ul>
+      ) : (
+        <p className="df2-inline-note">No requests.</p>
+      )}
+    </section>
   );
 }

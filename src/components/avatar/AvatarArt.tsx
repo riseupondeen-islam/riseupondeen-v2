@@ -135,11 +135,22 @@ function Motif({ kind, x, y, s, color, deep }: { kind: AvatarConfig['motif']; x:
 }
 
 interface Paint {
+  beard: string;
   cloth: string;
   clothHi: string;
   accent: string;
   head: string;
   line: string;
+}
+
+/** A simple beard silhouette — makes brothers' figures read clearly as men (still no facial features). */
+function Beard({ cy = 35, fill }: { cy?: number; fill: string }) {
+  return (
+    <path
+      d={`M26.4 ${cy + 1}c.6 7.6 4.6 12.4 9.6 12.4s9-4.8 9.6-12.4c-1.6 3.4-4.8 5.3-9.6 5.3s-8-1.9-9.6-5.3Z`}
+      fill={fill}
+    />
+  );
 }
 
 function Figure({ kind, p }: { kind: AvatarConfig['figure']; p: Paint }) {
@@ -176,6 +187,7 @@ function Figure({ kind, p }: { kind: AvatarConfig['figure']; p: Paint }) {
         {shoulders}
         <path d="M31 49l5 9 5-9" fill="none" stroke={p.accent} strokeWidth="1.4" opacity=".85" />
         <ellipse cx="36" cy="34" rx="10" ry="11.5" fill={p.head} />
+        <Beard cy={34} fill={p.beard} />
         <path d="M26 30.5c0-6.5 4.5-10.5 10-10.5s10 4 10 10.5Z" fill={p.accent} />
         <path d="M27 27.5h18M28 24.5h16" stroke={p.line} strokeWidth="0.7" opacity=".35" />
       </g>
@@ -186,6 +198,7 @@ function Figure({ kind, p }: { kind: AvatarConfig['figure']; p: Paint }) {
         {shoulders}
         <path d="M24 31c0-8 5.2-13.5 12-13.5S48 23 48 31v18c-3 2.5-7 3.5-12 3.5s-9-1-12-3.5Z" fill={p.clothHi} />
         <ellipse cx="36" cy="35" rx="8.6" ry="10.5" fill={p.head} />
+        <Beard cy={35} fill={p.beard} />
         <path d="M24.6 25.8c3-3 7-4.6 11.4-4.6s8.4 1.6 11.4 4.6" fill="none" stroke={p.accent} strokeWidth="2.4" strokeLinecap="round" />
         <path d="M24.6 28.6c3-2.6 7-4 11.4-4s8.4 1.4 11.4 4" fill="none" stroke={p.accent} strokeWidth="1.2" strokeLinecap="round" opacity=".7" />
       </g>
@@ -195,16 +208,19 @@ function Figure({ kind, p }: { kind: AvatarConfig['figure']; p: Paint }) {
       <g>
         {shoulders}
         <ellipse cx="36" cy="35" rx="10" ry="11.5" fill={p.head} />
+        <Beard cy={35} fill={p.beard} />
         <path d="M24.5 31c0-8 5-13 11.5-13s11.5 5 11.5 13c-3-2-7-3-11.5-3s-8.5 1-11.5 3Z" fill={p.accent} />
         <path d="M26 25.5c4-2 13-2.5 20 1M25 29c5-2.5 15-2.5 22 .5" fill="none" stroke={p.line} strokeWidth="0.9" opacity=".35" />
       </g>
     );
+  // Khimar: a long, loose head covering draping over the shoulders (sisters).
   return (
     <g>
-      {shoulders}
-      <path d="M17 57c6-4 12-6 19-6s13 2 19 6l-6 15H23Z" fill={p.accent} opacity=".9" />
-      <path d="M22 62c4-2.4 9-3.6 14-3.6" fill="none" stroke={p.line} strokeWidth=".8" opacity=".3" />
-      <ellipse cx="36" cy="35" rx="10" ry="11.5" fill={p.head} />
+      <path d="M36 12.5c-11.5 0-18 9.5-18 20 0 4 .8 7.6 2.3 10.6C12.5 47.5 8 55 7 64v8h58v-8c-1-9-5.5-16.5-13.3-20.9 1.5-3 2.3-6.6 2.3-10.6 0-10.5-6.5-20-18-20Z" fill={p.cloth} />
+      <path d="M22 21.5c3.2-5.4 8-8.2 14-8.2" fill="none" stroke={p.clothHi} strokeWidth="1.8" strokeLinecap="round" opacity=".5" />
+      <ellipse cx="36" cy="33" rx="8" ry="9.8" fill={p.head} />
+      <path d="M20 47c4.6 5 10 7.6 16 7.6S47.4 52 52 47" fill="none" stroke={p.accent} strokeWidth="1.4" opacity=".8" />
+      <path d="M12 66c3-6 8-10 14-12M60 66c-3-6-8-10-14-12" fill="none" stroke={p.clothHi} strokeWidth="1.3" strokeLinecap="round" opacity=".4" />
     </g>
   );
 }
@@ -227,6 +243,7 @@ export function AvatarArt({ config, name = '', size = 44 }: { config: AvatarConf
     : '';
   const motifOnly = config.figure === 'none';
   const paint: Paint = {
+    beard: `url(#bd-${id})`,
     cloth: `url(#cl-${id})`,
     clothHi: shade(outfit, 0.32),
     accent: `url(#ac-${id})`,
@@ -256,6 +273,10 @@ export function AvatarArt({ config, name = '', size = 44 }: { config: AvatarConf
           <stop offset="0" stopColor={shade(accent, 0.45)} />
           <stop offset="0.5" stopColor={accent} />
           <stop offset="1" stopColor={shade(accent, -0.3)} />
+        </linearGradient>
+        <linearGradient id={`bd-${id}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#3a2f26" />
+          <stop offset="1" stopColor="#1f1913" />
         </linearGradient>
         <radialGradient id={`hd-${id}`} cx="0.42" cy="0.35" r="0.7">
           <stop offset="0" stopColor={dark ? '#556660' : '#E9DDC6'} />

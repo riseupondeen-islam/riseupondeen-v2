@@ -1589,15 +1589,18 @@ body.df2-chat-open .rud-quran-mini-player {
 .df2-fullscreen {
   /* Chat wallpaper defaults (Ivory Pearl); data-chat-theme switches them. */
   --df2-chat-bg: radial-gradient(circle at 20% 0, rgba(217, 186, 114, 0.08), transparent 45%), #0d1013;
-  --df2-bubble-mine: #1d4f3e;
-  --df2-bubble-mine-text: #f5f1e6;
-  --df2-bubble-theirs: #17231f;
+  --df2-bubble-mine: #3a2f18;
+  --df2-bubble-mine-text: #fbf3df;
+  --df2-bubble-theirs: #1a1e22;
   --df2-bubble-theirs-text: var(--df2-text);
   position: fixed;
-  top: var(--df2-vtop, 0px);
+  top: 0;
   left: 0;
   right: 0;
   z-index: 12050;
+  /* V3.2: follows the visual viewport with a composited transform (no layout per keyboard frame). */
+  transform: translate3d(0, var(--df2-vtop, 0px), 0);
+  will-change: transform;
   display: flex;
   flex-direction: column;
   height: var(--df2-vh, 100dvh);
@@ -1608,8 +1611,8 @@ body.df2-chat-open .rud-quran-mini-player {
 html.light-mode .df2-fullscreen,
 html.light-mode .df2-theme-preview {
   --df2-chat-bg: radial-gradient(circle at 20% 0, rgba(148, 112, 31, 0.08), transparent 45%), #fbf7ee;
-  --df2-bubble-mine: #dcefe5;
-  --df2-bubble-mine-text: #13382a;
+  --df2-bubble-mine: #f1e4c4;
+  --df2-bubble-mine-text: #3a2c0e;
   --df2-bubble-theirs: #ffffff;
   --df2-bubble-theirs-text: #1d2621;
 }

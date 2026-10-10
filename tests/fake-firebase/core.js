@@ -107,7 +107,12 @@ function assertWrite(op, path, data, options) {
   const before = state.docs.get(path) || null;
   const kind = op === 'delete' ? 'delete' : op === 'update' || before ? 'update' : 'create';
   if (op === 'update' && !before) return; // reported as not-found by applyUpdate
-  if (!rules.allowed(kind, path, before, afterWrite(op, path, data, options))) throw permissionDenied(path);
+  const after = afterWrite(op, path, data, options);
+  if (!rules.allowed(kind, path, before, after)) {
+    // Tests can inspect refused writes (window.__FAKE_FB__.denied) to see exactly what was sent.
+    (state.denied ||= []).push({ kind, path, before: normalizeForLog(before), after: normalizeForLog(after) });
+    throw permissionDenied(path);
+  }
 }
 
 const SERVER_TS = { __serverTimestamp: true };

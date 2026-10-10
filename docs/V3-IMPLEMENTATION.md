@@ -236,3 +236,19 @@ two; iOS only after removing and re-adding the Home Screen icon).
 New/changed backend: `deens_monthly_winners` rules + index; `validSignature`; `validSharedContent` accepts `name`; `validAvatarConfig` accepts the new avatar values. Deploy rules and indexes again (§6).
 
 Not verified here (in addition to §7): the signature fonts (Google Fonts are blocked in the test sandbox, so screenshots show the fallback serif; real devices load the script fonts) and the service-worker timeout on a real slow network.
+
+---
+
+## 10. V3.3 (third review)
+
+| # | Change |
+| --- | --- |
+| Intro | Stays 4 s, follows the visitor's light/dark mode, a single mihrab arch (no star). Installed app: at most every 12 h. |
+| Name card | Appears after the intro (never on top), styled for both themes (the light theme had painted dark-card text grey on grey), scrollable so the keyboard never hides the button. The install guide now waits for a calm moment after it. |
+| RISE chat | Sending after RISE had read the thread could be refused (a stale unread counter broke the "+1" rule) — the counter is now read before writing. The welcome message always sorts first. In light mode all chat bubbles were painted white by a legacy `article` rule — fixed. |
+| Keyboard / shaking | Chats follow the visual viewport with a composited transform and only write real changes; the page behind is held at the top; the newest message stays in view when the keyboard opens; text fields are 16 px on touch screens (no iOS zoom); `interactive-widget=resizes-content` for Android. |
+| Avatars | Brothers' figures (Kufi, Ghutra, Imamah) have a simple beard silhouette; sisters' figures are Hijab, Niqab and a new long Khimar; the builder groups them as Brothers / Sisters. |
+| Friends | "+ Add friend" and "Requests" are two small buttons; each opens its panel (search field focused). |
+| Home | The hero's entrance animation replayed every time Home was shown again (display none → block), which made Home jump — it now plays once. Home sections no longer scroll inside themselves (`.shell` had `overflow-x:hidden`, which forces `overflow-y:auto`; now `clip`). |
+| Guide | Only the highlight's position animates; its size changes in one step (animating size repainted the full-screen shade each frame). |
+| Masjids | New launcher card and full-screen finder (skeleton loading, distance + walking time, Directions, search). The Google Maps button searches "masjids near me". |

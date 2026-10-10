@@ -48,7 +48,7 @@ test('Add Friend → request → accept: the complete two-user flow', async ({ p
   await page.screenshot({ path: `${SHOTS}/${info.project.name}-01-friends-empty.png`, fullPage: true });
 
   // Search shows the person with an enabled "Add friend" (V1 showed "Unavailable" here).
-  await ui(page).getByLabel("Friend's username").fill('@Bilal');
+  await (await friendSearch(page)).fill('@Bilal');
   await ui(page).getByRole('button', { name: 'Find' }).click();
   const addButton = page.locator('.df2-search-result').getByRole('button', { name: 'Add friend' });
   await expect(addButton).toBeEnabled();
@@ -82,7 +82,7 @@ test('Add Friend → request → accept: the complete two-user flow', async ({ p
   expect((await fakeDocs(page, 'deens_friend_requests/'))[0].status).toBe('accepted');
 
   // The friends badge clears and searching the friend now shows "Friends" (disabled).
-  await ui(page).getByLabel("Friend's username").fill('aisha');
+  await (await friendSearch(page)).fill('aisha');
   await ui(page).getByRole('button', { name: 'Find' }).click();
   await expect(page.locator('.df2-search-result').getByRole('button', { name: 'Friends' })).toBeDisabled();
   await page.screenshot({ path: `${SHOTS}/${info.project.name}-04-circle.png`, fullPage: true });
@@ -92,7 +92,7 @@ test('Add Friend → request → accept: the complete two-user flow', async ({ p
 test('declining and cancelling requests update the right state', async ({ page }) => {
   await openDeenFriends(page);
   await signIn(page, DF_USERS.aisha);
-  await ui(page).getByLabel("Friend's username").fill('bilal');
+  await (await friendSearch(page)).fill('bilal');
   await ui(page).getByRole('button', { name: 'Find' }).click();
   await page.locator('.df2-search-result').getByRole('button', { name: 'Add friend' }).click();
   await page.locator('.df2-search-result').getByRole('button', { name: 'Cancel request' }).click();
@@ -112,15 +112,22 @@ test('declining and cancelling requests update the right state', async ({ page }
   await expect(page.locator('#df2-requests')).toContainText('No requests');
 });
 
+/** "+ Add friend" opens the username search (V3.2). */
+async function friendSearch(page: Page) {
+  const field = ui(page).getByLabel("Friend's username");
+  if (!(await field.isVisible())) await ui(page).getByRole('button', { name: 'Add friend', exact: true }).click();
+  return field;
+}
+
 /** Friend requests live inside a collapsible "Requests" button (V3.1). */
 async function openRequests(page: Page) {
-  const toggle = page.locator('.df2-requests-toggle');
+  const toggle = ui(page).getByRole('button', { name: /^Requests/ });
   if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
 }
 
 async function becomeFriends(page: Page) {
   await signIn(page, DF_USERS.aisha);
-  await ui(page).getByLabel("Friend's username").fill('bilal');
+  await (await friendSearch(page)).fill('bilal');
   await ui(page).getByRole('button', { name: 'Find' }).click();
   await page.locator('.df2-search-result').getByRole('button', { name: 'Add friend' }).click();
   await expect(page.locator('.df2-search-result').getByRole('button', { name: 'Cancel request' })).toBeVisible();

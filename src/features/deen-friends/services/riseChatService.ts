@@ -12,6 +12,7 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   limit,
   onSnapshot,
@@ -90,13 +91,20 @@ export async function ensureRiseThread(profile: OwnProfile): Promise<void> {
       });
     }
     if (!welcome.exists()) {
+      // The welcome always sorts first, even when it is (re)created after earlier messages.
+      const created = thread.exists() ? (thread.data() as Record<string, unknown>).createdAt : null;
+      const createdMs =
+        created && typeof (created as { toMillis?: () => number }).toMillis === 'function'
+          ? (created as { toMillis: () => number }).toMillis()
+          : 0;
+      const welcomeAt = createdMs ? Math.min(now, createdMs) : thread.exists() ? 1 : now;
       tx.set(welcomeRef, {
         from: 'rise',
         senderUid: uid,
         text: RISE_WELCOME_TEXT,
         automated: true,
         createdAt: serverTimestamp(),
-        createdAtMs: now,
+        createdAtMs: welcomeAt,
       });
     }
   });
@@ -175,6 +183,11 @@ export async function sendRiseMessage(
     throw new DeenFriendsError('invalid', `Please keep messages under ${RISE_MESSAGE_MAX} characters.`);
   const { db, uid } = await requireSignedIn();
   if (!thread) await ensureRiseThread(profile);
+  // The rules allow raising unreadByRise by at most one per write. Read the current value instead of
+  // trusting the screen's copy: after RISE reads the thread (counter reset to 0) a stale local value
+  // made the next message fail with "permission denied".
+  const current = await getDoc(doc(db, 'deens_rise_threads', uid)).catch(() => null);
+  const unreadNow = Number(current?.exists() ? current.data()?.unreadByRise : thread?.unreadByRise) || 0;
   const now = Date.now();
   const batch = writeBatch(db);
   batch.set(doc(db, 'deens_rise_threads', uid, 'messages', messageId), {
@@ -194,7 +207,7 @@ export async function sendRiseMessage(
       lastMessagePreview: preview(body),
       lastFrom: 'user',
       lastMessageAtMs: now,
-      unreadByRise: Math.min(999, (thread?.unreadByRise || 0) + 1),
+      unreadByRise: Math.min(999, unreadNow + 1),
       unreadByUser: 0,
       updatedAt: serverTimestamp(),
     },

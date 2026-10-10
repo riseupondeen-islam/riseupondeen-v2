@@ -5,7 +5,8 @@ import { useState } from 'react';
 import type { AvatarConfig, OwnProfile } from '../types';
 import {
   ACCENTS,
-  AVATAR_FIGURES,
+  MEN_FIGURES,
+  WOMEN_FIGURES,
   AVATAR_MOTIFS,
   AVATAR_PATTERNS,
   AVATAR_PRESETS,
@@ -154,7 +155,9 @@ export function AvatarCreator({ profile, onClose }: { profile: OwnProfile; onClo
                   ))}
                 </div>
               </fieldset>
-              <Choice label="Figure" options={AVATAR_FIGURES} labels={LABELS.figure} value={config.figure} onPick={(v) => set('figure', v)} render={(v) => ({ ...config, figure: v })} />
+              <Choice label="Brothers" options={MEN_FIGURES} labels={LABELS.figure} value={config.figure} onPick={(v) => set('figure', v)} render={(v) => ({ ...config, figure: v })} />
+              <Choice label="Sisters" options={WOMEN_FIGURES} labels={LABELS.figure} value={config.figure} onPick={(v) => set('figure', v)} render={(v) => ({ ...config, figure: v })} />
+              <Choice label="No figure" options={['none'] as const} labels={LABELS.figure} value={config.figure} onPick={(v) => set('figure', v)} render={(v) => ({ ...config, figure: v })} />
               <label className="df2-toggle">
                 <input type="checkbox" checked={config.initials} onChange={(e) => set('initials', e.target.checked)} />
                 <span>

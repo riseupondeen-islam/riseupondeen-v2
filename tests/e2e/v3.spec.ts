@@ -677,7 +677,7 @@ test('People lists every Deen Friends member in small rows; profile opens on tap
   // Requests are inside one small button: closed until tapped.
   await page.keyboard.press('Escape');
   await expect(page.locator('#df2-requests')).toHaveCount(0);
-  await page.locator('.df2-requests-toggle').click();
+  await ui(page).getByRole('button', { name: /^Requests/ }).click();
   await expect(page.locator('#df2-requests')).toContainText('No requests');
 });
 
@@ -749,4 +749,63 @@ test('Friday and Ramadan modes use their own card layout', async ({ page }) => {
   }
   await expect(page.locator('#rudFridayMode')).toContainText('Read Al-Kahf');
   await expect(page.locator('#rudRamadanMode')).toContainText('Ramadan Mubarak');
+});
+
+test('Nearby Masjids: Google Maps searches "masjids near me"', async ({ page }) => {
+  await prepare(page);
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'geolocation', {
+      value: {
+        getCurrentPosition: (_ok: unknown, fail: (e: unknown) => void) => fail({ code: 1, PERMISSION_DENIED: 1 }),
+        watchPosition: () => 1,
+        clearWatch: () => undefined,
+      },
+    });
+  });
+  await goto(page, '#prayer');
+  await page.locator('#rudNearbyMasjidBtn').click();
+  await page.evaluate(() => {
+    (window as unknown as { open: (u: string) => unknown }).open = (u: string) => {
+      (window as unknown as { __opened: string }).__opened = u;
+      return {};
+    };
+  });
+  await page.locator('#rudRiseMapOverlay').getByRole('button', { name: /Google Maps/ }).click();
+  expect(await page.evaluate(() => (window as unknown as { __opened: string }).__opened)).toContain('query=masjids%20near%20me');
+});
+
+test('returning Home does not replay the hero entrance (no jump)', async ({ page }) => {
+  await prepare(page);
+  await goto(page, '#home');
+  await setHash(page, '#quran');
+  await page.waitForTimeout(400);
+  await setHash(page, '#home');
+  await page.waitForTimeout(60);
+  const anims = await page.evaluate(() =>
+    [...document.querySelectorAll('.hero .hero-kicker, .hero .hero-tagline, .hero .hero-actions')].flatMap((e) => e.getAnimations().map((a) => (a as CSSAnimation).animationName)),
+  );
+  expect(anims).toEqual([]);
+  // Home sections never scroll inside themselves.
+  const inner = await page.evaluate(() =>
+    [...document.querySelectorAll('.shell')].filter((e) => /(auto|scroll)/.test(getComputedStyle(e).overflowY)).length,
+  );
+  expect(inner).toBe(0);
+});
+
+test('first visit: 4-second intro in the visitor theme, then the name card; entering a name works', async ({ page }) => {
+  await prepare(page, { theme: 'light', returningVisitor: false });
+  await page.goto('/#home');
+  await page.waitForTimeout(1500);
+  const intro = await page.evaluate(() => {
+    const el = document.getElementById('preloader')!;
+    return { hidden: el.classList.contains('hide'), bg: getComputedStyle(el).backgroundColor, card: !document.getElementById('rudWelcomeIntro')?.hidden };
+  });
+  expect(intro).toEqual({ hidden: false, bg: 'rgb(251, 248, 241)', card: false }); // light intro, name card waits
+  const card = page.locator('#rudWelcomeIntro .rud-welcome-card');
+  await expect(card).toBeVisible({ timeout: 6000 });
+  expect(await card.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgb(255, 253, 248)');
+  await page.locator('#rudVisitorName').fill('Ameen');
+  await page.locator('#rudWelcomeContinue').click();
+  await expect(page.locator('#rudWelcomeIntro')).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem('rud_visitor_name'))).toBe('Ameen');
 });
