@@ -330,7 +330,7 @@ test('Deen Friends: challenge streak, monthly points and first place, without do
   expect(entries[0]).toMatchObject({ uid: 'fakeuser101', points: 1, activeDays: 1, completions: 1, displayName: 'Aisha Rahman', visible: true });
   expect(JSON.stringify(entries[0])).not.toContain('@example.com');
   // The completion written in the same transaction as the streak/points.
-  const tx = (await firestoreLog(page)).filter((e) => e.op === 'transaction').pop() as { ops: Array<{ path: string }> };
+  const tx = (await firestoreLog(page)).filter((e) => e.op === 'transaction').pop() as unknown as { ops: Array<{ path: string }> };
   expect(tx.ops.map((o) => o.path.split('/')[0]).sort()).toEqual(['deens_activity', 'deens_daily_challenges', 'deens_leaderboard', 'deens_streaks']);
   // Leaderboard shows the first-place presentation.
   await expect(ui(page).locator('.df2-lb-first')).toContainText('Aisha Rahman');
