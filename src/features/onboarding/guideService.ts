@@ -18,6 +18,10 @@ export interface GuideProgress {
   firstRunVersion?: number;
   tours?: Record<string, { doneAt: number }>;
   resume?: { tourId: string; step: number } | null;
+  /** Pages whose short guide has been shown (page key → time). */
+  pages?: Record<string, number>;
+  /** The visitor turned automatic page guides off. */
+  pageToursOff?: boolean;
 }
 
 export function readProgress(): GuideProgress {
@@ -45,6 +49,16 @@ export function writeProgress(patch: Partial<GuideProgress>): void {
 export function markTourDone(tourId: string): void {
   const progress = readProgress();
   writeProgress({ tours: { ...(progress.tours || {}), [tourId]: { doneAt: Date.now() } }, resume: null });
+}
+
+export function markPageSeen(key: string): void {
+  const progress = readProgress();
+  if (progress.pages?.[key]) return;
+  writeProgress({ pages: { ...(progress.pages || {}), [key]: Date.now() } });
+}
+
+export function pageSeen(key: string): boolean {
+  return !!readProgress().pages?.[key];
 }
 
 export function readCachedGuide(): GuideConfig {

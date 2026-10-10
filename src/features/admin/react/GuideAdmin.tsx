@@ -161,6 +161,10 @@ export function GuideAdmin() {
           <input type="checkbox" checked={config.enabled} onChange={(e) => update({ ...config, enabled: e.target.checked })} />
           <span>Offer the first-run walkthrough to new visitors</span>
         </label>
+        <label className="df2-toggle">
+          <input type="checkbox" checked={config.pageTours} onChange={(e) => update({ ...config, pageTours: e.target.checked })} />
+          <span>Open each page’s short guide automatically on a visitor’s first visit to that page</span>
+        </label>
         <label className="df2-field">
           <span>First-run tour</span>
           <select value={config.firstRunTourId} onChange={(e) => update({ ...config, firstRunTourId: e.target.value })}>

@@ -33,8 +33,8 @@ export async function prepare(
           localStorage.setItem('rud_visitor_name', 'Tester');
           localStorage.setItem('rud_visitor_id', 'v_e2e_test');
           sessionStorage.setItem('rud_intro_seen_session_v1', '1');
-          // V3: returning visitors have already seen the first-run App Guide offer.
-          localStorage.setItem('rud_onboarding_v1', JSON.stringify({ firstRunDone: true, firstRunVersion: 1 }));
+          // V3: returning visitors have already seen the first-run App Guide offer (page guides off in tests).
+          localStorage.setItem('rud_onboarding_v1', JSON.stringify({ firstRunDone: true, firstRunVersion: 1, pageToursOff: true }));
         }
         if (snap) localStorage.setItem('rud_public_firestore_v2', snap as string);
       } catch {

@@ -19,7 +19,7 @@ export function StreaksTab() {
   );
 }
 
-/** V3: my personal challenge streak (Section 7). */
+/** V3: my personal challenge streak (Section 7) — compact: count, today's state, two numbers. */
 function ChallengeStreakCard() {
   const s = useDeenFriends();
   const streak = s.myStreak;
@@ -28,41 +28,39 @@ function ChallengeStreakCard() {
   const atRisk = !today && current > 0;
   return (
     <section className={`df2-card df2-my-streak${today ? ' is-today' : ''}`} aria-labelledby="df2-my-streak-title" data-tour="df-my-streak">
-      <div className="df2-my-streak-flame" aria-hidden="true">
-        <Icon name="flame" size={30} />
-        <b>{current}</b>
-      </div>
-      <div className="df2-my-streak-copy">
-        <span className="df2-kicker">YOUR CHALLENGE STREAK</span>
-        <h2 id="df2-my-streak-title">
-          {current} day{current === 1 ? '' : 's'}
-          {today ? ' · done today' : ''}
-        </h2>
-        <p>
-          {today
-            ? 'Alhamdulillah — today counts. Come back tomorrow to keep it going.'
-            : atRisk
-              ? 'Complete any challenge today to keep your streak.'
-              : 'Complete a Daily Deen Challenge, a friend’s challenge or a circle challenge to start a streak.'}
-        </p>
-        <div className="df2-stat-row">
-          <span className="df2-stat">
-            <b>{streak?.longest || 0}</b>
-            <small>longest</small>
-          </span>
-          <span className="df2-stat">
-            <b>{streak?.totalDays || 0}</b>
-            <small>active days</small>
-          </span>
+      <div className="df2-my-streak-main">
+        <span className="df2-my-streak-flame" aria-hidden="true">
+          <Icon name="flame" size={22} />
+        </span>
+        <div className="df2-my-streak-copy">
+          <span className="df2-kicker">YOUR STREAK</span>
+          <h2 id="df2-my-streak-title">
+            {current} day{current === 1 ? '' : 's'}
+          </h2>
         </div>
-        <small className="df2-footnote">
-          A day counts when you complete a challenge (starting or sharing one doesn’t). Days run midnight to midnight India Standard
-          Time. {s.profile?.privacy.showStreak === false ? 'Your streak is private.' : 'Friends can see your streak on your profile.'}
-        </small>
+        {today ? (
+          <span className="df2-my-streak-state is-done">
+            <Icon name="check" size={13} /> Today
+          </span>
+        ) : atRisk ? (
+          <span className="df2-my-streak-state">Keep it going</span>
+        ) : null}
       </div>
-      <button type="button" className="df2-btn df2-btn-sm" onClick={() => goToDeenFriends({ tab: 'challenges' }, true)}>
-        Go to challenges
-      </button>
+      <div className="df2-my-streak-foot">
+        <span className="df2-my-streak-stats">
+          <span>
+            <b>{streak?.longest || 0}</b> best
+          </span>
+          <span>
+            <b>{streak?.totalDays || 0}</b> active days
+          </span>
+        </span>
+        {!today ? (
+          <button type="button" className="df2-btn df2-btn-sm df2-btn-primary" onClick={() => goToDeenFriends({ tab: 'challenges' }, true)}>
+            Challenges
+          </button>
+        ) : null}
+      </div>
     </section>
   );
 }
@@ -73,7 +71,7 @@ function FriendStreaks() {
   if (!s.friendships.length)
     return (
       <EmptyState icon="flame" title="Build your first shared streak">
-        <p>Add a Deen Friend, then check in each day you both keep up your good deeds.</p>
+        <p>Add a Deen Friend and check in together each day.</p>
         <button type="button" className="df2-btn df2-btn-primary" onClick={() => goToDeenFriends({ tab: 'friends' })}>
           Find a friend
         </button>
@@ -87,27 +85,21 @@ function FriendStreaks() {
   return (
     <>
       <section className="df2-card df2-streak-summary">
-        <div>
-          <span className="df2-kicker">SHARED STREAKS</span>
-          <p>A streak grows on each day you and a friend both check in. Missing a day simply starts a new one.</p>
-        </div>
-        <div className="df2-stat-row">
-          <span className="df2-stat">
-            <b>{alive}</b>
-            <small>active</small>
+        <span className="df2-kicker">SHARED STREAKS</span>
+        <span className="df2-my-streak-stats">
+          <span>
+            <b>{alive}</b> active
           </span>
-          <span className="df2-stat">
-            <b>{best}</b>
-            <small>best run</small>
+          <span>
+            <b>{best}</b> best run
           </span>
-        </div>
+        </span>
       </section>
       <ul className="df2-streak-list">
         {records.map(({ friendship }) => (
           <StreakRow key={friendship.id} friendship={friendship} />
         ))}
       </ul>
-      <p className="df2-footnote">Streaks are encouragement between friends — never a measure of anyone’s faith.</p>
     </>
   );
 }

@@ -78,19 +78,23 @@ test('navigation order, icons and the exact supplied logo', async ({ page, reque
     els.map((e) => `${Math.round(e.getBoundingClientRect().width)}x${Math.round(e.getBoundingClientRect().height)}`),
   );
   expect(new Set(sizes).size).toBe(1);
-  // The header logo is the supplied artwork (256px master derivative), shown on a rounded tile.
-  const logo = await page.locator('.rud-minimal-logo img').evaluate((img: HTMLImageElement) => ({ w: img.naturalWidth, h: img.naturalHeight, r: getComputedStyle(img).borderRadius }));
-  expect(logo).toEqual({ w: 256, h: 256, r: '12px' });
+  // The header keeps the original transparent brand logo (no tile) in both themes.
+  const logo = await page.locator('.rud-minimal-logo img').evaluate((img: HTMLImageElement) => ({
+    w: img.naturalWidth,
+    r: getComputedStyle(img).borderRadius,
+    bg: getComputedStyle(img).backgroundColor,
+  }));
+  expect(logo).toEqual({ w: 256, r: '0px', bg: 'rgba(0, 0, 0, 0)' });
   for (const [path, size] of [['/icon-192.png', 192], ['/icon-512.png', 512], ['/icon-maskable-512.png', 512]] as const) {
     const res = await request.get(path);
     expect(res.ok()).toBeTruthy();
     const buf = await res.body();
     expect(buf.readUInt32BE(16)).toBe(size); // PNG IHDR width
   }
-  // Explore has the App Guide and theme entries.
+  // Explore has the App Guide entry.
   await page.locator('#rudExploreBtn').click();
   await expect(page.locator('#rudExploreGuide')).toBeVisible();
-  await expect(page.locator('#rudExploreTheme')).toBeVisible();
+  await expect(page.locator('#rudExploreTheme')).toHaveCount(0); // not duplicated (it is in the top bar)
 });
 
 test('Makkah scene belongs to the first screen and does not follow the page', async ({ page }) => {
@@ -212,6 +216,34 @@ test('first-run App Guide: offered once, tour highlights real controls, never tr
   for (let i = 0; i < 3; i++) await page.locator('.rud-tour-card [data-primary]').click();
   await expect(page.locator('.rud-tour')).toHaveCount(0);
   expect(errors).toEqual([]);
+});
+
+test('page guide opens by itself on the first visit to a page, once', async ({ page }) => {
+  await prepare(page);
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('__v3_pages')) return;
+    sessionStorage.setItem('__v3_pages', '1');
+    localStorage.setItem('rud_onboarding_v1', JSON.stringify({ firstRunDone: true, firstRunVersion: 1 }));
+  });
+  await goto(page, '#tasbih');
+  const card = page.locator('.rud-tour-card');
+  await expect(card).toContainText('quick guide');
+  await expect(card).toContainText('Tap to count');
+  await expect(page.locator('.rud-tour-ring')).toBeVisible();
+  await card.getByRole('button', { name: 'Next' }).click();
+  await expect(card).toContainText('Choose a Zikr');
+  await expect(page).toHaveURL(/#tasbih$/); // a page guide never leaves the page
+  await card.getByRole('button', { name: 'Skip' }).click();
+  await expect(page.locator('.rud-tour')).toHaveCount(0);
+  await setHash(page, '#home');
+  await setHash(page, '#tasbih');
+  await page.waitForTimeout(1500);
+  await expect(page.locator('.rud-tour')).toHaveCount(0); // only once per page
+  // Another page gets its own guide; leaving that page ends it.
+  await setHash(page, '#prayer');
+  await expect(page.locator('.rud-tour-card')).toContainText('Prayer');
+  await setHash(page, '#home');
+  await expect(page.locator('.rud-tour')).toHaveCount(0);
 });
 
 test('in-app browser card (Instagram, Android): Chrome hand-off, dismiss is remembered', async ({ browser }) => {

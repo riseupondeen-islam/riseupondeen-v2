@@ -17,6 +17,7 @@ import {
   rudTrackQuranLocalActivity,
 } from '../my-deen/myDeen';
 import { esc, featureShowPage } from '../tools/featurePageShell';
+import appLogoUrl from '../../assets/images/app-logo.png';
 
 let RUD_QURAN_META_KEY,
   RUD_QURAN_BOOKMARK_KEY,
@@ -404,7 +405,8 @@ function rudQuranEnsurePlayerChrome() {
   rudQuranEnsureAudioEngine();
   if (!document.getElementById('rudQuranMiniPlayer'))
     document.body.insertAdjacentHTML('beforeend', rudQuranPlayerChromeHtml());
-  const logoSrc = document.querySelector('.rud-minimal-logo img.brand-logo,.brand-logo')?.getAttribute('src') || '';
+  // The player artwork is the app-icon logo (the header keeps the original brand logo).
+  const logoSrc = appLogoUrl;
   document.querySelectorAll('.rud-quran-player-logo,.rud-quran-mini-logo').forEach((img) => {
     if (logoSrc && img.getAttribute('src') !== logoSrc) img.setAttribute('src', logoSrc);
   });

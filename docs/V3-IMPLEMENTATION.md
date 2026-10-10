@@ -190,3 +190,24 @@ two; iOS only after removing and re-adding the Home Screen icon).
 - Pre-existing (unchanged): `deens_users` documents (including email) are readable by signed-in
   members as in V2; content rules allow any admin role to edit content. V3 does not widen either; the
   public cards and suggestions introduced in V3 never contain email.
+
+---
+
+## 8. V3.1 refinements (after review)
+
+- **Streaks tab:** the personal streak is one compact card (count, "Today" state, best and active
+  days, one button); the explanatory paragraphs and footnotes were removed. The old card had no
+  padding because `.df2-card` adds none.
+- **Premium accent:** the Deen Friends accent and every green button now use the site's gold
+  (gradient on primary buttons, gold for chips, toggles, selected states, success notifications and
+  the RISE badge). Chat themes a member chooses (e.g. Madinah Green) keep their own colours.
+- **Logos:** the header and admin show the original brand logo again, identical in light and dark.
+  The supplied artwork is used for the app icons and the Qur’an player (`src/assets/images/app-logo.png`).
+- **Page guides:** the first time someone opens a page that has guide steps, that page's short guide
+  opens by itself, once. It never leaves the page; leaving the page ends it; it can be switched off
+  in App Guide ("Show a short guide the first time I open a page") and by admins (App Guide →
+  automatic page guides). Tours are faster (shorter waits, scroll-end detection) and smoother (the
+  highlight glides between controls instead of flashing; text cross-fades).
+- **Navigation icons:** My Deen is a lantern; Deen Friends is two companions joined by a heart.
+- **Duplicates removed:** Explore no longer repeats Deen Friends and the Light/Dark switch, which are
+  in the top bar; it keeps the App Guide.

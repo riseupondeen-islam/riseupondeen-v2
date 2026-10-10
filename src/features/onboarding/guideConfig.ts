@@ -40,6 +40,8 @@ export interface GuideConfig {
   firstRunTourId: string;
   /** Users who completed first-run before this version see it again (admin choice). */
   reshowOnVersion: number;
+  /** Open a page's own short guide automatically the first time someone visits that page. */
+  pageTours: boolean;
   tours: GuideTour[];
 }
 
@@ -59,6 +61,7 @@ export const DEFAULT_GUIDE: GuideConfig = {
   version: 1,
   firstRunTourId: 'start',
   reshowOnVersion: 1,
+  pageTours: true,
   tours: [
     {
       id: 'start',
@@ -223,6 +226,7 @@ export function sanitizeGuide(input: unknown): GuideConfig {
     version: Math.max(1, Math.floor(Number(raw.version) || 1)),
     firstRunTourId: str(raw.firstRunTourId, 60) || (tours[0]?.id ?? ''),
     reshowOnVersion: Math.max(1, Math.floor(Number(raw.reshowOnVersion) || 1)),
+    pageTours: raw.pageTours !== false,
     tours: tours.length ? tours : DEFAULT_GUIDE.tours,
   };
 }
@@ -237,4 +241,30 @@ export function currentLayout(): Exclude<GuideLayout, 'all'> {
 
 export function fitsLayout(layout: GuideLayout): boolean {
   return layout === 'all' || layout === currentLayout();
+}
+
+/** A route as a page key: "#quran/18" and "#quran/1" are the same page (the surah reader). */
+export function pageKey(route: string): string {
+  const r = (route || '#home').split('?')[0];
+  return r.replace(/\/\d+$/, '/:n');
+}
+
+/** The short guide for one page: the steps of every tour that belong to that page (the first-run
+ *  tour and Explore/install steps excluded), in tour order. Null when the page has none. */
+export function pageTourFor(config: GuideConfig, route: string): GuideTour | null {
+  const key = pageKey(route);
+  if (key === '#home') return null; // home has the first-run welcome instead
+  let title = '';
+  const steps: GuideStep[] = [];
+  for (const tour of config.tours) {
+    if (!tour.enabled || !fitsLayout(tour.layout) || tour.id === config.firstRunTourId) continue;
+    for (const step of tour.steps) {
+      if (!step.route || pageKey(step.route) !== key) continue;
+      if (step.action !== 'none' || /rudExplore|explore-/.test(step.target)) continue;
+      if (!title) title = tour.title;
+      steps.push({ ...step, route: '' }); // stay on the page the visitor opened
+    }
+  }
+  if (!steps.length) return null;
+  return { id: `page:${key}`, title, summary: '', enabled: true, layout: 'all', steps: steps.slice(0, 6) };
 }

@@ -15,10 +15,11 @@
   --df2-muted: #a1aaa4;
   --df2-gold: #d9ba72;
   --df2-gold-soft: rgba(217, 186, 114, 0.14);
-  --df2-emerald: #3f9473;
-  --df2-emerald-strong: #2f7a5c;
-  --df2-emerald-soft: rgba(63, 148, 115, 0.16);
-  --df2-on-primary: #08130f;
+  /* V3.1: the accent (still named "emerald" for compatibility) is the site's premium gold. */
+  --df2-emerald: #d9ba72;
+  --df2-emerald-strong: #c7a359;
+  --df2-emerald-soft: rgba(217, 186, 114, 0.14);
+  --df2-on-primary: #1a1408;
   --df2-danger: #e8a092;
   --df2-danger-soft: rgba(232, 160, 146, 0.12);
   --df2-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
@@ -41,14 +42,14 @@ html.light-mode .df2-root {
   --df2-muted: #66706a;
   --df2-gold: #94701f;
   --df2-gold-soft: rgba(148, 112, 31, 0.1);
-  --df2-emerald: #1f6b4f;
-  --df2-emerald-strong: #185a42;
-  --df2-emerald-soft: rgba(31, 107, 79, 0.1);
+  --df2-emerald: #8f6a1c;
+  --df2-emerald-strong: #7a5a16;
+  --df2-emerald-soft: rgba(143, 106, 28, 0.1);
   --df2-on-primary: #ffffff;
   --df2-danger: #a4473a;
   --df2-danger-soft: rgba(164, 71, 58, 0.08);
   --df2-shadow: 0 14px 38px rgba(60, 45, 15, 0.1);
-  --df2-focus: 0 0 0 3px rgba(31, 107, 79, 0.3);
+  --df2-focus: 0 0 0 3px rgba(148, 112, 31, 0.3);
 }
 .df2-root *,
 .df2-root *::before,
@@ -1107,7 +1108,7 @@ html.light-mode .df2-streak-pill.is-alive {
   height: 46px;
   flex: 0 0 46px;
   border-radius: 50%;
-  background: linear-gradient(145deg, #1f6b4f, #11402f);
+  background: linear-gradient(145deg, #2c2416, #120f09);
   color: #f1d48e;
   box-shadow: inset 0 0 0 2px rgba(241, 212, 142, 0.35);
 }

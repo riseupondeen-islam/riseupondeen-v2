@@ -2,30 +2,10 @@
    (see docs/V3-IMPLEMENTATION.md). The original 00–12 stylesheets are left untouched. */
 
 /* =========================================================================================
-   1. Brand logo (supplied artwork, opaque white field) — presentation only, never recoloured.
-   The supplied logo is a square painting on its own white field. It is shown as a rounded
-   "tile" so the white field reads as an intentional app-icon shape on dark and light themes.
+   1. Logos. The header and admin keep the original transparent brand logo exactly as before
+   (same in light and dark). The supplied square artwork (never recoloured) is used for the app
+   icons and the Qur'an player, shown as a rounded tile.
    ========================================================================================= */
-/* 01-base.css pins `.brand-logo` with !important (transparent, no radius, no shadow) for the old
-   transparent PNG; the supplied artwork is opaque, so the tile needs !important to take effect. */
-.rud-minimal-logo .brand-logo,
-#adminApp .brand .brand-logo,
-.admin-login-card .brand-logo {
-  border-radius: 12px !important;
-  background: #fefefd !important;
-  object-fit: cover;
-  filter: none;
-  box-shadow:
-    0 0 0 1px rgba(217, 186, 114, 0.42),
-    0 6px 16px rgba(0, 0, 0, 0.28) !important;
-}
-html.light-mode .rud-minimal-logo .brand-logo,
-html.light-mode #adminApp .brand .brand-logo,
-html.light-mode .admin-login-card .brand-logo {
-  box-shadow:
-    0 0 0 1px rgba(120, 92, 40, 0.2),
-    0 4px 12px rgba(60, 45, 15, 0.1) !important;
-}
 .rud-quran-player-logo,
 .rud-quran-mini-logo {
   border-radius: 22% !important;
@@ -198,7 +178,7 @@ html {
   --note-muted: #b3b9b6;
   --note-line: rgba(217, 186, 114, 0.18);
   --note-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
-  --note-success: #55b38c;
+  --note-success: #d9ba72;
   --note-info: #7fa8d4;
   --note-warning: #e0b75a;
   --note-error: #ec8f80;
@@ -220,7 +200,7 @@ html.light-mode #toastStack {
   --note-muted: #5c6660;
   --note-line: rgba(120, 92, 40, 0.16);
   --note-shadow: 0 16px 40px rgba(60, 45, 15, 0.14);
-  --note-success: #1f7a56;
+  --note-success: #94701f;
   --note-info: #2f6596;
   --note-warning: #9a6a0c;
   --note-error: #b14a3c;
@@ -374,7 +354,7 @@ body.rud-gx-open #toastStack {
   --v3-gold-soft: rgba(217, 186, 114, 0.13);
   --v3-primary: #d9ba72;
   --v3-on-primary: #10140f;
-  --v3-emerald: #3f9473;
+  --v3-emerald: #d9ba72;
   --v3-shadow: 0 28px 80px rgba(0, 0, 0, 0.5);
   --v3-backdrop: rgba(3, 7, 9, 0.62);
   --v3-focus: 0 0 0 3px rgba(217, 186, 114, 0.45);
@@ -391,12 +371,12 @@ html.light-mode .rud-v3 {
   --v3-line-strong: rgba(120, 92, 40, 0.32);
   --v3-gold: #8f6a1c;
   --v3-gold-soft: rgba(148, 112, 31, 0.1);
-  --v3-primary: #1f6b4f;
+  --v3-primary: #8f6a1c;
   --v3-on-primary: #ffffff;
-  --v3-emerald: #1f6b4f;
+  --v3-emerald: #8f6a1c;
   --v3-shadow: 0 24px 64px rgba(60, 45, 15, 0.18);
   --v3-backdrop: rgba(250, 247, 240, 0.72);
-  --v3-focus: 0 0 0 3px rgba(31, 107, 79, 0.3);
+  --v3-focus: 0 0 0 3px rgba(148, 112, 31, 0.3);
 }
 .rud-v3 *, .rud-v3 *::before, .rud-v3 *::after { box-sizing: border-box; }
 .rud-v3 :focus-visible { outline: none; box-shadow: var(--v3-focus); }
@@ -514,6 +494,7 @@ html.light-mode .rud-v3 {
   color: var(--v3-on-primary);
 }
 html:not(.light-mode) .rud-btn-primary { background: linear-gradient(135deg, #e6cd8b, #c09a4c); }
+html.light-mode .rud-btn-primary { background: linear-gradient(135deg, #b8913f, #8a6519); }
 .rud-btn-quiet { border-color: transparent; background: transparent; color: var(--v3-muted); }
 @keyframes rudFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes rudSheetUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
@@ -745,6 +726,8 @@ html:not(.light-mode) .rud-btn-primary { background: linear-gradient(135deg, #e6
 .rud-gx-full strong, .rud-gx-list strong { display: flex; align-items: center; gap: 8px; font-size: 0.92rem; }
 .rud-gx-full small, .rud-gx-list small { display: block; margin-top: 2px; color: var(--v3-muted); font-size: 0.76rem; line-height: 1.4; }
 .rud-gx-full i, .rud-gx-list i { color: var(--v3-gold); font-style: normal; font-size: 1.3rem; }
+.rud-gx-toggle { display: flex; align-items: center; gap: 10px; margin: 2px 2px 10px; color: var(--v3-muted); font-size: 0.82rem; cursor: pointer; }
+.rud-gx-toggle input { width: 18px; height: 18px; accent-color: var(--v3-gold); }
 .rud-gx-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
 .rud-gx-done { padding: 2px 7px; border-radius: 999px; background: var(--v3-gold-soft); color: var(--v3-gold); font-size: 0.62rem; font-style: normal; font-weight: 800; letter-spacing: 0.04em; }
 .rud-tour { position: fixed; inset: 0; z-index: 12700; pointer-events: none; }
@@ -752,7 +735,7 @@ html:not(.light-mode) .rud-btn-primary { background: linear-gradient(135deg, #e6
   position: fixed;
   inset: 0;
   background: rgba(2, 6, 8, 0.58);
-  transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+  transition: top 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), left 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
   pointer-events: none;
 }
 html.light-mode .rud-tour-shade { background: rgba(20, 16, 8, 0.42); }
@@ -767,7 +750,7 @@ html.light-mode .rud-tour-shade.has-hole { box-shadow: 0 0 0 200vmax rgba(20, 16
   position: fixed;
   border-radius: 16px;
   box-shadow: 0 0 0 2px var(--v3-gold), 0 0 0 7px var(--v3-gold-soft);
-  transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
+  transition: top 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), left 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
   animation: rudTourRing 2s ease-in-out infinite;
   pointer-events: none;
 }
@@ -784,6 +767,8 @@ html.light-mode .rud-tour-shade.has-hole { box-shadow: 0 0 0 200vmax rgba(20, 16
   pointer-events: auto;
   animation: rudFadeIn 0.2s ease-out both;
 }
+.rud-tour-card.is-floating { transition: top 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), left 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.rud-tour-text { animation: rudFadeIn 0.18s ease-out both; }
 .rud-tour-card.is-centered { top: 50%; left: 50%; transform: translate(-50%, -50%); }
 .rud-tour-card.is-sheet { left: 50%; bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px)); transform: translateX(-50%); }
 .rud-tour-card.is-sheet-top { left: 50%; top: max(12px, calc(env(safe-area-inset-top) + 8px)); transform: translateX(-50%); }
@@ -800,7 +785,8 @@ html.light-mode .rud-tour-shade.has-hole { box-shadow: 0 0 0 200vmax rgba(20, 16
 body.rud-gx-open .rud-ix-card { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .rud-tour-shade, .rud-tour-ring, .rud-tour-progress i { transition: none; }
-  .rud-tour-ring, .rud-tour-card, .rud-gx-welcome { animation: none; }
+  .rud-tour-ring, .rud-tour-card, .rud-tour-text, .rud-gx-welcome { animation: none; }
+  .rud-tour-card.is-floating { transition: none; }
 }
 
 /* Admin › App Guide editor */
@@ -993,23 +979,55 @@ html body .df2-root[data-chat-theme] .df2-icon-btn {
 }
 .df2-streak-chip b { color: var(--df2-text); font-size: 0.95rem; font-variant-numeric: tabular-nums; }
 .df2-streak-chip.is-today { color: #e8913a; border-color: rgba(232, 145, 58, 0.5); background: rgba(232, 145, 58, 0.1); }
-.df2-my-streak { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px 16px; align-items: start; }
-.df2-my-streak > .df2-btn { grid-column: 1 / -1; justify-self: start; }
+/* Personal streak: one compact card (the old version had no padding — .df2-card adds none). */
+.df2-my-streak { display: grid; gap: 12px; padding: 14px 16px; }
+.df2-my-streak-main { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .df2-my-streak-flame {
-  position: relative;
   display: grid;
   place-items: center;
-  width: 74px;
-  height: 74px;
-  border-radius: 22px;
-  background: radial-gradient(circle at 50% 30%, rgba(232, 145, 58, 0.22), transparent 70%), var(--df2-surface-2);
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--df2-surface-2);
   border: 1px solid var(--df2-line);
   color: var(--df2-muted);
+  transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
 }
-.df2-my-streak.is-today .df2-my-streak-flame { color: #e8913a; border-color: rgba(232, 145, 58, 0.45); }
-.df2-my-streak-flame b { position: absolute; bottom: 7px; font-size: 0.95rem; color: var(--df2-text); }
-.df2-my-streak-copy h2 { margin: 4px 0 4px; font-size: 1.35rem; }
-.df2-my-streak-copy p { margin: 0 0 10px; color: var(--df2-muted); font-size: 0.86rem; }
+.df2-my-streak.is-today .df2-my-streak-flame {
+  color: #e8913a;
+  border-color: rgba(232, 145, 58, 0.4);
+  background: radial-gradient(circle at 50% 35%, rgba(232, 145, 58, 0.2), transparent 70%), var(--df2-surface-2);
+}
+.df2-my-streak-copy { display: grid; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.df2-my-streak-copy h2 { margin: 0; font-size: 1.3rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.df2-my-streak-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--df2-gold-soft);
+  color: var(--df2-gold);
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.df2-my-streak-state.is-done { background: rgba(232, 145, 58, 0.14); color: #d9822f; }
+.df2-my-streak-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.df2-my-streak-stats { display: flex; flex-wrap: wrap; gap: 6px; }
+.df2-my-streak-stats > span {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--df2-surface-2);
+  color: var(--df2-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.df2-my-streak-stats b { color: var(--df2-text); font-variant-numeric: tabular-nums; }
+html body .df2-root .df2-streak-summary { flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; padding: 12px 16px; }
 .df2-stat-flame b { display: inline-flex; align-items: center; gap: 4px; color: #e8913a; }
 
 .df2-suggest-list, .df2-pick-list, .df2-member-list, .df2-participants, .df2-lb-list, .df2-rules-list, .df2-preview-privacy, .df2-group-members-preview {
@@ -1127,3 +1145,29 @@ html body .df2-root[data-chat-theme] .df2-icon-btn {
 .rud-clear-confirm { padding: 16px; margin-bottom: 12px; border-color: var(--df2-danger) !important; }
 .rud-clear-confirm h2 { margin: 0 0 6px; font-size: 1.1rem; }
 .rud-clear-confirm .df2-input { margin: 10px 0; }
+
+/* =========================================================================================
+   Premium accent (V3.1): the Deen Friends accent was emerald green; buttons, chips, toggles and
+   selected states now use the site's gold (tokens in 08-deen-friends.css). User-chosen chat
+   themes keep their own accent.
+   ========================================================================================= */
+html body .df2-root .df2-btn-primary {
+  background: linear-gradient(135deg, #e6cd8b, #c09a4c);
+  color: #1a1408;
+  box-shadow: 0 6px 18px rgba(192, 154, 76, 0.22);
+}
+html.light-mode body .df2-root .df2-btn-primary {
+  background: linear-gradient(135deg, #b8913f, #8a6519);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(138, 101, 25, 0.2);
+}
+html body .df2-root .df2-btn-primary:hover:not(:disabled) { filter: brightness(1.05); }
+html body .df2-root[data-chat-theme]:not([data-chat-theme='ivory']) .df2-btn-primary,
+html.light-mode body .df2-root[data-chat-theme]:not([data-chat-theme='ivory']) .df2-btn-primary {
+  background: var(--df2-emerald);
+  color: var(--df2-on-primary);
+  box-shadow: none;
+}
+html body .df2-root .df2-my-streak .df2-btn-sm { min-height: 36px; padding: 0 16px; font-size: 0.82rem; font-weight: 700; }
+/* Empty states sit on a soft surface so page art behind them never shows through the text. */
+html body .df2-root .df2-empty { background: color-mix(in srgb, var(--df2-surface) 88%, transparent); }

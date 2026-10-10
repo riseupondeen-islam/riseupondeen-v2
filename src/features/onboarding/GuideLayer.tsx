@@ -7,20 +7,46 @@
  * - Tour: navigates to each step's route, waits for its control, scrolls it into view, highlights it
  *   and explains it. Missing/hidden controls become a centred explanation (never a dead end).
  *   Back / Next / Skip / Finish, Escape and arrow keys work; progress can be resumed.
+ * - Page guides: the first time someone opens a page that has guide steps (Qur’an, Prayer, My Deen,
+ *   Tasbih, the libraries, Deen Friends…), that page's short guide opens once by itself. It never
+ *   leaves the page, can be skipped, and can be turned off in the App Guide.
  * - Preview (admin): `rud:preview-guide` runs a draft configuration without saving any progress.
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { AppDialog } from '../../components/overlay/AppDialog';
 import { requestInstallExperience } from '../pwa/installState';
-import { DEFAULT_GUIDE, fitsLayout, sanitizeGuide, type GuideConfig, type GuideStep, type GuideTour } from './guideConfig';
-import { firstRunDue, loadPublishedGuide, markTourDone, readCachedGuide, readProgress, writeProgress } from './guideService';
+import { DEFAULT_GUIDE, fitsLayout, pageKey, pageTourFor, sanitizeGuide, type GuideConfig, type GuideStep, type GuideTour } from './guideConfig';
+import {
+  firstRunDue,
+  loadPublishedGuide,
+  markPageSeen,
+  markTourDone,
+  pageSeen,
+  readCachedGuide,
+  readProgress,
+  writeProgress,
+} from './guideService';
 
 interface Running {
   tour: GuideTour;
   index: number;
   preview: boolean;
   firstRun: boolean;
+  /** Opened automatically for a page visited for the first time. */
+  page: boolean;
+  /** Page key the guide was opened on. */
+  key: string;
+}
+
+/** Something else is on screen that a guide must not cover. */
+function busyElsewhere(): boolean {
+  return (
+    document.body.classList.contains('rud-first-visit-open') ||
+    document.documentElement.dataset.maintenance === 'active' ||
+    /^#(riseupondeen\.admin|admin)/i.test(location.hash) ||
+    !!document.querySelector('.rud-dialog-backdrop, .df2-fullscreen, .df2-sheet-backdrop, #searchOverlay.open, .modal.open, .rud-explore-drawer.open')
+  );
 }
 
 function reducedMotion(): boolean {
@@ -74,6 +100,23 @@ function waitForTarget(selector: string, timeout = 3500): Promise<HTMLElement | 
   });
 }
 
+/** Resolves when smooth scrolling stops (scrollend where supported), or after `max` ms. */
+function scrollSettled(max: number): Promise<void> {
+  if (max <= 0) return Promise.resolve();
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      window.removeEventListener('scrollend', finish);
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = window.setTimeout(finish, max);
+    window.addEventListener('scrollend', finish, { once: true });
+  });
+}
+
 function setExplore(open: boolean): void {
   const drawer = document.getElementById('rudExploreDrawer');
   const isOpen = !!drawer?.classList.contains('open');
@@ -106,30 +149,76 @@ export function GuideLayer() {
     if (!firstRunDue(config)) return;
     let timer = 0;
     const attempt = () => {
-      const busy =
-        document.body.classList.contains('rud-first-visit-open') ||
-        document.documentElement.dataset.maintenance === 'active' ||
-        /^#(riseupondeen\.admin|admin)/i.test(location.hash) ||
-        !!document.querySelector('.rud-dialog-backdrop, .df2-fullscreen, #searchOverlay.open, .modal.open');
-      if (busy || runningRef.current) {
-        timer = window.setTimeout(attempt, 2500);
+      if (busyElsewhere() || runningRef.current) {
+        timer = window.setTimeout(attempt, 1500);
         return;
       }
+      // Someone who arrived on another page gets that page's own guide instead (below).
+      if (pageTourFor(config, location.hash) && config.pageTours && !readProgress().pageToursOff) return;
       setWelcome(true);
     };
-    timer = window.setTimeout(attempt, 2200);
+    timer = window.setTimeout(attempt, 1200);
     return () => clearTimeout(timer);
   }, [config]);
 
   const start = useCallback(
-    (tour: GuideTour | undefined, opts: { preview?: boolean; firstRun?: boolean; at?: number } = {}) => {
+    (tour: GuideTour | undefined, opts: { preview?: boolean; firstRun?: boolean; page?: boolean; at?: number } = {}) => {
       if (!tour || !tour.steps.length) return;
       setIndexOpen(false);
       setWelcome(false);
-      setRunning({ tour, index: Math.max(0, Math.min(opts.at || 0, tour.steps.length - 1)), preview: !!opts.preview, firstRun: !!opts.firstRun });
+      setRunning({
+        tour,
+        index: Math.max(0, Math.min(opts.at || 0, tour.steps.length - 1)),
+        preview: !!opts.preview,
+        firstRun: !!opts.firstRun,
+        page: !!opts.page,
+        key: pageKey(location.hash || '#home'),
+      });
     },
     [],
   );
+
+  /* Page guides: the first visit to a page with guide steps opens its short guide once. */
+  const welcomeRef = useRef(welcome);
+  welcomeRef.current = welcome;
+  useEffect(() => {
+    if (!config.pageTours) return;
+    let timer = 0;
+    const check = () => {
+      clearTimeout(timer);
+      // A page guide belongs to its page: leaving the page ends it.
+      if (runningRef.current?.page && pageKey(location.hash || '#home') !== runningRef.current.key) {
+        runningRef.current = null;
+        setRunning(null);
+      }
+      if (readProgress().pageToursOff || runningRef.current) return;
+      const key = pageKey(location.hash || '#home');
+      const tour = pageTourFor(config, key);
+      if (!tour || pageSeen(key)) return;
+      let tries = 0;
+      const attempt = () => {
+        if (pageKey(location.hash || '#home') !== key || runningRef.current) return;
+        if (busyElsewhere()) {
+          if (++tries < 20) timer = window.setTimeout(attempt, 900);
+          return;
+        }
+        // Opening a page replaces the generic welcome card (it is counted as "later").
+        if (welcomeRef.current) {
+          setWelcome(false);
+          writeProgress({ firstRunDone: true, firstRunVersion: config.version });
+        }
+        markPageSeen(key);
+        start(tour, { page: true });
+      };
+      timer = window.setTimeout(attempt, 650); // let the page render first
+    };
+    check();
+    window.addEventListener('hashchange', check);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('hashchange', check);
+    };
+  }, [config, start]);
 
   /* Admin preview (Admin → App Guide → Preview opens this page in a new tab). */
   useEffect(() => {
@@ -234,6 +323,14 @@ export function GuideLayer() {
               <i aria-hidden="true">›</i>
             </button>
           ) : null}
+          <label className="rud-gx-toggle">
+            <input
+              type="checkbox"
+              defaultChecked={!progress.pageToursOff}
+              onChange={(e) => writeProgress({ pageToursOff: !e.target.checked })}
+            />
+            <span>Show a short guide the first time I open a page</span>
+          </label>
           <ul className="rud-gx-list">
             {tours
               .filter((t) => t.id !== config.firstRunTourId)
@@ -262,7 +359,7 @@ export function GuideLayer() {
           onIndex={(index) => setRunning((r) => (r ? { ...r, index } : r))}
           onEnd={(completed) => {
             const r = runningRef.current;
-            if (r && !r.preview) {
+            if (r && !r.preview && !r.page) {
               if (completed) markTourDone(r.tour.id);
               else writeProgress({ resume: { tourId: r.tour.id, step: r.index } });
               if (r.firstRun || r.tour.id === config.firstRunTourId) finishFirstRun();
@@ -322,8 +419,9 @@ function TourRunner({
   useEffect(() => {
     let cancelled = false;
     const step = steps[running.index];
-    setState({ step, target: null, ready: false });
-    setRect(null);
+    // Keep the previous highlight while the next control is found, so the ring glides to it
+    // instead of the whole screen flashing.
+    setState((prev) => ({ step, target: prev.target, ready: false }));
     (async () => {
       if (!fitsLayout(step.layout)) {
         // Not for this screen size: move on in the same direction.
@@ -344,12 +442,12 @@ function TourRunner({
       }
       if (step.route && (location.hash || '#home') !== step.route) {
         location.hash = step.route;
-        await new Promise((r) => setTimeout(r, 120));
+        await new Promise((r) => setTimeout(r, 40));
       }
       if (needsExplore) {
         setExplore(true);
         exploreOpenedByTour.current = true;
-        await new Promise((r) => setTimeout(r, 260));
+        await new Promise((r) => setTimeout(r, 200));
       }
       if (step.action === 'close-explore') setExplore(false);
       const target = step.target ? await waitForTarget(step.target) : null;
@@ -360,10 +458,13 @@ function TourRunner({
         const offscreen = r.top < margin || r.bottom > window.innerHeight - 160;
         if (offscreen && !target.closest('.rud-minimal-topbar')) {
           target.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' });
-          await new Promise((res) => setTimeout(res, reducedMotion() ? 30 : 380));
+          await scrollSettled(reducedMotion() ? 0 : 420);
         }
       }
-      if (!cancelled) setState({ step, target, ready: true });
+      if (cancelled) return;
+      if (!target) setRect(null);
+      setState({ step, target, ready: true });
+      markPageSeen(pageKey(location.hash || '#home'));
     })();
     return () => {
       cancelled = true;
@@ -470,14 +571,16 @@ function TourRunner({
         <div className="rud-tour-meta">
           <span>
             {running.preview ? 'Preview · ' : ''}
-            {running.tour.title}
+            {running.page ? `${running.tour.title} · quick guide` : running.tour.title}
           </span>
           <span>
             {index + 1} / {steps.length}
           </span>
         </div>
-        <h2 id="rudTourTitle">{state.step.title}</h2>
-        <p id="rudTourBody">{state.ready ? state.step.body : 'Finding this on the page…'}</p>
+        <div className="rud-tour-text" key={state.step.id}>
+          <h2 id="rudTourTitle">{state.step.title}</h2>
+          <p id="rudTourBody">{state.step.body}</p>
+        </div>
         {state.ready && state.step.target && !state.target ? (
           <p className="rud-tour-missing">This control isn’t on screen right now (it may need you to sign in, or appear once content loads). You can continue the tour.</p>
         ) : null}
