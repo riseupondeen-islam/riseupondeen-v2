@@ -24,7 +24,7 @@ import { Icon, Sheet, useToast, type IconName } from './ui';
 
 /* ---------- action menu ---------- */
 
-export type DeenAction = 'challenge' | 'quran' | 'dua' | 'hadith' | 'zikr' | 'reminder' | 'checkin' | 'encourage';
+export type DeenAction = 'challenge' | 'quran' | 'dua' | 'hadith' | 'zikr' | 'reminder' | 'name' | 'encourage';
 
 const ACTIONS: Array<{ id: DeenAction; icon: IconName; title: string; copy: string }> = [
   { id: 'challenge', icon: 'target', title: 'Challenge', copy: 'Set a Deen goal to complete together' },
@@ -33,7 +33,7 @@ const ACTIONS: Array<{ id: DeenAction; icon: IconName; title: string; copy: stri
   { id: 'hadith', icon: 'scroll', title: 'Hadith', copy: 'Share a hadith published by RISE' },
   { id: 'zikr', icon: 'beads', title: 'Dhikr', copy: 'Share a remembrance of Allah' },
   { id: 'reminder', icon: 'sparkle', title: 'Reminder', copy: 'Share a daily Islamic reminder' },
-  { id: 'checkin', icon: 'check', title: 'Check in', copy: 'Mark today on your shared streak' },
+  { id: 'name', icon: 'sparkle', title: 'Names of Allah', copy: 'Share one of the 99 Names' },
   { id: 'encourage', icon: 'heart', title: 'Encourage', copy: 'Send a kind word' },
 ];
 
@@ -109,6 +109,7 @@ const SHARE_FILTERS: Array<{ id: 'all' | SharedContentType; label: string }> = [
   { id: 'hadith', label: 'Hadith' },
   { id: 'zikr', label: 'Dhikr' },
   { id: 'reminder', label: 'Reminders' },
+  { id: 'name', label: '99 Names' },
 ];
 
 export function ShareSheet({
@@ -229,7 +230,7 @@ export function ShareSheet({
           type="search"
           value={term}
           onChange={(e) => setTerm(e.target.value)}
-          placeholder="Search duas, hadith, dhikr, reminders"
+          placeholder="Search duas, hadith, dhikr, 99 Names"
           aria-label="Search content"
         />
       )}

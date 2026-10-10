@@ -4,32 +4,33 @@ import type { Interaction } from '../types';
 import {
   completeDailyChallengeToday,
   isRunningOn,
-  loadMyDailyChallenges,
   type DailyChallengeWithProgress,
 } from '../services/dailyChallengeService';
 import { friendlyMessage, logError } from '../services/errors';
 import { challengeState, daysBetween, localDay } from '../services/format';
-import { loadMyFriendChallenges } from '../services/interactionService';
 import { startTasbihChallenge } from '../services/tasbihHandoff';
 import { getDeenFriendsState, useDeenFriends } from '../state/deenFriendsStore';
 import { goToDeenFriends } from '../deenFriendsRoute';
 import { EmptyState, Icon, SkeletonRows, useToast } from './ui';
 import { CircleChallengesSection, LeaderboardSection } from './CircleChallenges';
+import { cachedChallenges, refreshChallenges, setCachedDaily } from '../state/challengeCache';
+import { MonthlyWinnerBanner } from './MonthlyWinner';
 
 export function ChallengesTab() {
   const s = useDeenFriends();
   const toast = useToast();
-  const [daily, setDaily] = useState<DailyChallengeWithProgress[] | null>(null);
-  const [friendChallenges, setFriendChallenges] = useState<Interaction[] | null>(null);
+  const cached = cachedChallenges();
+  const [daily, setDaily] = useState<DailyChallengeWithProgress[] | null>(cached?.daily ?? null);
+  const [friendChallenges, setFriendChallenges] = useState<Interaction[] | null>(cached?.friends ?? null);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
 
   const load = useCallback(async () => {
     setError('');
     try {
-      const [mine, withFriends] = await Promise.all([loadMyDailyChallenges(), loadMyFriendChallenges()]);
-      setDaily(mine);
-      setFriendChallenges(withFriends);
+      const fresh = await refreshChallenges();
+      setDaily(fresh.daily);
+      setFriendChallenges(fresh.friends);
     } catch (err) {
       logError('challenges load', err);
       setError(friendlyMessage(err, 'Challenges could not be loaded.'));
@@ -57,7 +58,11 @@ export function ChallengesTab() {
     setBusyId(challenge.id);
     try {
       const progress = await completeDailyChallengeToday(challenge, getDeenFriendsState().profile);
-      setDaily((list) => (list || []).map((x) => (x.challenge.id === challenge.id ? { ...x, progress } : x)));
+      setDaily((list) => {
+        const next = (list || []).map((x) => (x.challenge.id === challenge.id ? { ...x, progress } : x));
+        setCachedDaily(next);
+        return next;
+      });
       toast(
         progress.status === 'completed' ? 'MashaAllah — challenge completed!' : 'Today is done. May Allah accept it.',
         'success',
@@ -78,14 +83,13 @@ export function ChallengesTab() {
 
   return (
     <div className="df2-stack">
+      <MonthlyWinnerBanner />
+      <LeaderboardSection />
       <section className="df2-section" aria-labelledby="df2-daily-title">
         <div className="df2-section-head">
           <h2 id="df2-daily-title">
-            Daily Deen Challenges <span className="df2-official-tag">From RISE</span>
+            Daily challenges <span className="df2-official-tag">RISE</span>
           </h2>
-          <button type="button" className="df2-link-btn" onClick={() => void load()}>
-            Refresh
-          </button>
         </div>
         {error ? <p className="df2-inline-note">{error}</p> : null}
         {daily === null ? (
@@ -163,21 +167,14 @@ export function ChallengesTab() {
             })}
           </div>
         ) : (
-          <EmptyState icon="target" title="No Daily Deen Challenge right now">
-            <p>
-              When RISE publishes a challenge for you, it appears here. Your progress is private to you and the RISE
-              team.
-            </p>
-          </EmptyState>
+          <EmptyState icon="target" title="No daily challenge right now" />
         )}
       </section>
 
       <section className="df2-section" aria-labelledby="df2-shared-title">
         <div className="df2-section-head">
-          <h2 id="df2-shared-title">Shared goals with friends</h2>
-          <span className="df2-section-meta">
-            {finishedWithFriends ? `${finishedWithFriends} completed together` : ''}
-          </span>
+          <h2 id="df2-shared-title">With friends</h2>
+          {finishedWithFriends ? <span className="df2-section-meta">{finishedWithFriends} done</span> : null}
         </div>
         {friendChallenges === null ? (
           <SkeletonRows count={2} />
@@ -213,17 +210,13 @@ export function ChallengesTab() {
             })}
           </ul>
         ) : (
-          <EmptyState icon="people" title="No shared goals in progress">
-            <p>
-              Open a friend’s conversation and choose “Challenge” to set a goal you both complete — reading, learning or
-              dhikr.
-            </p>
+          <EmptyState icon="people" title="No shared goals yet">
+            <p>Start one from a friend’s chat.</p>
           </EmptyState>
         )}
       </section>
 
       <CircleChallengesSection />
-      <LeaderboardSection />
     </div>
   );
 }

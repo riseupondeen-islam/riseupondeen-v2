@@ -6,31 +6,40 @@
    (same in light and dark). The supplied square artwork (never recoloured) is used for the app
    icons and the Qur'an player, shown as a rounded tile.
    ========================================================================================= */
-.rud-quran-player-logo,
-.rud-quran-mini-logo {
-  border-radius: 22% !important;
-  background: #fefefd;
+/* Qur'an player artwork: the app-icon logo fills the whole square art box (and the mini player's). */
+html body .rud-quran-player-art { padding: 0; overflow: hidden; background: #fefefd; }
+html body .rud-quran-player-art-inner { width: 100%; height: 100%; }
+html body .rud-quran-player-art-inner i { display: none; }
+html body .rud-quran-player-logo {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
   object-fit: cover;
+  border-radius: 0 !important;
+  filter: none;
 }
+html body .rud-quran-mini-art { padding: 0; overflow: hidden; background: #fefefd !important; }
+html body .rud-quran-mini-logo { width: 100%; height: 100%; object-fit: cover; border-radius: 0 !important; display: block; }
+/* The ••• options button stays inside its box. */
+html body .rud-quran-player-top .rud-quran-player-more { font-size: 0; line-height: 0; padding: 0; overflow: hidden; }
 
 /* =========================================================================================
-   2. Makkah background (Section 4).
-   Root cause: .global-mecca-bg (Kaaba, minarets, arcades) was position:fixed with inset:0, so the
-   architecture stayed pinned to the viewport and slid behind every section while the page scrolled
-   (and was re-anchored each time a mobile toolbar resized the viewport). The scene now belongs to the
-   first screen: it is laid out once at the large-viewport height and scrolls away with the hero,
-   fading into the fixed sky layer below it. No scroll listeners, no parallax.
+   2. Makkah background.
+   The Kaaba scene stays behind the whole main page while it scrolls (fixed), as before V3. The only
+   change from the original is its size: it is laid out once at the large-viewport height (lvh)
+   instead of inset:0, so it no longer jumps when a mobile toolbar shows or hides. Pure CSS — no
+   scroll listeners or parallax.
    ========================================================================================= */
 body > #root > .global-mecca-bg {
-  position: absolute !important;
+  position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
   bottom: auto !important;
   height: 100vh;
   height: 100lvh;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 80%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0, #000 80%, transparent 100%);
+  transform: translateZ(0);
 }
 /* The fixed sky layer underneath keeps one stable size (no jump when the address bar hides). */
 body > #root > .mecca-bg-lite {
@@ -38,8 +47,7 @@ body > #root > .mecca-bg-lite {
   height: 100vh;
   height: 100lvh;
 }
-/* Its own small silhouette/moon were always covered by the opaque scene above; keep them hidden
-   now that the scene scrolls away, so no second Kaaba appears pinned to the viewport. */
+/* Its own small silhouette/moon are always covered by the scene above (no duplicate Kaaba). */
 body > #root > .mecca-bg-lite .mecca-silhouette,
 body > #root > .mecca-bg-lite .mecca-moon {
   display: none !important;
@@ -209,33 +217,31 @@ body.df2-chat-open #toastStack,
 body.rud-gx-open #toastStack {
   top: calc(env(safe-area-inset-top, 0px) + 12px) !important;
 }
+/* V3.1 design: a compact "island" card — deep glass, hairline gold edge, a solid tone medallion,
+   two-line text, spring entry, swipe up (or tap ×) to dismiss. Transform/opacity animation only. */
 .rud-note {
   --tone: var(--note-info);
   position: relative;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 30px;
-  align-items: start;
-  gap: 10px;
-  padding: 12px 10px 13px 12px;
+  grid-template-columns: 36px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 10px;
   overflow: hidden;
-  border: 1px solid var(--note-line);
-  border-radius: 18px;
-  background: var(--note-bg);
+  border-radius: 22px;
+  background:
+    linear-gradient(var(--note-bg), var(--note-bg)) padding-box,
+    linear-gradient(135deg, color-mix(in srgb, var(--tone) 55%, transparent), var(--note-line) 40%, color-mix(in srgb, var(--tone) 30%, transparent)) border-box;
+  border: 1px solid transparent;
   color: var(--note-text);
-  box-shadow: var(--note-shadow);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
+  box-shadow: var(--note-shadow), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
   font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
   pointer-events: auto;
-  animation: rudNoteIn 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-.rud-note::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  background: var(--tone);
-  opacity: 0.85;
+  touch-action: pan-x;
+  will-change: transform, opacity;
+  animation: rudNoteIn 0.42s cubic-bezier(0.18, 1.25, 0.4, 1) both;
 }
 .rud-note-success { --tone: var(--note-success); }
 .rud-note-info { --tone: var(--note-info); }
@@ -244,38 +250,41 @@ body.rud-gx-open #toastStack {
 .rud-note-icon {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
-  color: var(--tone);
-  background: color-mix(in srgb, var(--tone) 14%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 28%, transparent);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #fff;
+  background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--tone) 70%, #fff), var(--tone) 60%, color-mix(in srgb, var(--tone) 70%, #000));
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--tone) 35%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
-.rud-note-body {
-  min-width: 0;
-  padding-top: 1px;
-}
+.rud-note-success .rud-note-icon,
+.rud-note-warning .rud-note-icon { color: #1d1608; }
+html.light-mode .rud-note-icon { color: #fff; }
+.rud-note-body { min-width: 0; }
 .rud-note-title {
   display: block;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 800;
-  line-height: 1.3;
-  letter-spacing: 0.01em;
+  line-height: 1.25;
 }
 .rud-note-text {
-  margin: 2px 0 0;
+  margin: 1px 0 0;
   color: var(--note-muted);
   font-size: 0.8rem;
-  line-height: 1.45;
+  line-height: 1.4;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .rud-note-action {
   margin-top: 8px;
-  min-height: 32px;
+  min-height: 30px;
   padding: 0 12px;
-  border: 1px solid color-mix(in srgb, var(--tone) 45%, transparent);
+  border: 0;
   border-radius: 999px;
-  background: transparent;
+  background: color-mix(in srgb, var(--tone) 18%, transparent);
   color: var(--tone);
   font: 750 0.74rem/1 'Manrope', system-ui, sans-serif;
   cursor: pointer;
@@ -283,15 +292,16 @@ body.rud-gx-open #toastStack {
 .rud-note-close {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border: 0;
-  border-radius: 10px;
-  background: transparent;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--note-text) 7%, transparent);
   color: var(--note-muted);
   cursor: pointer;
+  transition: background 0.15s ease;
 }
-.rud-note-close:hover { background: color-mix(in srgb, var(--note-text) 8%, transparent); }
+.rud-note-close:hover { background: color-mix(in srgb, var(--note-text) 14%, transparent); }
 .rud-note-close:focus-visible,
 .rud-note-action:focus-visible {
   outline: 2px solid var(--tone);
@@ -299,32 +309,32 @@ body.rud-gx-open #toastStack {
 }
 .rud-note-progress {
   position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 5px;
+  left: 22px;
+  right: 22px;
+  bottom: 0;
   height: 2px;
   overflow: hidden;
   border-radius: 2px;
-  background: color-mix(in srgb, var(--note-text) 7%, transparent);
 }
 .rud-note-progress i {
   display: block;
   height: 100%;
-  background: var(--tone);
-  opacity: 0.7;
+  background: linear-gradient(90deg, transparent, var(--tone), transparent);
+  opacity: 0.8;
   transform-origin: left center;
   animation: rudNoteProgress linear forwards;
 }
+.rud-note.is-dragging { animation: none; transition: none; }
 .rud-note.is-leaving {
-  animation: rudNoteOut 0.24s ease-in both;
+  animation: rudNoteOut 0.22s ease-in both;
   pointer-events: none;
 }
 @keyframes rudNoteIn {
-  from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+  from { opacity: 0; transform: translateY(-16px) scale(0.92); }
   to { opacity: 1; transform: none; }
 }
 @keyframes rudNoteOut {
-  to { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 0; transform: translateY(-14px) scale(0.96); }
 }
 @keyframes rudNoteProgress {
   from { transform: scaleX(1); }
@@ -344,8 +354,8 @@ body.rud-gx-open #toastStack {
    6. V3 overlay design tokens + primitives (AppDialog, buttons) — install guides, App Guide.
    ========================================================================================= */
 .rud-v3 {
-  --v3-surface: #0f1916;
-  --v3-surface-2: #15241f;
+  --v3-surface: #111417;
+  --v3-surface-2: #171b1f;
   --v3-text: #f4f0e6;
   --v3-muted: #a8b0aa;
   --v3-line: rgba(217, 186, 114, 0.18);
@@ -731,30 +741,43 @@ html.light-mode .rud-btn-primary { background: linear-gradient(135deg, #b8913f, 
 .rud-gx-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
 .rud-gx-done { padding: 2px 7px; border-radius: 999px; background: var(--v3-gold-soft); color: var(--v3-gold); font-size: 0.62rem; font-style: normal; font-weight: 800; letter-spacing: 0.04em; }
 .rud-tour { position: fixed; inset: 0; z-index: 12700; pointer-events: none; }
+/* Performance: the highlight moves with transform (compositor), sits on its own layer, and the
+   pulse animates a pseudo-element's opacity/scale — no full-screen repaint per frame. */
 .rud-tour-shade {
   position: fixed;
   inset: 0;
   background: rgba(2, 6, 8, 0.58);
-  transition: top 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), left 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
   pointer-events: none;
+  animation: rudFadeIn 0.18s ease-out both;
 }
 html.light-mode .rud-tour-shade { background: rgba(20, 16, 8, 0.42); }
-.rud-tour-shade.has-hole {
+.rud-tour-shade.has-hole,
+.rud-tour-ring {
   inset: auto;
+  top: 0;
+  left: 0;
   border-radius: 16px;
-  background: transparent;
-  box-shadow: 0 0 0 200vmax rgba(2, 6, 8, 0.58);
+  will-change: transform;
+  backface-visibility: hidden;
+  transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
+.rud-tour-shade.has-hole { background: transparent; box-shadow: 0 0 0 200vmax rgba(2, 6, 8, 0.58); }
 html.light-mode .rud-tour-shade.has-hole { box-shadow: 0 0 0 200vmax rgba(20, 16, 8, 0.42); background: transparent; }
 .rud-tour-ring {
   position: fixed;
-  border-radius: 16px;
-  box-shadow: 0 0 0 2px var(--v3-gold), 0 0 0 7px var(--v3-gold-soft);
-  transition: top 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), left 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
-  animation: rudTourRing 2s ease-in-out infinite;
+  box-shadow: 0 0 0 2px var(--v3-gold);
   pointer-events: none;
 }
-@keyframes rudTourRing { 50% { box-shadow: 0 0 0 2px var(--v3-gold), 0 0 0 11px transparent; } }
+.rud-tour-ring::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 6px var(--v3-gold-soft);
+  animation: rudTourPulse 1.8s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+@keyframes rudTourPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0; transform: scale(1.04); } }
 .rud-tour-card {
   position: fixed;
   width: min(380px, calc(100% - 24px));
@@ -778,14 +801,14 @@ html.light-mode .rud-tour-shade.has-hole { box-shadow: 0 0 0 200vmax rgba(20, 16
 .rud-tour-card p { margin: 0; color: var(--v3-muted); font-size: 0.86rem; line-height: 1.55; }
 .rud-tour-missing { margin-top: 8px !important; padding: 8px 10px; border-radius: 12px; background: var(--v3-gold-soft); color: var(--v3-text) !important; font-size: 0.76rem !important; }
 .rud-tour-progress { height: 3px; margin: 12px 0 10px; border-radius: 3px; background: var(--v3-line); overflow: hidden; }
-.rud-tour-progress i { display: block; height: 100%; background: var(--v3-gold); transition: width 0.25s ease; }
+.rud-tour-progress i { display: block; height: 100%; width: 100%; background: var(--v3-gold); transform-origin: left; transition: transform 0.25s ease; }
 .rud-tour-actions { display: flex; align-items: center; gap: 6px; }
 .rud-tour-actions .rud-btn { min-height: 40px; padding: 0 15px; }
 .rud-tour-spacer { flex: 1; }
 body.rud-gx-open .rud-ix-card { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .rud-tour-shade, .rud-tour-ring, .rud-tour-progress i { transition: none; }
-  .rud-tour-ring, .rud-tour-card, .rud-tour-text, .rud-gx-welcome { animation: none; }
+  .rud-tour-ring::after, .rud-tour-shade, .rud-tour-card, .rud-tour-text, .rud-gx-welcome { animation: none; }
   .rud-tour-card.is-floating { transition: none; }
 }
 
@@ -1117,19 +1140,40 @@ html body .df2-root .df2-streak-summary { flex-direction: row; align-items: cent
 .df2-rules-list li { padding-left: 16px; position: relative; color: var(--df2-soft); font-size: 0.88rem; line-height: 1.5; }
 .df2-rules-list li::before { content: ''; position: absolute; left: 2px; top: 9px; width: 6px; height: 6px; border-radius: 50%; background: var(--df2-gold); }
 
-.df2-av-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
-@media (min-width: 720px) { .df2-av-layout { grid-template-columns: 200px minmax(0, 1fr); } }
-.df2-av-preview { display: grid; justify-items: center; align-content: start; gap: 10px; padding: 16px; border: 1px solid var(--df2-line); border-radius: 20px; background: var(--df2-surface-2); position: sticky; top: 0; }
-.df2-av-preview small { color: var(--df2-muted); font-size: 0.74rem; text-align: center; }
-.df2-av-preview-small { display: flex; align-items: center; gap: 10px; }
-.df2-av-controls { display: grid; gap: 6px; min-width: 0; }
-.df2-av-choices > div { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 6px; overscroll-behavior-x: contain; scrollbar-width: thin; }
-.df2-av-choices button { display: grid; justify-items: center; gap: 4px; flex: 0 0 auto; min-width: 70px; padding: 6px; border: 1px solid var(--df2-line); border-radius: 14px; background: var(--df2-surface); color: var(--df2-text); }
-.df2-av-choices button.active { border-color: var(--df2-emerald); box-shadow: inset 0 0 0 1px var(--df2-emerald); }
+.df2-av-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+@media (min-width: 720px) { .df2-av-layout { grid-template-columns: 220px minmax(0, 1fr); } }
+/* Preview stage: a softly lit plinth with a slow light sweep (transform-only animation). */
+.df2-av-stage {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 12px;
+  min-height: 210px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid var(--df2-line-strong);
+  background:
+    radial-gradient(60% 50% at 50% 38%, rgba(230, 196, 120, 0.22), transparent 70%),
+    linear-gradient(160deg, var(--df2-surface-2), var(--df2-surface-3));
+  isolation: isolate;
+}
+.df2-av-stage-art { filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.28)); animation: df2AvFloat 5s ease-in-out infinite; }
+@keyframes df2AvFloat { 50% { transform: translateY(-4px); } }
+.df2-av-stage-shine { position: absolute; inset: -30% auto -30% -40%; width: 35%; background: linear-gradient(100deg, transparent, rgba(255, 240, 200, 0.28), transparent); transform: translateX(-120%) skewX(-14deg); animation: df2Sweep 6s ease-in-out infinite; z-index: -1; pointer-events: none; }
+.df2-av-preview-small { display: flex; align-items: center; gap: 12px; }
+.df2-av-controls { display: grid; gap: 8px; min-width: 0; align-content: start; }
+.df2-av-tabs { justify-self: start; }
+.df2-av-choices > div { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; padding: 2px; }
+.df2-av-choices button { display: grid; justify-items: center; gap: 4px; padding: 8px 4px 6px; border: 1px solid var(--df2-line); border-radius: 16px; background: var(--df2-surface); color: var(--df2-text); cursor: pointer; transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
+.df2-av-choices button:active { transform: scale(0.97); }
+.df2-av-choices button.active { border-color: var(--df2-gold); box-shadow: 0 0 0 1px var(--df2-gold), 0 8px 18px rgba(192, 154, 76, 0.18); }
 .df2-av-choices small { font-size: 0.68rem; color: var(--df2-muted); white-space: nowrap; }
-.df2-av-swatches > div { display: flex; flex-wrap: wrap; gap: 8px; }
-.df2-av-swatches button { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--df2-line-strong); }
-.df2-av-swatches button.active { outline: 2px solid var(--df2-emerald); outline-offset: 2px; }
+.df2-av-swatches > div { display: flex; flex-wrap: wrap; gap: 10px; }
+.df2-av-swatches button { width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.6); box-shadow: 0 0 0 1px var(--df2-line-strong), inset 0 -6px 10px rgba(0, 0, 0, 0.12); cursor: pointer; transition: transform 0.15s ease; }
+.df2-av-swatches button.active { outline: 2px solid var(--df2-gold); outline-offset: 3px; transform: scale(1.06); }
+@media (prefers-reduced-motion: reduce) { .df2-av-stage-art, .df2-av-stage-shine { animation: none; } }
 .df2-avatar-built { background: transparent !important; }
 .df2-build-avatar { margin-bottom: 10px; }
 
@@ -1171,3 +1215,377 @@ html.light-mode body .df2-root[data-chat-theme]:not([data-chat-theme='ivory']) .
 html body .df2-root .df2-my-streak .df2-btn-sm { min-height: 36px; padding: 0 16px; font-size: 0.82rem; font-weight: 700; }
 /* Empty states sit on a soft surface so page art behind them never shows through the text. */
 html body .df2-root .df2-empty { background: color-mix(in srgb, var(--df2-surface) 88%, transparent); }
+
+/* Sheets never move sideways on phones: nothing inside may be wider than the sheet (iOS date
+   inputs have a wide intrinsic size), and the sheet body is the only vertical scroller. */
+html body .df2-sheet-body { overflow-x: hidden; touch-action: pan-y; }
+html body .df2-root .df2-field input,
+html body .df2-root .df2-field select,
+html body .df2-root .df2-field textarea { min-width: 0; max-width: 100%; box-sizing: border-box; }
+html body .df2-root .df2-field input[type='date'] { width: 100%; -webkit-appearance: none; appearance: none; min-height: 44px; }
+html body .df2-root .df2-cc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+html body .df2-root .df2-cc-form .df2-pick-list { max-height: none; overflow: visible; }
+/* Shared streak rows: one tap opens the chat; no check-in button. */
+html body .df2-root .df2-streak-row { display: block; padding: 0; }
+.df2-streak-open { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; border-radius: inherit; }
+.df2-streak-open:focus-visible { box-shadow: var(--df2-focus); outline: none; }
+.df2-streak-row.is-today { border-color: rgba(232, 145, 58, 0.4); }
+
+/* People list (all members): small, clean rows. */
+.df2-people { display: grid; margin: 0; padding: 4px; list-style: none; border: 1px solid var(--df2-line); border-radius: var(--df2-radius); background: var(--df2-surface); }
+.df2-person-row { display: flex; align-items: center; gap: 8px; padding: 4px 6px 4px 4px; border-radius: 12px; transition: background 0.15s ease; }
+.df2-person-row + .df2-person-row { border-top: 1px solid var(--df2-line); border-radius: 0; }
+.df2-person-row:hover { background: var(--df2-raised); }
+.df2-person-open { display: flex; align-items: center; gap: 10px; flex: 1 1 auto; min-width: 0; padding: 6px; border: 0; background: none; color: inherit; text-align: left; cursor: pointer; border-radius: 10px; }
+.df2-person-open span { display: grid; min-width: 0; }
+.df2-person-open strong { font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.df2-person-open small { color: var(--df2-muted); font-size: 0.74rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body .df2-root .df2-btn-xs { min-height: 30px; padding: 0 12px; font-size: 0.76rem; font-weight: 700; flex: 0 0 auto; }
+.df2-icon-btn-xs { width: 30px; height: 30px; min-width: 30px; flex: 0 0 auto; }
+.df2-people-more { justify-self: center; margin-top: 6px; }
+/* Friend requests: one small button; the list opens inside it. */
+.df2-requests-wrap { display: grid; gap: 8px; }
+.df2-requests-toggle { display: inline-flex; align-items: center; gap: 8px; justify-self: start; min-height: 38px; padding: 0 14px; border: 1px solid var(--df2-line); border-radius: 999px; background: var(--df2-surface); color: var(--df2-text); font-size: 0.84rem; font-weight: 700; cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease; }
+.df2-requests-toggle small { color: var(--df2-muted); font-weight: 700; }
+.df2-requests-toggle.is-open { border-color: var(--df2-line-strong); background: var(--df2-raised); }
+.df2-requests-panel { padding: 6px; border: 1px solid var(--df2-line); border-radius: var(--df2-radius); background: var(--df2-surface); animation: rudFadeIn 0.16s ease-out both; }
+.df2-requests-panel .df2-request-list { gap: 4px; }
+.df2-add-head h2 { margin: 0; font-size: 1rem; }
+
+/* Monthly winner — premium gold card with a slow light sweep (transform only). */
+.df2-winner {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 22px;
+  color: #fff7e2;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(255, 226, 150, 0.22), transparent 55%),
+    linear-gradient(140deg, #2a2112 0%, #16110a 55%, #2b210f 100%);
+  border: 1px solid rgba(230, 196, 120, 0.55);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 240, 200, 0.18);
+  isolation: isolate;
+}
+.df2-winner-shine {
+  position: absolute;
+  inset: -40% auto -40% -30%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 236, 180, 0.22), transparent);
+  transform: translateX(-120%) skewX(-12deg);
+  animation: df2Sweep 5.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes df2Sweep { 0%, 55% { transform: translateX(-120%) skewX(-12deg); } 100% { transform: translateX(420%) skewX(-12deg); } }
+.df2-winner-head { display: flex; align-items: center; gap: 10px; }
+.df2-winner-head small { display: block; color: #e6c983; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
+.df2-winner-head strong { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.35rem; font-weight: 600; line-height: 1.1; }
+.df2-winner-crown { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: #2a1e08; background: linear-gradient(135deg, #f6dc94, #c99a3e); box-shadow: 0 0 0 4px rgba(230, 196, 120, 0.16); }
+.df2-winner-people { display: flex; flex-wrap: wrap; gap: 10px; }
+.df2-winner-person { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 6px 12px 6px 6px; border: 1px solid rgba(230, 196, 120, 0.3); border-radius: 999px; background: rgba(255, 240, 200, 0.06); color: inherit; text-align: left; cursor: pointer; }
+.df2-winner-avatar { display: grid; padding: 2px; border-radius: 50%; background: conic-gradient(from 0deg, #f6dc94, #b8862e, #f6dc94, #9e7426, #f6dc94); }
+.df2-winner-name { display: grid; min-width: 0; }
+.df2-winner-name strong { font-size: 1rem; }
+.df2-winner-name small { color: #d9c08a; font-size: 0.76rem; }
+.df2-winner-message { margin: 0; color: #f0e2bf; font-size: 0.86rem; line-height: 1.5; }
+@media (prefers-reduced-motion: reduce) { .df2-winner-shine { animation: none; display: none; } }
+.rud-winner-admin-card { display: grid; gap: 12px; padding: 16px; max-width: 640px; }
+.rud-winner-admin-card h3 { margin: 4px 0 0; font-size: 1rem; }
+.rud-winner-rank { min-width: 2.2em; color: var(--df2-gold); }
+
+/* =========================================================================================
+   Visiting card (V3.1) — rectangular, foil edge, slow light sweep, script signature.
+   All motion is transform/opacity only.
+   ========================================================================================= */
+.df2-vcard { display: grid; gap: 10px; padding: 0 !important; border: 0 !important; background: none !important; box-shadow: none !important; }
+.df2-vcard-face {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 12px;
+  min-height: 200px;
+  padding: 16px 18px 14px;
+  border-radius: 20px;
+  color: #f5eedc;
+  background:
+    radial-gradient(90% 120% at 100% 0%, rgba(217, 186, 114, 0.18), transparent 55%),
+    linear-gradient(150deg, #1b2422 0%, #101615 60%, #18201e 100%);
+  border: 1px solid rgba(217, 186, 114, 0.38);
+  box-shadow: 0 22px 44px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  isolation: isolate;
+  animation: df2CardIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+html.light-mode .df2-vcard-face {
+  color: #2a2418;
+  background:
+    radial-gradient(90% 120% at 100% 0%, rgba(201, 160, 78, 0.16), transparent 55%),
+    linear-gradient(150deg, #fffdf8 0%, #f6efe1 100%);
+  border-color: rgba(160, 120, 40, 0.35);
+  box-shadow: 0 18px 36px rgba(60, 45, 15, 0.14), inset 0 1px 0 #fff;
+}
+@keyframes df2CardIn { from { opacity: 0; transform: translateY(10px) scale(0.98); } }
+.df2-vcard-pattern {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.08;
+  background-image:
+    linear-gradient(45deg, currentColor 1px, transparent 1px),
+    linear-gradient(-45deg, currentColor 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(120deg, transparent 30%, #000 100%);
+  mask-image: linear-gradient(120deg, transparent 30%, #000 100%);
+}
+.df2-vcard-shine {
+  position: absolute;
+  inset: -40% auto -40% -40%;
+  width: 38%;
+  z-index: 1;
+  background: linear-gradient(100deg, transparent, rgba(255, 244, 214, 0.32), transparent);
+  transform: translateX(-140%) skewX(-16deg);
+  animation: df2CardShine 7s ease-in-out 0.4s infinite;
+  pointer-events: none;
+}
+@keyframes df2CardShine { 0% { transform: translateX(-140%) skewX(-16deg); } 30%, 100% { transform: translateX(460%) skewX(-16deg); } }
+.df2-vcard-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.df2-vcard-brand { font-size: 0.58rem; font-weight: 800; letter-spacing: 0.24em; color: #d9ba72; }
+html.light-mode .df2-vcard-brand { color: #94701f; }
+.df2-vcard-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.04em; color: #2a1e08; background: linear-gradient(135deg, #f6dc94, #c99a3e); }
+.df2-vcard-main { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.df2-vcard-avatar { display: grid; flex: 0 0 auto; padding: 2px; border-radius: 50%; background: linear-gradient(135deg, rgba(246, 220, 148, 0.9), rgba(160, 120, 40, 0.6)); }
+.df2-vcard-id { display: grid; gap: 1px; min-width: 0; }
+.df2-vcard-id strong { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.45rem; font-weight: 600; line-height: 1.05; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.df2-vcard-id span { color: #d9ba72; font-size: 0.8rem; font-weight: 700; }
+html.light-mode .df2-vcard-id span { color: #94701f; }
+.df2-vcard-id small { opacity: 0.7; font-size: 0.72rem; }
+.df2-vcard-foot { display: grid; gap: 4px; min-width: 0; }
+.df2-vcard-foot .df2-visiting-bio { margin: 0; max-width: 100%; font-size: 0.78rem; line-height: 1.4; opacity: 0.78; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.df2-signature { display: inline-block; justify-self: end; max-width: 100%; padding: 0 2px 2px; line-height: 1.1; color: #e9cf8b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transform: translateY(4px); transition: opacity 0.4s ease, transform 0.4s ease; }
+.df2-signature.is-ready { opacity: 1; transform: none; }
+html.light-mode .df2-signature { color: #6e5418; }
+.df2-vcard.is-winner .df2-vcard-face {
+  background:
+    radial-gradient(90% 120% at 100% 0%, rgba(255, 226, 150, 0.32), transparent 55%),
+    linear-gradient(150deg, #2c2212 0%, #15100a 60%, #2a1f0e 100%);
+  border: 1px solid rgba(240, 205, 130, 0.75);
+  box-shadow: 0 24px 50px rgba(120, 85, 20, 0.35), inset 0 0 0 1px rgba(255, 236, 180, 0.12);
+  color: #fff6de;
+}
+.df2-vcard.is-winner .df2-vcard-avatar { background: conic-gradient(from 0deg, #f6dc94, #b8862e, #f6dc94, #9e7426, #f6dc94); }
+.df2-vcard.is-winner .df2-signature,
+.df2-vcard.is-winner .df2-vcard-id span,
+.df2-vcard.is-winner .df2-vcard-brand { color: #f3d98f; }
+.df2-vcard-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.df2-vchip { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--df2-line); background: var(--df2-surface-2); color: var(--df2-soft); font-size: 0.74rem; font-weight: 700; }
+.df2-vchip.is-flame { color: #e8913a; }
+.df2-vchip.is-earned { color: var(--df2-gold); }
+.df2-vcard-details { margin: 0; }
+@media (max-width: 380px) { .df2-vcard-face { aspect-ratio: auto; } .df2-vcard-id strong { font-size: 1.25rem; } }
+@media (prefers-reduced-motion: reduce) { .df2-vcard-face, .df2-vcard-shine { animation: none; } .df2-vcard-shine { display: none; } }
+
+/* Own profile: visiting card, then four compact actions; notifications fold away. */
+.df2-profile-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+html body .df2-root .df2-pa { font-size: 0.74rem; line-height: 1.2; }
+.df2-pa { display: grid; justify-items: center; gap: 4px; padding: 10px 4px; border: 1px solid var(--df2-line); border-radius: 16px; background: var(--df2-surface-2); color: var(--df2-text); font-size: 0.74rem; font-weight: 700; cursor: pointer; transition: transform 0.15s ease, border-color 0.15s ease; }
+.df2-pa svg { color: var(--df2-gold); }
+.df2-pa:active { transform: scale(0.97); }
+.df2-pa:hover { border-color: var(--df2-line-strong); }
+.df2-collapse-toggle { margin-top: 4px; }
+.df2-collapse-panel { margin-top: 8px; animation: rudFadeIn 0.16s ease-out both; }
+.df2-preview-note { display: flex; align-items: center; gap: 6px; margin: 10px 0 0; color: var(--df2-muted); font-size: 0.76rem; }
+.df2-preview-note svg { color: var(--df2-gold); flex: 0 0 auto; }
+/* Editor */
+.df2-edit-form { gap: 14px; }
+.df2-edit-avatar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.df2-classic-icons { flex: 1 0 100%; }
+.df2-details > summary { cursor: pointer; color: var(--df2-gold); font-size: 0.82rem; font-weight: 700; list-style: none; padding: 6px 0; }
+.df2-details > summary::-webkit-details-marker { display: none; }
+.df2-details > summary::after { content: ' ›'; display: inline-block; transition: transform 0.15s ease; }
+.df2-details[open] > summary::after { transform: rotate(90deg); }
+.df2-signature-edit { display: grid; gap: 10px; }
+.df2-signature-preview { display: grid; place-items: center; min-height: 72px; padding: 8px 12px; border-radius: 16px; border: 1px dashed var(--df2-line-strong); background: var(--df2-surface-2); }
+.df2-signature-preview .df2-signature { margin: 0; color: var(--df2-gold); }
+.df2-signature-styles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.df2-signature-styles button { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; border: 1px solid var(--df2-line); border-radius: 14px; background: var(--df2-surface); color: var(--df2-text); cursor: pointer; overflow: hidden; }
+.df2-signature-styles button span { font-size: 1.3rem; line-height: 1.2; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.df2-signature-styles button small { color: var(--df2-muted); font-size: 0.64rem; font-weight: 700; }
+.df2-signature-styles button.active { border-color: var(--df2-gold); box-shadow: 0 0 0 1px var(--df2-gold); }
+.df2-toggle-compact { padding: 8px 0; }
+.df2-toggle-compact strong { font-size: 0.86rem; }
+.df2-account-details { margin: 12px 0 6px; }
+
+/* =========================================================================================
+   Friday & Ramadan modes (V3.1) — one occasion card layout for both: icon medallion, title,
+   one line, and pill actions. Stacks on phones; no horizontal overflow.
+   ========================================================================================= */
+.rud-occasion-section { padding-block: clamp(22px, 4vw, 40px) !important; }
+.rud-occasion-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 22px;
+  border-radius: 26px;
+  border: 1px solid rgba(217, 186, 114, 0.28);
+  background:
+    radial-gradient(70% 140% at 0% 0%, rgba(217, 186, 114, 0.16), transparent 60%),
+    linear-gradient(150deg, rgba(20, 26, 30, 0.92), rgba(10, 14, 16, 0.94));
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  color: #f3eee2;
+  isolation: isolate;
+}
+.rud-occasion-card.is-ramadan {
+  border-color: rgba(230, 196, 120, 0.4);
+  background:
+    radial-gradient(80% 160% at 100% 0%, rgba(246, 220, 148, 0.2), transparent 60%),
+    linear-gradient(150deg, #1d1810, #0e0c08);
+}
+html.light-mode body .rud-occasion-card {
+  color: #2a2418;
+  border-color: rgba(160, 120, 40, 0.28);
+  background:
+    radial-gradient(70% 140% at 0% 0%, rgba(201, 160, 78, 0.16), transparent 60%),
+    linear-gradient(150deg, #fffdf8, #f6efe1);
+  box-shadow: 0 16px 36px rgba(60, 45, 15, 0.1);
+}
+.rud-occasion-glow { position: absolute; inset: auto -10% -60% auto; width: 50%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(246, 220, 148, 0.14), transparent 70%); z-index: -1; pointer-events: none; }
+.rud-occasion-icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 18px; color: #2a1e08; background: linear-gradient(135deg, #f6dc94, #c99a3e); box-shadow: 0 10px 24px rgba(201, 154, 62, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.5); }
+.rud-occasion-copy { display: grid; gap: 3px; min-width: 0; }
+.rud-occasion-kicker { color: #d9ba72; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.2em; }
+html.light-mode body .rud-occasion-kicker { color: #94701f; }
+.rud-occasion-copy strong { font-family: 'Cormorant Garamond', Georgia, serif; font-size: clamp(1.5rem, 2.6vw, 2rem); font-weight: 600; line-height: 1.05; }
+.rud-occasion-copy > span:last-child { opacity: 0.72; font-size: 0.86rem; line-height: 1.45; }
+.rud-occasion-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.rud-occasion-link { display: inline-flex; align-items: center; min-height: 38px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(217, 186, 114, 0.35); color: inherit; font-size: 0.8rem; font-weight: 700; white-space: nowrap; transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease; }
+.rud-occasion-link:hover { border-color: rgba(217, 186, 114, 0.7); }
+.rud-occasion-link:active { transform: scale(0.97); }
+.rud-occasion-link.is-primary { border-color: transparent; color: #1a1408; background: linear-gradient(135deg, #e6cd8b, #c09a4c); }
+html.light-mode body .rud-occasion-link.is-primary { color: #fff; background: linear-gradient(135deg, #b8913f, #8a6519); }
+@media (max-width: 760px) {
+  .rud-occasion-card { grid-template-columns: auto minmax(0, 1fr); gap: 14px; padding: 18px; }
+  .rud-occasion-actions { grid-column: 1 / -1; justify-content: flex-start; }
+  .rud-occasion-icon { width: 48px; height: 48px; border-radius: 15px; }
+}
+@media (max-width: 380px) { .rud-occasion-link { flex: 1 1 auto; justify-content: center; } }
+
+/* =========================================================================================
+   Intro (V3.1) — night sky, slow geometric star, the app mark in a gold ring, a gold-ink
+   "Assalamu Alaikum". Same look in light and dark. GPU-friendly: opacity/transform only.
+   ========================================================================================= */
+html body #preloader.rud-intro {
+  background: #06080b;
+  color: #f4ecd8;
+  transition: opacity 0.42s cubic-bezier(0.22, 0.61, 0.36, 1), transform 0.42s cubic-bezier(0.22, 0.61, 0.36, 1), visibility 0s linear 0.42s;
+}
+html body #preloader.rud-intro::before,
+html body #preloader.rud-intro::after { display: none; }
+html body #preloader.rud-intro.hide { opacity: 0; transform: scale(1.03); }
+.rud-intro-sky {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(60% 45% at 50% 38%, rgba(217, 186, 114, 0.2), transparent 70%),
+    radial-gradient(90% 60% at 50% 110%, rgba(40, 70, 90, 0.35), transparent 70%),
+    linear-gradient(180deg, #05070a 0%, #0a1014 60%, #06080b 100%);
+}
+.rud-intro-star {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  z-index: -1;
+  width: min(620px, 135vw);
+  height: auto;
+  color: rgba(230, 200, 130, 0.13);
+  transform: translate(-50%, -50%);
+  animation: rudIntroSpin 60s linear infinite;
+  will-change: transform;
+}
+@keyframes rudIntroSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+.rud-intro-inner { display: grid; justify-items: center; gap: 10px; padding: 24px; text-align: center; }
+.rud-intro-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 104px;
+  height: 104px;
+  margin-bottom: 8px;
+  border-radius: 30px;
+  padding: 3px;
+  background: conic-gradient(from 210deg, #f6dc94, #8f6a1c, #f6dc94, #b8862e, #f6dc94);
+  box-shadow: 0 18px 50px rgba(201, 154, 62, 0.28), 0 0 0 8px rgba(217, 186, 114, 0.06);
+  animation: rudIntroRise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.rud-intro-mark img { width: 100%; height: 100%; object-fit: cover; border-radius: 27px; background: #fefefd; }
+.rud-intro-mark::after { content: ''; position: absolute; inset: -14px; border-radius: 40px; border: 1px solid rgba(217, 186, 114, 0.25); animation: rudIntroHalo 2.4s ease-out infinite; }
+@keyframes rudIntroHalo { from { opacity: 0.9; transform: scale(0.94); } to { opacity: 0; transform: scale(1.18); } }
+.rud-intro-arabic { font-family: 'Noto Naskh Arabic', 'Amiri', serif; font-size: clamp(1.5rem, 5vw, 2rem); line-height: 1.6; color: #e9cf8b; animation: rudIntroRise 0.7s 0.12s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+html body #preloader .rud-intro-title {
+  margin: 0;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: clamp(2.5rem, 9vw, 4.4rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  background: linear-gradient(180deg, #fff6dc 0%, #e9cf8b 55%, #b8862e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: rudIntroRise 0.8s 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.rud-intro-sub { max-width: 340px; color: rgba(244, 236, 216, 0.66); font-size: 0.86rem; line-height: 1.5; animation: rudIntroRise 0.8s 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.rud-intro-rule { width: 64px; height: 1px; margin: 6px 0 2px; background: linear-gradient(90deg, transparent, #d9ba72, transparent); animation: rudIntroRise 0.8s 0.44s both; }
+html body #preloader .rud-intro-brand { margin: 0; color: #d9ba72; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.42em; animation: rudIntroRise 0.8s 0.5s both; }
+.rud-intro-progress { position: relative; width: 120px; height: 2px; margin-top: 14px; overflow: hidden; border-radius: 2px; background: rgba(217, 186, 114, 0.16); }
+.rud-intro-progress::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, #f6dc94, transparent); transform: translateX(-100%); animation: rudIntroLoad 1.2s ease-in-out infinite; }
+@keyframes rudIntroLoad { to { transform: translateX(100%); } }
+@keyframes rudIntroRise { from { opacity: 0; transform: translateY(12px); } }
+@media (prefers-reduced-motion: reduce) {
+  .rud-intro-star, .rud-intro-mark, .rud-intro-mark::after, .rud-intro-arabic, html body #preloader .rud-intro-title, .rud-intro-sub, .rud-intro-rule, html body #preloader .rud-intro-brand, .rud-intro-progress::after { animation: none; }
+}
+
+/* First-visit name card (V3.1) — continues the intro: night sky, gold ink, glass card. */
+html body #rudWelcomeIntro {
+  background:
+    radial-gradient(60% 45% at 50% 30%, rgba(217, 186, 114, 0.18), transparent 70%),
+    linear-gradient(180deg, #05070a 0%, #0a1014 60%, #06080b 100%) !important;
+}
+html body #rudWelcomeIntro .rud-welcome-card {
+  position: relative;
+  border: 1px solid rgba(217, 186, 114, 0.3) !important;
+  background: linear-gradient(160deg, rgba(22, 28, 32, 0.92), rgba(10, 14, 16, 0.94)) !important;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  color: #f4ecd8 !important;
+  animation: rudIntroRise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+html body #rudWelcomeIntro .rud-welcome-mark { width: 64px; height: 64px; margin: 0 auto 18px; border-radius: 20px; background: url('/icon-192.png') center / cover no-repeat, #fefefd; box-shadow: 0 0 0 2px rgba(217, 186, 114, 0.7), 0 14px 34px rgba(201, 154, 62, 0.25); }
+html body #rudWelcomeIntro :is(.rud-welcome-kicker) { color: #d9ba72 !important; }
+html body #rudWelcomeIntro .rud-welcome-card h1 {
+  background: linear-gradient(180deg, #fff6dc 0%, #e9cf8b 55%, #b8862e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+}
+html body #rudWelcomeIntro :is(.rud-welcome-copy) { color: rgba(244, 236, 216, 0.72) !important; }
+html body #rudWelcomeIntro :is(.rud-welcome-privacy) { color: rgba(244, 236, 216, 0.45) !important; }
+html body #rudWelcomeIntro #rudVisitorName {
+  border: 1px solid rgba(217, 186, 114, 0.35) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #fff7e6 !important;
+  box-shadow: none !important;
+}
+html body #rudWelcomeIntro #rudVisitorName::placeholder { color: rgba(244, 236, 216, 0.4) !important; }
+html body #rudWelcomeIntro #rudVisitorName:focus { border-color: rgba(233, 207, 139, 0.85) !important; box-shadow: 0 0 0 4px rgba(217, 186, 114, 0.14) !important; }
+html body #rudWelcomeIntro #rudWelcomeContinue {
+  border: 0 !important;
+  color: #1a1408 !important;
+  background: linear-gradient(135deg, #f0d892, #c09a4c) !important;
+  box-shadow: 0 12px 28px rgba(192, 154, 76, 0.28) !important;
+}
+.rud-saw { font-family: 'Noto Naskh Arabic', 'Amiri', serif; }
+html body .df2-root .df2-requests-toggle { font-size: 0.84rem; line-height: 1.2; }

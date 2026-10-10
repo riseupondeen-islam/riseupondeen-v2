@@ -34,6 +34,8 @@ const ICON_PATHS: Record<string, ReactNode> = {
   close: <path d="M6 6l12 12M18 6 6 18" />,
   back: <path d="m15 5-7 7 7 7" />,
   chevron: <path d="m9 5 7 7-7 7" />,
+  chevronDown: <path d="m6 9 6 6 6-6" />,
+  chevronUp: <path d="m6 15 6-6 6 6" />,
   share: (
     <>
       <circle cx="18" cy="5" r="2.5" />
@@ -83,6 +85,7 @@ const ICON_PATHS: Record<string, ReactNode> = {
     </>
   ),
   shield: <path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z" />,
+  bell: <path d="M6.8 9.5a5.2 5.2 0 0 1 10.4 0c0 6 2.1 6.2 2.1 6.2H4.7s2.1-.2 2.1-6.2ZM9.8 18.2c.4 1 1.1 1.5 2.2 1.5s1.8-.5 2.2-1.5" />,
   trash: <path d="M5 7h14M10 11v6M14 11v6M7 7l1 13h8l1-13M9 7V4h6v3" />,
   sun: (
     <>

@@ -20,6 +20,7 @@ const TYPE_MAP: Record<string, SharedContentType> = {
   reminder: 'reminder',
   quran: 'quran',
   ayah: 'quran',
+  name: 'name', // the 99 Names of Allah
 };
 
 function clean(value: unknown, max: number): string {
@@ -37,6 +38,7 @@ export function publishedShareItems(): ShareItem[] {
     const type = TYPE_MAP[String(x.type || '').toLowerCase()];
     if (!type || !x.id) continue;
     const full = contentFromPublished(x, type);
+    if (type === 'name' && !full.reference) full.reference = x.number ? `The 99 Names · ${String(x.number)}` : 'The 99 Names of Allah';
     items.push({
       ...full,
       title: clean(full.title, 200),

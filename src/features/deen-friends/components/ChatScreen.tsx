@@ -9,11 +9,9 @@ import {
   completeChallenge,
   listenToConversation,
   markSeen,
-  postCheckinCard,
   respondToChallenge,
   sendEncouragement,
 } from '../services/interactionService';
-import { checkInToday } from '../services/streakService';
 import { startTasbihChallenge } from '../services/tasbihHandoff';
 import { getDeenFriendsState, refreshProfile, useDeenFriends } from '../state/deenFriendsStore';
 import { ChatSettingsSheet, readChatTheme, type ChatThemeId } from './ChatSettingsSheet';
@@ -28,7 +26,7 @@ type OpenSheet =
   | 'challenge'
   | 'encourage'
   | 'settings'
-  | { share: 'all' | 'quran' | 'dua' | 'hadith' | 'zikr' | 'reminder' };
+  | { share: 'all' | 'quran' | 'dua' | 'hadith' | 'zikr' | 'reminder' | 'name' };
 
 export function ChatScreen({
   friendship,
@@ -153,24 +151,10 @@ export function ChatScreen({
     }
   }
 
-  async function checkIn() {
-    try {
-      const isNew = await checkInToday(friendship.id);
-      if (isNew && me?.privacy.shareCheckinCards) await postCheckinCard(friendRef);
-      toast(isNew ? 'Checked in for today.' : 'You already checked in today.', 'success');
-    } catch (err) {
-      logError('check-in', err);
-      toast(friendlyMessage(err), 'error');
-    }
-  }
-
   function pickAction(action: DeenAction) {
     if (action === 'challenge') setSheet('challenge');
     else if (action === 'encourage') setSheet('encourage');
-    else if (action === 'checkin') {
-      setSheet(null);
-      void checkIn();
-    } else setSheet({ share: action });
+    else setSheet({ share: action });
   }
 
   const online = !!friend && Date.now() - friend.lastActiveAt < 120000;
@@ -229,9 +213,6 @@ export function ChatScreen({
               </button>
               <button type="button" className="df2-btn" onClick={() => setSheet({ share: 'all' })}>
                 Share a reminder
-              </button>
-              <button type="button" className="df2-btn" onClick={() => void checkIn()}>
-                Check in
               </button>
             </div>
           </div>

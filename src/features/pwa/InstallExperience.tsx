@@ -46,7 +46,7 @@ function busyElsewhere(): boolean {
     body.classList.contains('rud-gx-open') ||
     body.classList.contains('df2-chat-open') ||
     document.documentElement.dataset.maintenance === 'active' ||
-    !!document.querySelector('#rudFirstVisitOverlay.open, .rud-welcome-overlay.open') ||
+    !!document.querySelector('#preloader:not(.hide), #rudWelcomeIntro:not([hidden]), .rud-gx-welcome, .rud-dialog-backdrop') ||
     /^#(riseupondeen\.admin|admin)/i.test(location.hash)
   );
 }
@@ -74,6 +74,21 @@ async function copyLink(): Promise<boolean> {
 }
 
 const AppIcon = () => <img className="rud-ix-appicon" src="/icon-192.png" alt="" width="56" height="56" />;
+
+function sessionSeen(): boolean {
+  try {
+    return sessionStorage.getItem('rud_install_card_session') === '1';
+  } catch {
+    return false;
+  }
+}
+function markSessionSeen(): void {
+  try {
+    sessionStorage.setItem('rud_install_card_session', '1');
+  } catch {
+    /* ignore */
+  }
+}
 
 /* ------------------------------------------------------------------------------------------ */
 
@@ -133,32 +148,40 @@ export function InstallExperience() {
     }
     if (inApp) return;
 
-    let engaged = false;
-    let routeChanges = 0;
+    /* Browser visitors on a phone (link opened in Safari, Chrome, Samsung Internet…): offer the
+       install guide a few seconds after the page settles. Never in the installed app, never in an
+       in-app browser (that gets the "open in your browser" card above), at most once per session,
+       and a dismissal snoozes it for 3 days. */
+    const mobile = isIOS() || isAndroid();
+    let shown = false;
+    let tries = 0;
     const consider = () => {
-      if (!engaged || viewRef.current || busyElsewhere() || !installCardAllowed()) return;
-      if (isAndroid() || platform() === 'desktop') {
-        if (canPromptInstall() && isAndroid()) open('android');
-      } else if (isIOS() && iosBrowser() === 'safari' && !readPrefs().iosGuideSeenAt) open('ios-suggest');
-    };
-    const onRoute = () => {
-      routeChanges += 1;
-      if (routeChanges >= 2) {
-        engaged = true;
-        timers.push(window.setTimeout(consider, 1500));
+      if (shown || viewRef.current || !installCardAllowed() || sessionSeen()) return;
+      if (busyElsewhere()) {
+        if (++tries < 40) timers.push(window.setTimeout(consider, 2500));
+        return;
+      }
+      if (isIOS()) {
+        shown = true;
+        markSessionSeen();
+        open('ios-suggest');
+      } else if (isAndroid()) {
+        shown = true;
+        markSessionSeen();
+        open(canPromptInstall() ? 'android' : 'manual');
+      } else if (canPromptInstall()) {
+        shown = true;
+        markSessionSeen();
+        open('android'); // desktop Chrome/Edge with a real install prompt
       }
     };
-    timers.push(
-      window.setTimeout(() => {
-        engaged = true;
-        consider();
-      }, 30000),
-    );
-    window.addEventListener('hashchange', onRoute);
-    const stop = subscribeInstall(() => timers.push(window.setTimeout(consider, 800)));
+    // Android: give Chrome a moment to fire beforeinstallprompt so the one-tap install is used.
+    timers.push(window.setTimeout(consider, mobile ? (isAndroid() && !canPromptInstall() ? 6500 : 4000) : 45000));
+    const stop = subscribeInstall(() => {
+      if (isAndroid() && viewRef.current === 'manual' && canPromptInstall()) setView('android');
+    });
     return () => {
       timers.forEach(clearTimeout);
-      window.removeEventListener('hashchange', onRoute);
       stop();
     };
   }, [open]);
@@ -443,12 +466,12 @@ function IosSuggestion({ onOpen, onClose }: { onOpen: () => void; onClose: () =>
           <AppIcon />
         </span>
         <div>
-          <span className="rud-dialog-kicker">iPhone &amp; iPad</span>
+          <span className="rud-dialog-kicker">Install the app</span>
           <h2 id="rudIxIosSuggest">Add Rise Upon Deen to your Home Screen</h2>
         </div>
       </div>
       <div className="rud-ix-card-body">
-        <p>It opens full-screen like an app and keeps your Qur’an and saved content close. It takes three taps.</p>
+        <p>It opens full-screen like an app and keeps your Qur’an and saved content close. It takes a few taps.</p>
       </div>
       <div className="rud-ix-card-actions">
         <button type="button" className="rud-btn rud-btn-primary" onClick={onOpen}>

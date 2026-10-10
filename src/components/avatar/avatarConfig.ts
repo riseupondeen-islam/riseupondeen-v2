@@ -6,9 +6,9 @@
 import type { AvatarConfig } from '../../features/deen-friends/types';
 
 export const AVATAR_SHAPES = ['circle', 'arch', 'octagon', 'star'] as const;
-export const AVATAR_PATTERNS = ['none', 'stars', 'girih', 'arches', 'dots'] as const;
-export const AVATAR_FIGURES = ['none', 'hijab', 'kufi', 'turban', 'shawl'] as const;
-export const AVATAR_MOTIFS = ['none', 'crescent', 'lantern', 'mosque', 'book', 'tasbih'] as const;
+export const AVATAR_PATTERNS = ['none', 'stars', 'girih', 'arches', 'dots', 'mashrabiya', 'rays'] as const;
+export const AVATAR_FIGURES = ['none', 'hijab', 'niqab', 'kufi', 'ghutra', 'turban', 'shawl'] as const;
+export const AVATAR_MOTIFS = ['none', 'crescent', 'lantern', 'mosque', 'kaaba', 'book', 'tasbih', 'star'] as const;
 
 export const BACKGROUNDS: Record<string, string> = {
   cream: '#F4EAD5',
@@ -17,8 +17,12 @@ export const BACKGROUNDS: Record<string, string> = {
   sky: '#DCE7F0',
   rose: '#F1DDD8',
   lilac: '#E6DDEB',
+  pearl: '#F7F2E8',
+  saffron: '#F0D7A2',
   night: '#14251F',
   ink: '#1A2233',
+  midnight: '#0E1830',
+  dusk: '#3A2D47',
 };
 export const OUTFITS: Record<string, string> = {
   emerald: '#2F6B53',
@@ -29,6 +33,8 @@ export const OUTFITS: Record<string, string> = {
   teal: '#2C6C72',
   plum: '#5B3F6C',
   ivory: '#EFE8D8',
+  olive: '#5B6440',
+  black: '#1F1F24',
 };
 export const ACCENTS: Record<string, string> = {
   gold: '#C9A04E',
@@ -36,13 +42,15 @@ export const ACCENTS: Record<string, string> = {
   rosegold: '#C48D7B',
   emerald: '#3F9473',
   ivory: '#F3EBD9',
+  bronze: '#A8743A',
+  pearl: '#E9E2D4',
 };
 
 export const LABELS = {
   shape: { circle: 'Circle', arch: 'Arch', octagon: 'Octagon', star: 'Eight-point star' },
-  pattern: { none: 'Plain', stars: 'Stars', girih: 'Girih lines', arches: 'Arches', dots: 'Dots' },
-  figure: { none: 'Motif only', hijab: 'Hijab', kufi: 'Kufi', turban: 'Imamah', shawl: 'Shawl' },
-  motif: { none: 'None', crescent: 'Crescent', lantern: 'Lantern', mosque: 'Masjid', book: 'Qur’an', tasbih: 'Tasbih' },
+  pattern: { none: 'Plain', stars: 'Stars', girih: 'Girih', arches: 'Arches', dots: 'Dots', mashrabiya: 'Mashrabiya', rays: 'Light rays' },
+  figure: { none: 'Motif only', hijab: 'Hijab', niqab: 'Niqab', kufi: 'Kufi', ghutra: 'Ghutra', turban: 'Imamah', shawl: 'Shawl' },
+  motif: { none: 'None', crescent: 'Crescent', lantern: 'Lantern', mosque: 'Masjid', kaaba: 'Kaaba', book: 'Qur’an', tasbih: 'Tasbih', star: 'Star' },
 } as const;
 
 export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
@@ -65,6 +73,9 @@ export const AVATAR_PRESETS: Array<{ name: string; config: AvatarConfig }> = [
   { name: 'Rihla', config: { ...DEFAULT_AVATAR_CONFIG, shape: 'octagon', background: 'sand', pattern: 'girih', figure: 'turban', outfit: 'navy', accent: 'ivory', motif: 'none' } },
   { name: 'Rahma', config: { ...DEFAULT_AVATAR_CONFIG, shape: 'star', background: 'rose', pattern: 'dots', figure: 'shawl', outfit: 'maroon', accent: 'rosegold', motif: 'none' } },
   { name: 'Misbah', config: { ...DEFAULT_AVATAR_CONFIG, shape: 'arch', background: 'ink', pattern: 'girih', figure: 'none', outfit: 'teal', accent: 'gold', motif: 'lantern' } },
+  { name: 'Haya', config: { ...DEFAULT_AVATAR_CONFIG, shape: 'circle', background: 'dusk', pattern: 'mashrabiya', figure: 'niqab', outfit: 'black', accent: 'gold', motif: 'none' } },
+  { name: 'Safar', config: { ...DEFAULT_AVATAR_CONFIG, shape: 'octagon', background: 'saffron', pattern: 'rays', figure: 'ghutra', outfit: 'ivory', accent: 'bronze', motif: 'none' } },
+  { name: 'Ka‘bah', config: { ...DEFAULT_AVATAR_CONFIG, shape: 'arch', background: 'midnight', pattern: 'stars', figure: 'none', outfit: 'black', accent: 'gold', motif: 'kaaba' } },
 ];
 
 const pick = <T extends string>(value: unknown, list: readonly T[], fallback: T): T =>
@@ -96,5 +107,5 @@ export function avatarConfigForStorage(config: AvatarConfig): AvatarConfig {
 }
 
 export function isDarkBackground(key: string): boolean {
-  return key === 'night' || key === 'ink';
+  return key === 'night' || key === 'ink' || key === 'midnight' || key === 'dusk';
 }

@@ -241,7 +241,7 @@ service cloud.firestore {
         && c.keys().hasOnly(['id','type','title','preview','reference','arabic','translation','transliteration','source'])
         && c.keys().hasAll(['id','type','title'])
         && isString(c.id, 200)
-        && c.type in ['quran','dua','hadith','zikr','reminder']
+        && c.type in ['quran','dua','hadith','zikr','reminder','name']
         && isString(c.title, 200)
         && isString(c.get('preview', ''), 300)
         && isString(c.get('reference', ''), 200)
@@ -296,18 +296,27 @@ service cloud.firestore {
         && (list.size() <= from + 6 || isFriendOf(me, list[from + 6]))
         && (list.size() <= from + 7 || isFriendOf(me, list[from + 7]));
     }
+    // V3.1 visiting-card signature: a short name in one of four handwriting styles.
+    function validSignature(sg) {
+      return sg == null || (
+        sg is map
+        && sg.keys().hasOnly(['text','style'])
+        && sg.text is string && sg.text.size() >= 1 && sg.text.size() <= 40
+        && sg.style in ['royal','slim','classic','autograph']
+      );
+    }
     function validAvatarConfig(a) {
       return a == null || (
         a is map
         && a.keys().hasOnly(['v','shape','background','pattern','figure','outfit','accent','motif','initials'])
         && a.v == 1
         && a.shape in ['circle','arch','octagon','star']
-        && a.background in ['cream','sage','sand','sky','rose','lilac','night','ink']
-        && a.pattern in ['none','stars','girih','arches','dots']
-        && a.figure in ['none','hijab','kufi','turban','shawl']
-        && a.outfit in ['emerald','navy','maroon','charcoal','sand','teal','plum','ivory']
-        && a.accent in ['gold','silver','rosegold','emerald','ivory']
-        && a.motif in ['none','crescent','lantern','mosque','book','tasbih']
+        && a.background in ['cream','sage','sand','sky','rose','lilac','pearl','saffron','night','ink','midnight','dusk']
+        && a.pattern in ['none','stars','girih','arches','dots','mashrabiya','rays']
+        && a.figure in ['none','hijab','niqab','kufi','ghutra','turban','shawl']
+        && a.outfit in ['emerald','navy','maroon','charcoal','sand','teal','plum','ivory','olive','black']
+        && a.accent in ['gold','silver','rosegold','emerald','ivory','bronze','pearl']
+        && a.motif in ['none','crescent','lantern','mosque','kaaba','book','tasbih','star']
         && a.initials is bool
       );
     }
@@ -591,6 +600,7 @@ service cloud.firestore {
           isString(request.resource.data.username, 50) &&
           isString(request.resource.data.displayName, 50) &&
           validAvatarConfig(request.resource.data.get('avatarConfig', null)) &&
+          validSignature(request.resource.data.get('signature', null)) &&
           request.resource.data.updatedAt is timestamp &&
           request.resource.data.lastActiveAt is int;
 
@@ -2505,6 +2515,39 @@ service cloud.firestore {
       }
     }
 
+
+    /* =========================================================
+       V3.1 MONTHLY WINNERS
+       Announcements of a month's leaderboard winner(s). Every signed-in member can read them
+       (they are public announcements); only community-level admins write or remove them.
+       ========================================================= */
+
+    match /deens_monthly_winners/{monthId} {
+      allow read:
+        if signedIn();
+
+      allow create, update:
+        if isCommunityAdmin()
+        && monthId.matches('^[0-9]{4}-[0-9]{2}$')
+        && request.resource.data.keys().hasOnly([
+             'monthId','uids','winners','title','message','published','announcedBy','announcedAt','announcedAtMs'
+           ])
+        && request.resource.data.monthId == monthId
+        && request.resource.data.uids is list
+        && request.resource.data.uids.size() >= 1
+        && request.resource.data.uids.size() <= 3
+        && request.resource.data.winners is list
+        && request.resource.data.winners.size() == request.resource.data.uids.size()
+        && isString(request.resource.data.title, 80)
+        && isString(request.resource.data.message, 400)
+        && request.resource.data.published is bool
+        && request.resource.data.announcedBy == request.auth.uid
+        && request.resource.data.announcedAt == request.time
+        && request.resource.data.announcedAtMs is int;
+
+      allow delete:
+        if isCommunityAdmin();
+    }
 
     /* =========================================================
        V3 · APP GUIDE CONFIGURATION (Section 13)

@@ -9,15 +9,14 @@
  *                                 blocked, disabled, deleted, non-discoverable accounts, friends and
  *                                 pending requests. Readable only by its owner.
  *
- * The client shows mutual-friend suggestions first, then (paged, 12 at a time) recently active
- * discoverable members, and filters again locally against live friendships, requests and blocks. */
+ * The client shows mutual-friend suggestions first, then every other member (paged), and filters
+ * again locally against live friendships, requests and blocks. */
 import {
   collection,
   doc,
   getDoc,
   getDocs,
   limit,
-  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -133,22 +132,29 @@ export async function loadMutualSuggestions(): Promise<{ items: Suggestion[]; ge
   return { items, generatedAtMs: Number(data.generatedAtMs) || 0 };
 }
 
-export interface ActivePage {
+export interface MembersPage {
   items: Suggestion[];
   cursor: QueryDocumentSnapshot | null;
   done: boolean;
 }
 
-/** Recently active, discoverable members — 12 per page (bounded, paginated). */
-export async function loadActiveMembers(cursor: QueryDocumentSnapshot | null): Promise<ActivePage> {
-  const { db } = await requireSignedIn();
-  const base = [where('discoverable', '==', true), orderBy('lastActiveDay', 'desc'), limit(12)] as const;
-  const q = cursor
-    ? query(collection(db, 'deens_public_profiles'), base[0], base[1], startAfter(cursor), base[2])
-    : query(collection(db, 'deens_public_profiles'), ...base);
+const MEMBERS_PAGE = 30;
+
+/** Everyone with a Deen Friends account (V3.1), 30 per page in a stable order. Members who turned
+ *  "Show me in suggestions" off and disabled accounts are skipped; only name, username and avatar
+ *  are used (deens_users is already readable by signed-in members). */
+export async function loadMembers(cursor: QueryDocumentSnapshot | null): Promise<MembersPage> {
+  const { db, uid } = await requireSignedIn();
+  const col = collection(db, 'deens_users');
+  const q = cursor ? query(col, startAfter(cursor), limit(MEMBERS_PAGE)) : query(col, limit(MEMBERS_PAGE));
   const snap = await getDocs(q);
-  const items = snap.docs
-    .map((d) => readSuggestion({ ...(d.data() as Record<string, unknown>), uid: d.id }, 'active'))
-    .filter((x): x is Suggestion => !!x);
-  return { items, cursor: snap.docs[snap.docs.length - 1] || cursor, done: snap.docs.length < 12 };
+  const items: Suggestion[] = [];
+  for (const d of snap.docs) {
+    const data = d.data() as Record<string, unknown>;
+    const privacy = (data.privacy || {}) as Record<string, unknown>;
+    if (d.id === uid || data.deenFriendsAccessDisabled === true || privacy.discoverable === false || !data.username) continue;
+    const item = readSuggestion({ uid: d.id, username: data.username, displayName: data.displayName, avatar: data.avatar, avatarConfig: data.avatarConfig }, 'active');
+    if (item) items.push(item);
+  }
+  return { items, cursor: snap.docs[snap.docs.length - 1] || cursor, done: snap.docs.length < MEMBERS_PAGE };
 }

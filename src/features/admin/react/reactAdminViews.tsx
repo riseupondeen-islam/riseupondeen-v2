@@ -5,6 +5,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { DailyChallengesAdmin } from './DailyChallengesAdmin';
 import { RiseInboxAdmin } from './RiseInboxAdmin';
 import { GuideAdmin } from './GuideAdmin';
+import { WinnerAdmin } from './WinnerAdmin';
 
 let root: Root | null = null;
 
@@ -14,7 +15,7 @@ export function unmountReactAdminView(): void {
   root = null;
 }
 
-export type ReactAdminView = 'daily-challenges' | 'rise-inbox' | 'app-guide';
+export type ReactAdminView = 'daily-challenges' | 'rise-inbox' | 'app-guide' | 'monthly-winner';
 
 export function renderReactAdminView(view: ReactAdminView): void {
   const main = document.getElementById('adminMain');
@@ -25,5 +26,15 @@ export function renderReactAdminView(view: ReactAdminView): void {
   host.className = 'df2-root df2-admin';
   main.appendChild(host);
   root = createRoot(host);
-  root.render(view === 'daily-challenges' ? <DailyChallengesAdmin /> : view === 'app-guide' ? <GuideAdmin /> : <RiseInboxAdmin />);
+  root.render(
+    view === 'daily-challenges' ? (
+      <DailyChallengesAdmin />
+    ) : view === 'app-guide' ? (
+      <GuideAdmin />
+    ) : view === 'monthly-winner' ? (
+      <WinnerAdmin />
+    ) : (
+      <RiseInboxAdmin />
+    ),
+  );
 }

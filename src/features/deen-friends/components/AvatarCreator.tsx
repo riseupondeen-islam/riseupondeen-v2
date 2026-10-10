@@ -1,5 +1,6 @@
-/* Avatar builder (Section 10): modest, faceless, illustrated avatars built from shared SVG parts.
- * Preview live, pick a preset, customise, save, or reset to the classic artwork. */
+/* Avatar builder: modest, faceless, illustrated avatars built from shared SVG parts.
+ * A large live preview, then three tabs — Style (presets, figure), Shape (frame, pattern, motif)
+ * and Colours (background, clothing, accent). Save, reset, or return to the classic artwork. */
 import { useState } from 'react';
 import type { AvatarConfig, OwnProfile } from '../types';
 import {
@@ -93,17 +94,23 @@ export function AvatarCreator({ profile, onClose }: { profile: OwnProfile; onClo
     }
   }
 
+  const [tab, setTab] = useState<'style' | 'shape' | 'colours'>('style');
+  const TABS = [
+    { id: 'style', label: 'Style' },
+    { id: 'shape', label: 'Shape' },
+    { id: 'colours', label: 'Colours' },
+  ] as const;
+
   return (
     <Sheet
-      title="Create your avatar"
-      kicker="MODEST · ILLUSTRATED · NO FACES"
+      title="Your avatar"
       onClose={onClose}
       wide
       footer={
         <>
           {profile.avatarConfig ? (
             <button type="button" className="df2-btn df2-btn-ghost-danger" disabled={saving} onClick={() => void save(null)}>
-              Use classic avatar
+              Use classic
             </button>
           ) : null}
           <button type="button" className="df2-btn" disabled={saving} onClick={() => setConfig(DEFAULT_AVATAR_CONFIG)}>
@@ -116,40 +123,60 @@ export function AvatarCreator({ profile, onClose }: { profile: OwnProfile; onClo
       }
     >
       <div className="df2-av-layout">
-        <div className="df2-av-preview" aria-label="Preview">
-          <AvatarArt config={config} name={profile.displayName} size={132} />
+        <div className="df2-av-stage" aria-label="Preview">
+          <span className="df2-av-stage-shine" aria-hidden="true" />
+          <div className="df2-av-stage-art">
+            <AvatarArt config={config} name={profile.displayName} size={148} />
+          </div>
           <div className="df2-av-preview-small" aria-hidden="true">
             <AvatarArt config={config} name={profile.displayName} size={44} />
-            <AvatarArt config={config} name={profile.displayName} size={32} />
+            <AvatarArt config={config} name={profile.displayName} size={30} />
           </div>
-          <small>How it looks on your profile, in chats and lists.</small>
         </div>
         <div className="df2-av-controls">
-          <fieldset className="df2-fieldset df2-av-choices">
-            <legend>Start from a style</legend>
-            <div>
-              {AVATAR_PRESETS.map((p) => (
-                <button key={p.name} type="button" onClick={() => setConfig(p.config)}>
-                  <AvatarArt config={p.config} size={44} />
-                  <small>{p.name}</small>
-                </button>
-              ))}
-            </div>
-          </fieldset>
-          <Choice label="Figure" options={AVATAR_FIGURES} labels={LABELS.figure} value={config.figure} onPick={(v) => set('figure', v)} render={(v) => ({ ...config, figure: v })} />
-          <Choice label="Shape" options={AVATAR_SHAPES} labels={LABELS.shape} value={config.shape} onPick={(v) => set('shape', v)} render={(v) => ({ ...config, shape: v })} />
-          <Choice label="Pattern" options={AVATAR_PATTERNS} labels={LABELS.pattern} value={config.pattern} onPick={(v) => set('pattern', v)} render={(v) => ({ ...config, pattern: v })} />
-          <Choice label="Motif" options={AVATAR_MOTIFS} labels={LABELS.motif} value={config.motif} onPick={(v) => set('motif', v)} render={(v) => ({ ...config, motif: v })} />
-          <Swatches label="Background" map={BACKGROUNDS} value={config.background} onPick={(k) => set('background', k)} />
-          <Swatches label="Clothing colour" map={OUTFITS} value={config.outfit} onPick={(k) => set('outfit', k)} />
-          <Swatches label="Accent" map={ACCENTS} value={config.accent} onPick={(k) => set('accent', k)} />
-          <label className="df2-toggle">
-            <input type="checkbox" checked={config.initials} onChange={(e) => set('initials', e.target.checked)} />
-            <span>
-              <strong>Show my initials</strong>
-              <small>A small badge with the first letters of your display name.</small>
-            </span>
-          </label>
+          <div className="df2-segmented df2-av-tabs" role="tablist" aria-label="Avatar options">
+            {TABS.map((t) => (
+              <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {tab === 'style' ? (
+            <>
+              <fieldset className="df2-fieldset df2-av-choices">
+                <legend>Presets</legend>
+                <div>
+                  {AVATAR_PRESETS.map((p) => (
+                    <button key={p.name} type="button" onClick={() => setConfig(p.config)}>
+                      <AvatarArt config={p.config} size={52} />
+                      <small>{p.name}</small>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+              <Choice label="Figure" options={AVATAR_FIGURES} labels={LABELS.figure} value={config.figure} onPick={(v) => set('figure', v)} render={(v) => ({ ...config, figure: v })} />
+              <label className="df2-toggle">
+                <input type="checkbox" checked={config.initials} onChange={(e) => set('initials', e.target.checked)} />
+                <span>
+                  <strong>Show my initials</strong>
+                </span>
+              </label>
+            </>
+          ) : null}
+          {tab === 'shape' ? (
+            <>
+              <Choice label="Frame" options={AVATAR_SHAPES} labels={LABELS.shape} value={config.shape} onPick={(v) => set('shape', v)} render={(v) => ({ ...config, shape: v })} />
+              <Choice label="Pattern" options={AVATAR_PATTERNS} labels={LABELS.pattern} value={config.pattern} onPick={(v) => set('pattern', v)} render={(v) => ({ ...config, pattern: v })} />
+              <Choice label="Motif" options={AVATAR_MOTIFS} labels={LABELS.motif} value={config.motif} onPick={(v) => set('motif', v)} render={(v) => ({ ...config, motif: v })} />
+            </>
+          ) : null}
+          {tab === 'colours' ? (
+            <>
+              <Swatches label="Background" map={BACKGROUNDS} value={config.background} onPick={(k) => set('background', k)} />
+              <Swatches label="Clothing" map={OUTFITS} value={config.outfit} onPick={(k) => set('outfit', k)} />
+              <Swatches label="Accent" map={ACCENTS} value={config.accent} onPick={(k) => set('accent', k)} />
+            </>
+          ) : null}
         </div>
       </div>
       {error ? (

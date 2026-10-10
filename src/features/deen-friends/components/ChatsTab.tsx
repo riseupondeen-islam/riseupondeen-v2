@@ -39,7 +39,7 @@ export function ChatsTab() {
           </strong>
           <small>
             {rise?.lastMessagePreview ||
-              'Questions, feelings, problems or suggestions — talk to the RiseUponDeen team.'}
+              'Talk to the RiseUponDeen team'}
           </small>
         </span>
         <Badge count={rise?.unreadByUser || 0} />
@@ -47,7 +47,7 @@ export function ChatsTab() {
 
       <section className="df2-section df2-circles" aria-labelledby="df2-circles-title" data-tour="df-circles">
         <div className="df2-section-head">
-          <h2 id="df2-circles-title">Deen circles</h2>
+          <h2 id="df2-circles-title">Circles</h2>
           <button type="button" className="df2-btn df2-btn-sm" onClick={() => setCreating(true)} data-tour="df-new-circle">
             <Icon name="plus" size={16} /> New circle
           </button>
@@ -70,7 +70,7 @@ export function ChatsTab() {
             ))}
           </ul>
         ) : (
-          <p className="df2-inline-note">Start a circle with three or more Deen Friends to share reminders and encouragement together.</p>
+          <p className="df2-inline-note">No circles yet.</p>
         )}
       </section>
       {creating ? <CreateGroupSheet onClose={() => setCreating(false)} /> : null}
@@ -78,8 +78,7 @@ export function ChatsTab() {
       {!s.friendshipsLoaded ? (
         <SkeletonRows count={3} />
       ) : !s.friendships.length ? (
-        <EmptyState icon="chat" title="No friend conversations yet">
-          <p>Once a friend accepts your request, your private Deen conversation appears here.</p>
+        <EmptyState icon="chat" title="No chats yet">
           <button type="button" className="df2-btn df2-btn-primary" onClick={() => goToDeenFriends({ tab: 'friends' })}>
             Add a friend
           </button>

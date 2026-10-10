@@ -7,7 +7,6 @@ import {
   createUserChallenge,
   cancelUserChallenge,
   completeUserChallengeToday,
-  loadMyUserChallenges,
   loadParticipants,
   respondToUserChallenge,
   runningToday,
@@ -19,8 +18,6 @@ import {
   MAX_POINTS_PER_DAY,
   istDateString,
   istMonthId,
-  loadLeaderboard,
-  loadMyEntry,
   monthLabel,
   previousMonthId,
   type LeaderboardEntry,
@@ -28,6 +25,7 @@ import {
 import { readAvatarConfig } from '../../../components/avatar/avatarConfig';
 import { asAvatar } from '../services/format';
 import { getDeenFriendsState, useDeenFriends } from '../state/deenFriendsStore';
+import { cachedBoard, cachedCircles, refreshBoard, refreshCircles } from '../state/challengeCache';
 import { Avatar, EmptyState, Icon, Sheet, SkeletonRows, useToast } from './ui';
 
 const CATEGORIES = ["Qur'an", 'Salah', 'Zikr', 'Dua', 'Hadith', 'Charity', 'Character', 'Fasting'];
@@ -35,7 +33,7 @@ const CATEGORIES = ["Qur'an", 'Salah', 'Zikr', 'Dua', 'Hadith', 'Charity', 'Char
 export function CircleChallengesSection() {
   const s = useDeenFriends();
   const toast = useToast();
-  const [rows, setRows] = useState<UserChallengeView[] | null>(null);
+  const [rows, setRows] = useState<UserChallengeView[] | null>(() => cachedCircles());
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState('');
@@ -45,7 +43,7 @@ export function CircleChallengesSection() {
   const load = useCallback(async () => {
     setError('');
     try {
-      setRows(await loadMyUserChallenges());
+      setRows(await refreshCircles());
     } catch (err) {
       logError('circle challenges load', err);
       setError(friendlyMessage(err, 'Circle challenges could not be loaded.'));
@@ -97,7 +95,7 @@ export function CircleChallengesSection() {
       <div className="df2-section-head">
         <h2 id="df2-circle-ch-title">Circle challenges</h2>
         <button type="button" className="df2-btn df2-btn-sm" onClick={() => setCreating(true)} disabled={!s.friendships.length}>
-          <Icon name="plus" size={16} /> New challenge
+          <Icon name="plus" size={16} /> New
         </button>
       </div>
       {error ? <p className="df2-inline-note">{error}</p> : null}
@@ -186,9 +184,7 @@ export function CircleChallengesSection() {
           })}
         </div>
       ) : (
-        <EmptyState icon="target" title="No circle challenges yet">
-          <p>Set a goal for yourself and invite up to {MAX_INVITEES} Deen Friends — for example “Read Surah Al-Mulk every night this week”.</p>
-        </EmptyState>
+        <EmptyState icon="target" title="No circle challenges yet" />
       )}
       {creating ? (
         <CreateChallengeSheet
@@ -245,7 +241,7 @@ function CreateChallengeSheet({ onClose, onCreated }: { onClose: () => void; onC
 
   return (
     <Sheet title="New circle challenge" kicker="INVITE FRIENDS" onClose={onClose} wide>
-      <form className="df2-form" onSubmit={submit}>
+      <form className="df2-form df2-cc-form" onSubmit={submit}>
         <label className="df2-field">
           <span>Title</span>
           <input value={form.title} onChange={set('title')} maxLength={80} placeholder="e.g. Surah Al-Mulk every night" required />
@@ -258,7 +254,7 @@ function CreateChallengeSheet({ onClose, onCreated }: { onClose: () => void; onC
           <span>Description (optional)</span>
           <textarea value={form.description} onChange={set('description')} maxLength={300} rows={2} />
         </label>
-        <div className="df2-form-grid">
+        <div className="df2-form-grid df2-cc-grid">
           <label className="df2-field">
             <span>Category</span>
             <select value={form.category} onChange={set('category')}>
@@ -336,8 +332,8 @@ export function LeaderboardSection() {
   const s = useDeenFriends();
   const current = istMonthId();
   const [monthId, setMonthId] = useState(current);
-  const [rows, setRows] = useState<Array<LeaderboardEntry & { rank: number }> | null>(null);
-  const [mine, setMine] = useState<LeaderboardEntry | null>(null);
+  const [rows, setRows] = useState<Array<LeaderboardEntry & { rank: number }> | null>(() => cachedBoard(current)?.rows ?? null);
+  const [mine, setMine] = useState<LeaderboardEntry | null>(() => cachedBoard(current)?.mine ?? null);
   const [error, setError] = useState('');
   const [rulesOpen, setRulesOpen] = useState(false);
 
@@ -347,11 +343,15 @@ export function LeaderboardSection() {
   const shownMonth = useRef('');
   useEffect(() => {
     let cancelled = false;
-    if (shownMonth.current !== monthId) setRows(null);
+    if (shownMonth.current && shownMonth.current !== monthId) {
+      const cachedMonth = cachedBoard(monthId);
+      setRows(cachedMonth?.rows ?? null);
+      setMine(cachedMonth?.mine ?? null);
+    }
     shownMonth.current = monthId;
     setError('');
-    Promise.all([loadLeaderboard(monthId, 20), loadMyEntry(monthId).catch(() => null)])
-      .then(([list, me]) => {
+    refreshBoard(monthId)
+      .then(({ rows: list, mine: me }) => {
         if (cancelled) return;
         setRows(list);
         setMine(me);
@@ -375,10 +375,10 @@ export function LeaderboardSection() {
   return (
     <section className="df2-section df2-leaderboard" aria-labelledby="df2-lb-title" data-tour="df-leaderboard">
       <div className="df2-section-head">
-        <h2 id="df2-lb-title">Monthly leaderboard</h2>
+        <h2 id="df2-lb-title">Leaderboard</h2>
         <div className="df2-segmented" role="tablist" aria-label="Month">
           <button type="button" role="tab" aria-selected={monthId === current} className={monthId === current ? 'active' : ''} onClick={() => setMonthId(current)}>
-            This month
+            {monthLabel(current).split(' ')[0]}
           </button>
           <button
             type="button"
@@ -387,18 +387,15 @@ export function LeaderboardSection() {
             className={monthId === previousMonthId(current) ? 'active' : ''}
             onClick={() => setMonthId(previousMonthId(current))}
           >
-            Last month
+            {monthLabel(previousMonthId(current)).split(' ')[0]}
           </button>
         </div>
       </div>
-      <p className="df2-section-meta">{monthLabel(monthId)} · resets at midnight India Standard Time on the 1st</p>
       {error ? <p className="df2-inline-note">{error}</p> : null}
       {rows === null ? (
         <SkeletonRows count={3} />
       ) : !rows.length || !rows.some((r) => r.points > 0) ? (
-        <EmptyState icon="sparkle" title={monthId === current ? 'No completions yet this month' : 'No results for that month'}>
-          <p>Complete a challenge to be the first on the board — every completed day counts.</p>
-        </EmptyState>
+        <EmptyState icon="sparkle" title={monthId === current ? 'Be the first this month' : 'No results'} />
       ) : (
         <>
           {leaders.length ? (
@@ -445,23 +442,20 @@ export function LeaderboardSection() {
       {mine && !myRank ? (
         <p className="df2-inline-note">
           You: {mine.points} pts · {mine.activeDays} active day{mine.activeDays === 1 ? '' : 's'}
-          {mine.visible ? '' : ' (hidden from the board by your privacy setting)'}
+          {mine.visible ? '' : ' · hidden'}
         </p>
       ) : null}
       <button type="button" className="df2-link-btn" onClick={() => setRulesOpen(true)}>
         How points work
       </button>
       {rulesOpen ? (
-        <Sheet title="How points work" kicker="FAIR & TRANSPARENT" onClose={() => setRulesOpen(false)}>
+        <Sheet title="How points work" onClose={() => setRulesOpen(false)}>
           <ul className="df2-rules-list">
-            <li>+1 point for each challenge you complete: a Daily Deen Challenge day, a friend’s challenge, or a day of a circle challenge.</li>
-            <li>At most {MAX_POINTS_PER_DAY} points a day, so many small challenges can’t outweigh steady effort.</li>
-            <li>Creating, sharing, viewing or accepting a challenge earns nothing — only completing it does.</li>
-            <li>Ranking: points, then active days. Equal points and days share the same place; people who reached the score first are listed first.</li>
-            <li>Months run from the 1st at 00:00 to the last day at 23:59 India Standard Time. Last month’s results stay visible; lifetime streaks are separate.</li>
-            <li>Only your display name, username and avatar appear. Turn off “Show me on the monthly leaderboard” in Edit profile → Privacy to hide yourself.</li>
+            <li>+1 point for each completed challenge day (max {MAX_POINTS_PER_DAY} a day).</li>
+            <li>Only completing counts — not creating or sharing.</li>
+            <li>Ranked by points, then active days. Ties share a place.</li>
+            <li>Resets on the 1st (India time). Hide yourself in Edit profile → Privacy.</li>
           </ul>
-          <p className="df2-footnote">Points are encouragement, not a measure of anyone’s faith. May Allah accept from all of us.</p>
         </Sheet>
       ) : null}
     </section>

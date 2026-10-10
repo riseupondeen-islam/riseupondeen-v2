@@ -96,17 +96,29 @@ self.addEventListener('fetch', event => {
 
   if (request.mode !== 'navigate') return;
 
+  /* V3.1: network first, but never wait more than 2.5 s when an app shell is cached — a launch
+     from the Home Screen on a slow connection opens immediately from the cache, and the fresh
+     page still updates the cache in the background for the next launch. */
+  let saved = Promise.resolve();
+  const network = fetch(request).then((response) => {
+    if (response && response.ok) {
+      const copy = response.clone(); // cloned before the page consumes the body
+      saved = caches.open(RUD_V2_SHELL_CACHE).then((cache) => {
+        const puts = [cache.put(request, copy.clone())];
+        if (new URL(request.url).pathname === '/') puts.push(cache.put('/index.html', copy));
+        return Promise.all(puts);
+      }).catch(() => {});
+    }
+    return response;
+  });
+  event.waitUntil(network.then(() => saved, () => undefined));
   event.respondWith((async () => {
     try {
-      const response = await fetch(request);
-      if (response && response.ok) {
-        const cache = await caches.open(RUD_V2_SHELL_CACHE);
-        cache.put(request, response.clone()).catch(() => {});
-        if (new URL(request.url).pathname === '/') {
-          cache.put('/index.html', response.clone()).catch(() => {});
-        }
-      }
-      return response;
+      const cached = (await caches.match(request)) || (await caches.match('/index.html'));
+      if (!cached) return await network;
+      const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 2500));
+      const first = await Promise.race([network.catch(() => null), timeout]);
+      return first || cached;
     } catch {
       return (await caches.match(request)) ||
              (await caches.match('/index.html')) ||

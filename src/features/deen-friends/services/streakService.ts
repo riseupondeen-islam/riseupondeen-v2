@@ -89,3 +89,17 @@ export async function checkInToday(friendshipId: string): Promise<boolean> {
     return true;
   });
 }
+
+/* Shared streaks follow real activity (V3.1): a day counts for you when you send your friend a Deen
+ * action (reaction, encouragement, shared content, challenge) or answer / complete one of their
+ * challenges; it counts for the streak when you both did. There is no separate check-in button. */
+const recorded = new Set<string>();
+
+/** Marks today as active for me in this friendship (at most one write per friendship per day). */
+export function recordStreakActivity(friendshipId: string): void {
+  if (!friendshipId) return;
+  const key = `${friendshipId}_${localDay()}`;
+  if (recorded.has(key)) return;
+  recorded.add(key);
+  checkInToday(friendshipId).catch(() => recorded.delete(key)); // retried on the next action
+}

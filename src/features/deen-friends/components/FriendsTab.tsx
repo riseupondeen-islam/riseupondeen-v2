@@ -11,7 +11,7 @@ import {
   sendFriendRequest,
   type ConnectionStatus,
 } from '../services/friendService';
-import { localDay, presenceLabel } from '../services/format';
+import { presenceLabel } from '../services/format';
 import { visibleStreakCount } from '../services/streakService';
 import { relationshipSnapshot, useDeenFriends } from '../state/deenFriendsStore';
 import { goToDeenFriends } from '../deenFriendsRoute';
@@ -26,12 +26,8 @@ export function FriendsTab({ onOpenProfile }: { onOpenProfile: (uid: string) => 
       <RequestsSection onOpenProfile={onOpenProfile} />
       <section className="df2-section" aria-labelledby="df2-circle-title">
         <div className="df2-section-head">
-          <h2 id="df2-circle-title">{s.friendships.length ? 'My Deen circle' : 'Start your Deen circle'}</h2>
-          <span className="df2-section-meta">
-            {s.friendships.length
-              ? `${s.friendships.length} friend${s.friendships.length === 1 ? '' : 's'}`
-              : 'Private & purpose-first'}
-          </span>
+          <h2 id="df2-circle-title">My circle</h2>
+          {s.friendships.length ? <span className="df2-section-meta">{s.friendships.length}</span> : null}
         </div>
         {!s.friendshipsLoaded ? (
           <SkeletonRows count={3} />
@@ -42,12 +38,8 @@ export function FriendsTab({ onOpenProfile }: { onOpenProfile: (uid: string) => 
             ))}
           </div>
         ) : (
-          <EmptyState icon="people" title="Your circle starts with one friend">
-            <ol className="df2-onboarding-steps">
-              <li>Ask a friend for their Deen Friends username — or share your invite link.</li>
-              <li>Search for them above and send a request.</li>
-              <li>Once they accept, check in together, share reminders and set challenges.</li>
-            </ol>
+          <EmptyState icon="people" title="No friends yet">
+            <p>Search a username above or add someone from People.</p>
           </EmptyState>
         )}
       </section>
@@ -62,8 +54,6 @@ function FriendCard({ friendship, onOpenProfile }: { friendship: Friendship; onO
   const name = profile?.displayName || 'Deen Friend';
   const streak = s.streaks[friendship.id];
   const count = visibleStreakCount(streak);
-  const today = localDay();
-  const meToday = !!s.profile && streak?.checkins[s.profile.uid] === today;
   const unread = s.unreadByFriendship[friendship.id] || 0;
   const online = !!profile && Date.now() - profile.lastActiveAt < 120000;
   return (
@@ -85,7 +75,6 @@ function FriendCard({ friendship, onOpenProfile }: { friendship: Friendship; onO
           <Icon name="flame" size={15} />
           {count}
         </span>
-        {meToday ? <span className="df2-chip df2-chip-done">Checked in</span> : null}
       </div>
       <div className="df2-friend-actions">
         <button
@@ -146,7 +135,7 @@ function AddFriendCard({ onOpenProfile }: { onOpenProfile: (uid: string) => void
     setResult(null);
     try {
       const found = await findProfileByUsername(wanted);
-      if (!found) setMessage(`No Deen Friends profile found for @${wanted}. Check the spelling with your friend.`);
+      if (!found) setMessage(`No one found for @${wanted}.`);
       setResult(found);
     } catch (err) {
       logError('profile search', err);
@@ -204,10 +193,7 @@ function AddFriendCard({ onOpenProfile }: { onOpenProfile: (uid: string) => void
         <span className="df2-add-icon">
           <Icon name="plus" />
         </span>
-        <div>
-          <h2 id="df2-add-title">Add a Deen Friend</h2>
-          <p>Search by the exact username of someone you already know.</p>
-        </div>
+        <h2 id="df2-add-title">Add a friend</h2>
       </div>
       <form className="df2-search-row" onSubmit={submit} role="search">
         <label className="df2-input-with-prefix">
@@ -256,7 +242,8 @@ function RequestsSection({ onOpenProfile }: { onOpenProfile: (uid: string) => vo
   const s = useDeenFriends();
   const toast = useToast();
   const [busyId, setBusyId] = useState('');
-  if (!s.incoming.length && !s.outgoing.length) return null;
+  const [open, setOpen] = useState(false);
+  const total = s.incoming.length + s.outgoing.length;
 
   async function run(request: FriendRequest, action: 'accept' | 'decline' | 'cancel') {
     setBusyId(request.id);
@@ -329,15 +316,31 @@ function RequestsSection({ onOpenProfile }: { onOpenProfile: (uid: string) => vo
   };
 
   return (
-    <section className="df2-section" id="df2-requests" aria-labelledby="df2-requests-title">
-      <div className="df2-section-head">
-        <h2 id="df2-requests-title">Friend requests</h2>
-        <span className="df2-section-meta">{s.incoming.length ? `${s.incoming.length} new` : 'Sent'}</span>
-      </div>
-      <ul className="df2-request-list">
-        {s.incoming.map((r) => row(r, r.fromUid, true))}
-        {s.outgoing.map((r) => row(r, r.toUid, false))}
-      </ul>
-    </section>
+    <div className="df2-requests-wrap">
+      <button
+        type="button"
+        className={`df2-requests-toggle${open ? ' is-open' : ''}`}
+        aria-expanded={open}
+        aria-controls="df2-requests"
+        onClick={() => setOpen((x) => !x)}
+      >
+        <Icon name="people" size={17} />
+        <span>Requests</span>
+        {s.incoming.length ? <Badge count={s.incoming.length} /> : <small>{total}</small>}
+        <Icon name={open ? 'chevronUp' : 'chevronDown'} size={16} />
+      </button>
+      {open ? (
+        <section className="df2-requests-panel" id="df2-requests" aria-label="Friend requests">
+          {total ? (
+            <ul className="df2-request-list">
+              {s.incoming.map((r) => row(r, r.fromUid, true))}
+              {s.outgoing.map((r) => row(r, r.toUid, false))}
+            </ul>
+          ) : (
+            <p className="df2-inline-note">No requests.</p>
+          )}
+        </section>
+      ) : null}
+    </div>
   );
 }

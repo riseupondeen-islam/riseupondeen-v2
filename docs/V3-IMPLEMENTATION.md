@@ -211,3 +211,28 @@ two; iOS only after removing and re-adding the Home Screen icon).
 - **Navigation icons:** My Deen is a lantern; Deen Friends is two companions joined by a heart.
 - **Duplicates removed:** Explore no longer repeats Deen Friends and the Light/Dark switch, which are
   in the top bar; it keeps the App Guide.
+
+---
+
+## 9. V3.2 (after second review)
+
+| # | Change |
+| --- | --- |
+| Install | Browser visitors on phones get the install guide automatically ~4 s after the page settles (iOS: Add-to-Home-Screen guide; Android: one-tap install when Chrome offers it, otherwise the manual steps). Never in the installed app or in in-app browsers; once per session; "Not now" snoozes it 3 days. It waits for the intro, the name card and any guide. |
+| App Guide speed | The spotlight moves with a compositor transform (no React render per scroll frame), the pulse animates a pseudo-element's opacity/scale instead of a full-screen box-shadow, the target is found with a light observer + 120 ms poll (was rAF + attribute observer), the progress bar uses `scaleX`. |
+| Kaaba | The Kaaba scene is fixed behind the whole main page again, sized once at `100lvh` so it never jumps with the mobile toolbar. |
+| Sheets on phones | Nothing in a sheet can be wider than the sheet (iOS date inputs), the sheet body is the only scroller, and the scroll lock now hands a gesture to the sheet when an inner list reaches its edge (this is what made "New circle challenge" move/freeze). |
+| Deen Friends | Requests sit inside one small "Requests" button. **People** lists every Deen Friends member in small rows (mutual friends first; people who turned discovery off are hidden); a tap opens the profile. Tab texts trimmed. Challenges tab order: monthly winner → leaderboard → daily → with friends → circle. Challenge data is cached and prefetched (instant tab). |
+| Streaks | No check-in button. A day counts for a friendship when you send a Deen action or answer/complete a challenge; when both of you did, the shared streak grows. |
+| Sharing | The 99 Names of Allah can be shared in chats (rules accept type `name`). |
+| Monthly winner | Admin → **Monthly Winner**: choose the month, pick up to three winners from its leaderboard, write the announcement, publish (or remove). Members see a gold card at the top of Challenges; winners' visiting cards become the gold edition with a "Winner · Month" badge. Collection `deens_monthly_winners/{YYYY-MM}` (read: members, write: community admins) + index. |
+| Profile | Visiting card: rectangular card, light sweep, avatar ring, name, @username and a script **signature** (4 styles; text editable in Edit profile; stored as `signature {text, style}`, validated by rules). Own profile: card + four actions (Edit, Avatar, Preview, Invite); notifications fold away; editor shortened (details and account fold away). |
+| Avatars | Gradient backdrops with glow, shaded clothing, metallic frame + hairline, gloss; new options: Niqab, Ghutra figures; Mashrabiya and Light-rays patterns; Kaaba and Star motifs; Pearl, Saffron, Midnight, Dusk backgrounds; Olive, Black clothing; Bronze, Pearl accents; 3 new presets. Builder: big floating preview + Style / Shape / Colours tabs. |
+| Look | Dark Deen Friends surfaces are neutral charcoal (were green-tinted); notifications are compact glass "island" cards (swipe up to dismiss); My Deen nav icon is a dashboard with a crescent tile; Qur'an player artwork fills its square; the ••• button fits its box. |
+| Friday / Ramadan | Both use a dedicated occasion card (the Friday card had been squeezed into the two-column Dua/Hadith grid). Ramadan mode shows Record fast · Continue Qur'an · Prayer times. |
+| Launch speed | Installed app: the intro plays at most every 12 h and lasts 1.15 s (browser: once per session, 1.7 s). The service worker answers a Home-Screen launch from the cached shell if the network takes more than 2.5 s, and refreshes the cache in the background. |
+| Intro | New night-sky intro with the app mark in a gold ring and a gold "Assalamu Alaikum"; the first-visit name card now follows the intro (never on top of it) in the same style. |
+
+New/changed backend: `deens_monthly_winners` rules + index; `validSignature`; `validSharedContent` accepts `name`; `validAvatarConfig` accepts the new avatar values. Deploy rules and indexes again (§6).
+
+Not verified here (in addition to §7): the signature fonts (Google Fonts are blocked in the test sandbox, so screenshots show the fallback serif; real devices load the script fonts) and the service-worker timeout on a real slow network.

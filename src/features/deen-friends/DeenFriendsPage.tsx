@@ -9,7 +9,8 @@ import { MyProfileSheet, PersonSheet } from './components/ProfileSheets';
 import { RiseChatScreen } from './components/RiseChatScreen';
 import { StreaksTab } from './components/StreaksTab';
 import { GroupChatScreen } from './components/GroupScreens';
-import { completedToday, liveStreak } from './services/progressService';
+import { completedToday, istMonthId, liveStreak } from './services/progressService';
+import { prefetchChallengeData } from './state/challengeCache';
 import { Avatar, Badge, Icon, SkeletonRows, ToastProvider, type IconName } from './components/ui';
 import { goToDeenFriends, leaveConversation, useDeenFriendsRoute, type DeenFriendsTab } from './deenFriendsRoute';
 import { startPageListeners, startSession, useDeenFriends } from './state/deenFriendsStore';
@@ -33,13 +34,21 @@ function DeenFriendsContent() {
   const s = useDeenFriends();
   const route = useDeenFriendsRoute();
   const [profileUid, setProfileUid] = useState('');
+  useEffect(() => {
+    const onOpen = (e: Event) => setProfileUid(String((e as CustomEvent<{ uid?: string }>).detail?.uid || ''));
+    window.addEventListener('df2:open-profile', onOpen);
+    return () => window.removeEventListener('df2:open-profile', onOpen);
+  }, []);
   const [myProfileOpen, setMyProfileOpen] = useState(false);
 
   useEffect(() => {
     void startSession();
   }, []);
   useEffect(() => {
-    if (s.session === 'signed-in') void startPageListeners();
+    if (s.session === 'signed-in') {
+      void startPageListeners();
+      prefetchChallengeData(istMonthId()); // the Challenges tab then opens instantly
+    }
   }, [s.session, s.profile?.uid]);
 
   if (s.session === 'loading') {

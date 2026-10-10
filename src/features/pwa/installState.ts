@@ -154,8 +154,8 @@ export function installCardAllowed(): boolean {
   } catch {
     /* ignore */
   }
-  if ((p.dismissCount || 0) >= 2) return false;
-  return !p.dismissedAt || Date.now() - p.dismissedAt > 14 * DAY;
+  if ((p.dismissCount || 0) >= 4) return false;
+  return !p.dismissedAt || Date.now() - p.dismissedAt > 3 * DAY;
 }
 
 export function snoozeInstallCard(): void {

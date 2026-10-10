@@ -37,13 +37,12 @@ export function AppHeader() {
         </a>
         {'\n'}
         <a aria-label="My Deen" className="rud-topbar-icon" data-tour="nav-my-deen" href="#my-deen" title="My Deen">
-          {/* Lantern (fanous) — the personal light of My Deen. */}
+          {/* Personal dashboard: three tiles and a crescent tile — My Deen at a glance. */}
           <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
-            <path d="M12 2.2v1.7" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
-            <path d="M8.4 7.3 12 3.9l3.6 3.4Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.5" />
-            <path d="M8.1 7.3h7.8l1.4 5.1-2.3 5.6H9l-2.3-5.6 1.4-5.1Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.5" />
-            <path d="M12 10.2c.95 1.05 1.35 1.95 1.35 2.75a1.35 1.35 0 0 1-2.7 0c0-.8.4-1.7 1.35-2.75Z" fill="currentColor" />
-            <path d="M10.2 20.6h3.6" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
+            <rect height="7.2" rx="2.1" stroke="currentColor" strokeWidth="1.5" width="7.2" x="3.4" y="3.4" />
+            <rect height="7.2" rx="2.1" stroke="currentColor" strokeWidth="1.5" width="7.2" x="3.4" y="13.4" />
+            <rect height="7.2" rx="2.1" stroke="currentColor" strokeWidth="1.5" width="7.2" x="13.4" y="13.4" />
+            <path d="M17.6 3.3a3.75 3.75 0 1 0 3.2 5.75 2.95 2.95 0 1 1-3.2-5.75Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.5" />
           </svg>
         </a>
         {'\n'}

@@ -6,6 +6,8 @@ import {
   type Interaction,
   type PrivacySettings,
   type PublicProfile,
+  type Signature,
+  type SignatureStyle,
 } from '../types';
 import { readAvatarConfig } from '../../../components/avatar/avatarConfig';
 
@@ -161,7 +163,20 @@ export function readPublicProfile(uid: string, data: Record<string, unknown> | u
     field: String(d.field || ''),
     lastActiveAt: Number(d.lastActiveAt) || 0,
     privacy: readPrivacy(d.privacy),
+    signature: readSignature(d.signature),
   };
+}
+
+export const SIGNATURE_STYLES: SignatureStyle[] = ['royal', 'slim', 'classic', 'autograph'];
+
+/** A stored signature, or null when missing / malformed. */
+export function readSignature(value: unknown): Signature | null {
+  if (!value || typeof value !== 'object') return null;
+  const v = value as Record<string, unknown>;
+  const text = String(v.text || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  if (!text) return null;
+  const style = SIGNATURE_STYLES.includes(v.style as SignatureStyle) ? (v.style as SignatureStyle) : 'royal';
+  return { text, style };
 }
 
 /* ---------- friend challenges ---------- */

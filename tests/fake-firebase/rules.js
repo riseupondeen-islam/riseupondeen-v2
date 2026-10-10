@@ -154,7 +154,7 @@ export function createRules(state) {
       hasOnly(sc, ['id', 'type', 'title', 'preview', 'reference', 'arabic', 'translation', 'transliteration', 'source']) &&
       hasAll(sc, ['id', 'type', 'title']) &&
       isStr(sc.id, 200) &&
-      ['quran', 'dua', 'hadith', 'zikr', 'reminder'].includes(sc.type) &&
+      ['quran', 'dua', 'hadith', 'zikr', 'reminder', 'name'].includes(sc.type) &&
       isStr(sc.title, 200) &&
       isStr(sc.preview ?? '', 300) &&
       isStr(sc.reference ?? '', 200) &&
@@ -296,12 +296,12 @@ export function createRules(state) {
       hasOnly(a, ['v', 'shape', 'background', 'pattern', 'figure', 'outfit', 'accent', 'motif', 'initials']) &&
       a.v === 1 &&
       ['circle', 'arch', 'octagon', 'star'].includes(a.shape) &&
-      ['cream', 'sage', 'sand', 'sky', 'rose', 'lilac', 'night', 'ink'].includes(a.background) &&
-      ['none', 'stars', 'girih', 'arches', 'dots'].includes(a.pattern) &&
-      ['none', 'hijab', 'kufi', 'turban', 'shawl'].includes(a.figure) &&
-      ['emerald', 'navy', 'maroon', 'charcoal', 'sand', 'teal', 'plum', 'ivory'].includes(a.outfit) &&
-      ['gold', 'silver', 'rosegold', 'emerald', 'ivory'].includes(a.accent) &&
-      ['none', 'crescent', 'lantern', 'mosque', 'book', 'tasbih'].includes(a.motif) &&
+      ['cream', 'sage', 'sand', 'sky', 'rose', 'lilac', 'pearl', 'saffron', 'night', 'ink', 'midnight', 'dusk'].includes(a.background) &&
+      ['none', 'stars', 'girih', 'arches', 'dots', 'mashrabiya', 'rays'].includes(a.pattern) &&
+      ['none', 'hijab', 'niqab', 'kufi', 'ghutra', 'turban', 'shawl'].includes(a.figure) &&
+      ['emerald', 'navy', 'maroon', 'charcoal', 'sand', 'teal', 'plum', 'ivory', 'olive', 'black'].includes(a.outfit) &&
+      ['gold', 'silver', 'rosegold', 'emerald', 'ivory', 'bronze', 'pearl'].includes(a.accent) &&
+      ['none', 'crescent', 'lantern', 'mosque', 'kaaba', 'book', 'tasbih', 'star'].includes(a.motif) &&
       typeof a.initials === 'boolean');
   const users = {
     read: () => signedIn(),
@@ -327,6 +327,11 @@ export function createRules(state) {
         isStr(d.username, 50) &&
         isStr(d.displayName, 50) &&
         validAvatar(d.avatarConfig ?? null) &&
+        (d.signature == null ||
+          (isMap(d.signature) &&
+            hasOnly(d.signature, ['text', 'style']) &&
+            isStr(d.signature.text, 40) &&
+            ['royal', 'slim', 'classic', 'autograph'].includes(d.signature.style))) &&
         isTs(d.updatedAt) &&
         isInt(d.lastActiveAt)
       );
@@ -696,6 +701,22 @@ export function createRules(state) {
         return isOwner(seg[1]) && after.uid === seg[1] && !('email' in after) && typeof after.discoverable === 'boolean';
       }
       if (seg[0] === 'deens_suggestions' && seg.length === 2) return op === 'read' ? isOwner(seg[1]) : false;
+      if (seg[0] === 'deens_monthly_winners' && seg.length === 2) {
+        if (op === 'read') return signedIn();
+        if (op === 'delete') return isCommunity();
+        const d = after || {};
+        return (
+          isCommunity() &&
+          /^\d{4}-\d{2}$/.test(seg[1]) &&
+          d.monthId === seg[1] &&
+          Array.isArray(d.uids) &&
+          d.uids.length >= 1 &&
+          d.uids.length <= 3 &&
+          Array.isArray(d.winners) &&
+          d.winners.length === d.uids.length &&
+          d.announcedBy === uid()
+        );
+      }
       if (seg[0] === 'rud_app_guides' && seg.length === 2) {
         if (op === 'read') return seg[1] === 'published' || isCommunity();
         return isCommunity() && ['draft', 'published'].includes(seg[1]);

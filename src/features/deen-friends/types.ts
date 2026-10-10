@@ -27,15 +27,22 @@ export interface AvatarConfig {
   v: 1;
   shape: 'circle' | 'arch' | 'octagon' | 'star';
   background: string;
-  pattern: 'none' | 'stars' | 'girih' | 'arches' | 'dots';
-  figure: 'none' | 'hijab' | 'kufi' | 'turban' | 'shawl';
+  pattern: 'none' | 'stars' | 'girih' | 'arches' | 'dots' | 'mashrabiya' | 'rays';
+  figure: 'none' | 'hijab' | 'niqab' | 'kufi' | 'ghutra' | 'turban' | 'shawl';
   outfit: string;
   accent: string;
-  motif: 'none' | 'crescent' | 'lantern' | 'mosque' | 'book' | 'tasbih';
+  motif: 'none' | 'crescent' | 'lantern' | 'mosque' | 'kaaba' | 'book' | 'tasbih' | 'star';
   initials: boolean;
 }
 
 /** deens_users/{uid} as seen by other signed-in users (email is never read into this type). */
+/** V3.1 handwritten-style signature on the visiting card. */
+export type SignatureStyle = 'royal' | 'slim' | 'classic' | 'autograph';
+export interface Signature {
+  text: string;
+  style: SignatureStyle;
+}
+
 export interface PublicProfile {
   uid: string;
   username: string;
@@ -53,6 +60,8 @@ export interface PublicProfile {
   /** Epoch ms of the last activity heartbeat (used for "online" / "last seen"). */
   lastActiveAt: number;
   privacy: PrivacySettings;
+  /** Visiting-card signature; null = the display name in the default style. */
+  signature: Signature | null;
 }
 
 /** The signed-in user's own profile. */
@@ -109,7 +118,7 @@ export interface ChallengeDetails {
 
 export type InteractionKind = 'challenge' | 'checkin' | 'encourage' | 'content';
 
-export type SharedContentType = 'quran' | 'dua' | 'hadith' | 'zikr' | 'reminder';
+export type SharedContentType = 'quran' | 'dua' | 'hadith' | 'zikr' | 'reminder' | 'name';
 
 export interface SharedContent {
   id: string;

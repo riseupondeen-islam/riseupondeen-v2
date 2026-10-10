@@ -24,13 +24,13 @@ import {
   where,
 } from '../../../services/firebase/sdk';
 import { rudVisitorId } from '../../analytics/visitorAnalytics';
-import type { AvatarConfig, OwnProfile, PrivacySettings } from '../types';
+import type { AvatarConfig, OwnProfile, PrivacySettings, Signature } from '../types';
 import { avatarConfigForStorage } from '../../../components/avatar/avatarConfig';
 import { syncPublicCard } from './suggestionService';
 import { syncProgressVisibility } from './progressService';
 import { DeenFriendsError, classifyError, logError } from './errors';
 import { checkUsername } from './username';
-import { asAvatar, cleanText, readPublicProfile } from './format';
+import { asAvatar, cleanText, readPublicProfile, readSignature } from './format';
 import { currentDeenUser, requireSignedIn, waitForFirebase } from './firebaseSession';
 import { removeDeenPushDevice } from './pushDeviceService';
 
@@ -339,6 +339,8 @@ export interface ProfileEdits {
   privacy: PrivacySettings;
   /** V3 built avatar: an object to set, null to go back to the classic artwork, undefined to keep. */
   avatarConfig?: AvatarConfig | null;
+  /** V3.1 visiting-card signature: set, null to clear, undefined to keep. */
+  signature?: Signature | null;
 }
 
 /** Saves the editable profile fields. Username and usernameKey are never changed here. */
@@ -359,6 +361,7 @@ export async function saveOwnProfile(current: OwnProfile, edits: ProfileEdits): 
     field: cleanText(edits.field, 80),
     privacy: { ...edits.privacy },
     avatarConfig: edits.avatarConfig === undefined ? current.avatarConfig : edits.avatarConfig ? avatarConfigForStorage(edits.avatarConfig) : null,
+    signature: edits.signature === undefined ? current.signature : readSignature(edits.signature),
     visitorId: current.visitorId || String(rudVisitorId() || '').slice(0, 120),
   };
   // The update rule requires uid, username, displayName, visitorId (unchanged), updatedAt and lastActiveAt.
@@ -379,6 +382,7 @@ export async function saveOwnProfile(current: OwnProfile, edits: ProfileEdits): 
       languages: next.languages,
       field: next.field,
       privacy: next.privacy,
+      signature: next.signature,
       updatedAt: serverTimestamp(),
       lastActiveAt: Date.now(),
     },

@@ -763,23 +763,65 @@ function rudFridayReminder() {
       i.type !== 'site' && ['friday', 'jumuah', "jumu'ah", 'jummah', 'kahf'].some((w) => rudContentHay(i).includes(w)),
   );
 }
-function rudSyncFridayMode() {
-  const old = document.getElementById('rudFridayMode');
-  if (new Date().getDay() !== 5) {
+/* V3.1: Friday and Ramadan modes share one occasion card (their own layout — the Friday card used to
+   reuse the two-column Dua/Hadith ribbon grid, which squeezed its actions into the 74px divider). */
+const RUD_OCCASION_ICONS = {
+  friday:
+    '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V12.5c1.6-3.8 4.6-5.9 8-5.9s6.4 2.1 8 5.9V20Z"/><path d="M12 2.6v2.2M2.5 20h19M9.6 20v-4a2.4 2.4 0 0 1 4.8 0v4"/></svg>',
+  ramadan:
+    '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 3.2A8.6 8.6 0 1 0 20.8 15 6.9 6.9 0 1 1 14.5 3.2Z"/><path d="M18.4 4.3l.6 1.5 1.5.6-1.5.6-.6 1.5-.6-1.5-1.5-.6 1.5-.6Z"/></svg>',
+};
+function rudOccasionSectionHtml(kind, kicker, title, subtitle, links) {
+  return `<div class="shell"><div class="rud-occasion-card is-${kind}"><span class="rud-occasion-glow" aria-hidden="true"></span><span class="rud-occasion-icon">${RUD_OCCASION_ICONS[kind]}</span><div class="rud-occasion-copy"><span class="rud-occasion-kicker">${kicker}</span><strong>${title}</strong><span>${subtitle}</span></div><div class="rud-occasion-actions">${links}</div></div></div>`;
+}
+function rudPlaceOccasion(id, html) {
+  const old = document.getElementById(id);
+  if (!html) {
     old?.remove();
     return;
   }
+  if (old && old.dataset.rudSig === html) return;
   const hero = document.getElementById('home');
   if (!hero) return;
-  const reminder = rudFridayReminder(),
-    existing = old;
-  const section = document.createElement('section');
-  section.id = 'rudFridayMode';
-  section.className = 'section guidance-ribbon-section';
-  section.innerHTML = `<div class="shell"><div class="guidance-ribbon"><div class="guidance-ribbon-copy"><span class="eyebrow">FRIDAY MODE</span><strong>Jumu'ah Mubarak</strong><span>Surah Al-Kahf</span></div><div class="rud-inline-actions"><a class="guidance-ribbon-link" href="#quran/18/1">Read <i>↗</i></a><a class="guidance-ribbon-link" href="#quran/18/1" data-rud-friday-listen>Listen <i>↗</i></a>${reminder ? `<a class="guidance-ribbon-link" href="${route(reminder)}">Friday Reminder <i>↗</i></a>` : ''}</div></div></div>`;
-  if (existing && existing.innerHTML === section.innerHTML) return;
-  if (existing) existing.remove();
-  hero.insertAdjacentElement('afterend', section);
+  const section = old || document.createElement('section');
+  section.id = id;
+  section.className = 'section rud-occasion-section';
+  section.dataset.rudSig = html;
+  section.innerHTML = html;
+  if (!old) {
+    const after = document.getElementById('rudRamadanMode') && id === 'rudFridayMode' ? document.getElementById('rudRamadanMode') : hero;
+    after.insertAdjacentElement('afterend', section);
+  }
+}
+function rudSyncFridayMode() {
+  const ramadan = rudSmartHomeRamadan();
+  rudPlaceOccasion(
+    'rudRamadanMode',
+    ramadan
+      ? rudOccasionSectionHtml(
+          'ramadan',
+          'RAMADAN MODE',
+          'Ramadan Mubarak',
+          'Fasting, Qur’an and prayer — one day at a time.',
+          `<a class="rud-occasion-link is-primary" href="#my-deen">${rudRamadanFastedToday() ? 'Fast recorded ✓' : 'Record today’s fast'}</a><a class="rud-occasion-link" href="${rudSmartHomeLastRoute()}">Continue Qur’an</a><a class="rud-occasion-link" href="#prayer">Prayer times</a>`,
+        )
+      : '',
+  );
+  if (new Date().getDay() !== 5) {
+    rudPlaceOccasion('rudFridayMode', '');
+    return;
+  }
+  const reminder = rudFridayReminder();
+  rudPlaceOccasion(
+    'rudFridayMode',
+    rudOccasionSectionHtml(
+      'friday',
+      'FRIDAY MODE',
+      'Jumu’ah Mubarak',
+      'Read Surah Al-Kahf and send salawat upon the Prophet <span class="rud-saw" lang="ar">ﷺ</span>.',
+      `<a class="rud-occasion-link is-primary" href="#quran/18/1">Read Al-Kahf</a><a class="rud-occasion-link" href="#quran/18/1" data-rud-friday-listen>Listen</a>${reminder ? `<a class="rud-occasion-link" href="${route(reminder)}">Friday reminder</a>` : ''}`,
+    ),
+  );
 }
 function rudMyDeenGreeting() {
   let name = '';

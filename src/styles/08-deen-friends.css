@@ -4,15 +4,16 @@
 
 /* ---------- tokens ---------- */
 .df2-root {
-  --df2-surface: #0f1916;
-  --df2-surface-2: #142420;
-  --df2-surface-3: #1a2d28;
+  /* V3.1: neutral charcoal surfaces (were green-tinted) for a premium, gold-on-ink look. */
+  --df2-surface: #111417;
+  --df2-surface-2: #171b1f;
+  --df2-surface-3: #1e2328;
   --df2-raised: rgba(255, 255, 255, 0.035);
   --df2-line: rgba(214, 190, 130, 0.14);
   --df2-line-strong: rgba(214, 190, 130, 0.3);
   --df2-text: #f3efe5;
   --df2-soft: #d6d2c6;
-  --df2-muted: #a1aaa4;
+  --df2-muted: #a6acb2;
   --df2-gold: #d9ba72;
   --df2-gold-soft: rgba(217, 186, 114, 0.14);
   /* V3.1: the accent (still named "emerald" for compatibility) is the site's premium gold. */
@@ -1587,7 +1588,7 @@ body.df2-chat-open .rud-quran-mini-player {
 }
 .df2-fullscreen {
   /* Chat wallpaper defaults (Ivory Pearl); data-chat-theme switches them. */
-  --df2-chat-bg: radial-gradient(circle at 20% 0, rgba(217, 186, 114, 0.08), transparent 45%), #0c1513;
+  --df2-chat-bg: radial-gradient(circle at 20% 0, rgba(217, 186, 114, 0.08), transparent 45%), #0d1013;
   --df2-bubble-mine: #1d4f3e;
   --df2-bubble-mine-text: #f5f1e6;
   --df2-bubble-theirs: #17231f;

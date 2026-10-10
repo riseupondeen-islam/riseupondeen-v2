@@ -95,6 +95,11 @@ export function AdminDashboardShell() {
             <span>{'›'}</span>
           </button>
           {'\n'}
+          <button data-admin-view="monthly-winner">
+            {'Monthly Winner '}
+            <span>{'›'}</span>
+          </button>
+          {'\n'}
           <button data-admin-view="broadcast">
             {'Broadcast Message '}
             <span>{'›'}</span>

@@ -6,6 +6,8 @@
  * the original order, by runtime/legacyRuntime.ts (admin modules: features/admin/adminConsole.ts).
  */
 /** Runs this module's original top-level statements. Called once, in original order, by runtime/legacyRuntime. */
+import { introAlreadySeen, introDuration } from '../../components/layout/Preloader';
+
 export function init() {
   /* =========================================================
        RISE UPON DEEN — VANILLA JAVASCRIPT
@@ -24,10 +26,12 @@ export function init() {
     const preloader = $('#preloader');
     const introStartedAt = window.__rudIntroStartedAt || Date.now();
     const introSessionKey = 'rud_intro_seen_session_v1';
-    let introSeen = false;
+    /* V3.1: same rule as the Preloader component — once per browser session, and at most every
+       12 hours (shorter) in the installed Home Screen app. */
+    const introSeen = introAlreadySeen();
     try {
-      introSeen = sessionStorage.getItem(introSessionKey) === '1';
-      if (!introSeen) sessionStorage.setItem(introSessionKey, '1');
+      sessionStorage.setItem(introSessionKey, '1');
+      if (!introSeen) localStorage.setItem('rud_intro_seen_at', String(Date.now()));
     } catch {}
     const hidePreloader = () => {
       const root = document.documentElement;
@@ -43,7 +47,7 @@ export function init() {
     if (introSeen) {
       if (preloader) preloader.style.transition = 'none';
       hidePreloader();
-    } else setTimeout(hidePreloader, Math.max(0, 2000 - (Date.now() - introStartedAt)));
+    } else setTimeout(hidePreloader, Math.max(0, introDuration() - (Date.now() - introStartedAt)));
 
     /* ---------------- DYNAMIC YEAR ---------------- */
     $('#year').textContent = new Date().getFullYear();

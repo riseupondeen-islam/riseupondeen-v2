@@ -12,6 +12,7 @@
  *     - my challenge streak (V3)          deens_streaks/{me}
  *     - my Deen circles (V3)              deens_groups           where members array-contains me
  * Friend profiles are read once and cached; they are refreshed when a chat or profile is opened. */
+import { clearChallengeCache } from './challengeCache';
 import { useSyncExternalStore } from 'react';
 import { collection, limit, onAuthStateChanged, onSnapshot, query, where } from '../../../services/firebase/sdk';
 import type { FriendRequest, Friendship, OwnProfile, PublicProfile, RiseThread, StreakRecord } from '../types';
@@ -282,6 +283,7 @@ export function updateOwnProfile(profile: OwnProfile): void {
 
 export function setSignedOut(): void {
   stopListeners();
+  clearChallengeCache();
   profileRequests.clear();
   state = { ...initialState, session: 'signed-out' };
   subscribers.forEach((notify) => notify());

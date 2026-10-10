@@ -34,11 +34,11 @@ function scrollableAncestor(start: EventTarget | null, dy: number): boolean {
     const canScrollX = /(auto|scroll|overlay)/.test(style.overflowX) && el.scrollWidth > el.clientWidth + 1;
     if (canScrollX) return true;
     if (canScrollY) {
-      // Allow unless the gesture would push past the edge (that is what chains to the page).
+      // Allow when this area can still move in the gesture's direction. At its edge, keep looking
+      // outward: a list inside a scrolling sheet must hand the gesture to the sheet, not freeze.
       const atTop = el.scrollTop <= 0;
       const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
       if ((dy > 0 && !atTop) || (dy < 0 && !atBottom) || dy === 0) return true;
-      return false;
     }
     if (el.matches('input,textarea,select,[contenteditable="true"],[data-scroll-lock-allow]')) return true;
     el = el.parentElement;

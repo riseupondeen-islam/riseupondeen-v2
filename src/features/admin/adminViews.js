@@ -41,10 +41,16 @@ function renderAdminFatal(err) {
 function renderAdminView(v) {
   /* React-based admin views (Daily Deen Challenges, RISE Inbox) are unmounted before any other view renders. */
   unmountReactAdminView();
-  if (v === 'daily-challenges' || v === 'rise-inbox' || v === 'app-guide') {
+  if (v === 'daily-challenges' || v === 'rise-inbox' || v === 'app-guide' || v === 'monthly-winner') {
     S.currentAdminView = v;
     $('#adminTopTitle').textContent =
-      v === 'daily-challenges' ? 'Daily Deen Challenges' : v === 'app-guide' ? 'App Guide' : 'RISE Inbox';
+      v === 'daily-challenges'
+        ? 'Daily Deen Challenges'
+        : v === 'app-guide'
+          ? 'App Guide'
+          : v === 'monthly-winner'
+            ? 'Monthly Winner'
+            : 'RISE Inbox';
     return renderReactAdminView(v);
   }
   if (v !== 'analytics' && typeof S.adminAnalyticsUnsub === 'function') {

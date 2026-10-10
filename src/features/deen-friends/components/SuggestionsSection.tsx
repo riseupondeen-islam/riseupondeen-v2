@@ -1,6 +1,6 @@
-/* "People you may know" — friend suggestions inside the Friends tab (Section 9).
- * Mutual-friend suggestions (prepared server-side) come first, then recently active members who
- * chose to be discoverable. Only display name, username and avatar are ever shown. */
+/* "People" — everyone on Deen Friends, in small rows (V3.1). Mutual-friend suggestions (prepared
+ * server-side) come first, then every other member, paged. Tapping a row opens the profile. Only
+ * display name, username and avatar are shown; people who turned discovery off are not listed. */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { QueryDocumentSnapshot } from 'firebase/firestore';
 import { friendlyMessage, logError } from '../services/errors';
@@ -10,7 +10,7 @@ import {
   dismissSuggestion,
   dismissedSuggestions,
   eligible,
-  loadActiveMembers,
+  loadMembers,
   loadBlockedUids,
   loadMutualSuggestions,
   type Suggestion,
@@ -34,7 +34,7 @@ export function SuggestionsSection({ onOpenProfile }: { onOpenProfile: (uid: str
   const load = useCallback(async () => {
     setError('');
     try {
-      const [m, b, first] = await Promise.all([loadMutualSuggestions(), loadBlockedUids(), loadActiveMembers(null)]);
+      const [m, b, first] = await Promise.all([loadMutualSuggestions(), loadBlockedUids(), loadMembers(null)]);
       setMutual(m.items);
       setBlocked(b);
       setActive(first.items);
@@ -68,7 +68,7 @@ export function SuggestionsSection({ onOpenProfile }: { onOpenProfile: (uid: str
     if (loadingMore || done) return;
     setLoadingMore(true);
     try {
-      const page = await loadActiveMembers(cursor);
+      const page = await loadMembers(cursor);
       setActive((list) => [...list, ...page.items]);
       setCursor(page.cursor);
       setDone(page.done);
@@ -104,10 +104,8 @@ export function SuggestionsSection({ onOpenProfile }: { onOpenProfile: (uid: str
   return (
     <section className="df2-section df2-suggestions" aria-labelledby="df2-suggest-title" data-tour="df-suggestions">
       <div className="df2-section-head">
-        <h2 id="df2-suggest-title">People you may know</h2>
-        <button type="button" className="df2-link-btn" onClick={() => void load()}>
-          Refresh
-        </button>
+        <h2 id="df2-suggest-title">People</h2>
+        {items.length ? <span className="df2-section-meta">{items.length}{done ? '' : '+'}</span> : null}
       </div>
       {error ? (
         <p className="df2-inline-note">
@@ -118,16 +116,16 @@ export function SuggestionsSection({ onOpenProfile }: { onOpenProfile: (uid: str
         </p>
       ) : null}
       {mutual === null ? (
-        <SkeletonRows count={2} />
+        <SkeletonRows count={3} />
       ) : items.length ? (
         <>
-          <ul className="df2-suggest-list">
+          <ul className="df2-people">
             {items.map((item) => {
               const status = connectionStatus(item.uid, rel);
               return (
-                <li key={item.uid} className="df2-card df2-suggest">
-                  <button type="button" className="df2-suggest-person" onClick={() => onOpenProfile(item.uid)} aria-label={`View ${item.displayName}’s profile`}>
-                    <Avatar avatar={item.avatar} config={item.avatarConfig} name={item.displayName} size={46} />
+                <li key={item.uid} className="df2-person-row df2-suggest">
+                  <button type="button" className="df2-person-open" onClick={() => onOpenProfile(item.uid)} aria-label={`View ${item.displayName}’s profile`}>
+                    <Avatar avatar={item.avatar} config={item.avatarConfig} name={item.displayName} size={36} />
                     <span>
                       <strong>{item.displayName}</strong>
                       <small>
@@ -136,43 +134,38 @@ export function SuggestionsSection({ onOpenProfile }: { onOpenProfile: (uid: str
                       </small>
                     </span>
                   </button>
-                  <div className="df2-suggest-actions">
-                    <button
-                      type="button"
-                      className="df2-btn df2-btn-primary df2-btn-sm"
-                      disabled={busy === item.uid || status !== 'none'}
-                      onClick={() => void add(item)}
-                    >
-                      {busy === item.uid ? 'Sending…' : status === 'outgoing' ? 'Requested' : 'Add'}
-                    </button>
-                    <button
-                      type="button"
-                      className="df2-icon-btn"
-                      aria-label={`Hide ${item.displayName} from suggestions`}
-                      onClick={() => {
-                        dismissSuggestion(item.uid);
-                        setDismissed(dismissedSuggestions());
-                      }}
-                    >
-                      <Icon name="close" size={16} />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    className="df2-btn df2-btn-primary df2-btn-xs"
+                    disabled={busy === item.uid || status !== 'none'}
+                    onClick={() => void add(item)}
+                  >
+                    {busy === item.uid ? '…' : status === 'outgoing' ? 'Sent' : 'Add'}
+                  </button>
+                  <button
+                    type="button"
+                    className="df2-icon-btn df2-icon-btn-xs"
+                    aria-label={`Hide ${item.displayName}`}
+                    onClick={() => {
+                      dismissSuggestion(item.uid);
+                      setDismissed(dismissedSuggestions());
+                    }}
+                  >
+                    <Icon name="close" size={14} />
+                  </button>
                 </li>
               );
             })}
           </ul>
           {!done ? (
-            <button type="button" className="df2-btn df2-btn-sm df2-btn-block" disabled={loadingMore} onClick={() => void more()}>
-              {loadingMore ? 'Loading…' : 'Show more people'}
+            <button type="button" className="df2-link-btn df2-people-more" disabled={loadingMore} onClick={() => void more()}>
+              {loadingMore ? 'Loading…' : 'Show more'}
             </button>
           ) : null}
         </>
       ) : (
-        <p className="df2-inline-note">
-          No suggestions right now. As your circle grows, friends of friends appear here. You can also share your invite link from your profile.
-        </p>
+        <p className="df2-inline-note">No one new to add right now.</p>
       )}
-      <p className="df2-footnote">Only people who chose to be discoverable are suggested. Change yours in Edit profile → Privacy.</p>
     </section>
   );
 }

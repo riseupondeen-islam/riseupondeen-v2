@@ -33,6 +33,17 @@ export function init() {
         document.documentElement.dataset.maintenance === 'active'
       )
         return;
+      // V3.1: let the intro finish first, then the name card follows it (they never overlap).
+      const pre = document.getElementById('preloader');
+      if (pre && !pre.classList.contains('hide')) {
+        const mo = new MutationObserver(() => {
+          if (!pre.classList.contains('hide')) return;
+          mo.disconnect();
+          show();
+        });
+        mo.observe(pre, { attributes: true, attributeFilter: ['class'] });
+        return;
+      }
       el.hidden = false;
       el.setAttribute('aria-hidden', 'false');
       document.body.classList.add('rud-first-visit-open');

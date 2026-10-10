@@ -97,24 +97,21 @@ test('navigation order, icons and the exact supplied logo', async ({ page, reque
   await expect(page.locator('#rudExploreTheme')).toHaveCount(0); // not duplicated (it is in the top bar)
 });
 
-test('Makkah scene belongs to the first screen and does not follow the page', async ({ page }) => {
+test('Kaaba scene stays behind the whole main page at a stable size', async ({ page }) => {
   await prepare(page, { theme: 'dark' });
   await goto(page, '#home');
-  const first = await page.evaluate(() => {
-    const el = document.querySelector('.global-mecca-bg') as HTMLElement;
-    return { pos: getComputedStyle(el).position, top: el.getBoundingClientRect().top };
-  });
-  expect(first).toEqual({ pos: 'absolute', top: 0 });
+  const read = () =>
+    page.evaluate(() => {
+      const el = document.querySelector('.global-mecca-bg') as HTMLElement;
+      const r = el.getBoundingClientRect();
+      return { pos: getComputedStyle(el).position, top: r.top, height: Math.round(r.height) };
+    });
+  const first = await read();
+  expect(first.pos).toBe('fixed');
+  expect(first.top).toBe(0);
   await page.evaluate(() => window.scrollTo(0, 1600));
   await page.waitForTimeout(300);
-  const later = await page.evaluate(() => {
-    const scene = document.querySelector('.global-mecca-bg') as HTMLElement;
-    const sky = document.querySelector('.mecca-bg-lite') as HTMLElement;
-    return { sceneBottom: scene.getBoundingClientRect().bottom, skyTop: sky.getBoundingClientRect().top, skyPos: getComputedStyle(sky).position };
-  });
-  expect(later.sceneBottom).toBeLessThanOrEqual(0); // scrolled away with the hero
-  expect(later.skyPos).toBe('fixed');
-  expect(later.skyTop).toBe(0);
+  expect(await read()).toEqual(first); // still in view, same place and size
 });
 
 test('in-app notification cards: tone, dismiss, stacking limit', async ({ page }) => {
@@ -522,16 +519,17 @@ test('avatar builder and public profile preview (same card others see, privacy r
   await goto(page, '#deen-friends');
   await signIn(page, DF_USERS.aisha);
   await page.locator('.df2-me-chip').click();
-  await ui(page).getByRole('button', { name: 'Create avatar' }).click();
+  await ui(page).getByRole('button', { name: 'Avatar', exact: true }).click();
   const sheet = ui(page).locator('.df2-sheet');
   await sheet.getByRole('button', { name: 'Sakinah' }).click();
-  await sheet.getByRole('radio', { name: 'night' }).click();
+  await sheet.getByRole('tab', { name: 'Colours' }).click();
+  await sheet.getByRole('radio', { name: 'night', exact: true }).click();
   await sheet.getByRole('button', { name: 'Save avatar' }).click();
   await expect(page.locator('.df2-me-chip .df2-avatar-built svg clipPath')).toHaveCount(1);
   const user = (await fakeDocs(page, 'deens_users/fakeuser101'))[0];
   expect(user.avatarConfig).toMatchObject({ v: 1, figure: 'hijab', background: 'night' });
   // Preview public profile: shows the public card, never email.
-  const previewBtn = ui(page).getByRole('button', { name: 'Preview public profile' });
+  const previewBtn = ui(page).getByRole('button', { name: 'Preview', exact: true });
   if (!(await previewBtn.isVisible())) await page.locator('.df2-me-chip').click();
   await previewBtn.click();
   const preview = ui(page).locator('.df2-sheet');
@@ -600,6 +598,53 @@ test('admin: App Guide editor saves a draft and publishes a version', async ({ p
   expect(published.version).toBe(1);
   expect(JSON.stringify(published)).toContain('Tap anywhere to count');
 });
+
+test('admin: announce the monthly winner; members see it first in Challenges with a premium card', async ({ page: adminPage, browser }) => {
+  let page = adminPage;
+  const now = new Date(Date.now() + 5.5 * 3600000);
+  const cur = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+  await prepare(page);
+  await extendSeed(page, {
+    [`deens_leaderboard/${cur}/entries`]: {
+      fakeuser101: { uid: 'fakeuser101', monthId: cur, points: 7, activeDays: 3, completions: 7, lastAtMs: 1, displayName: 'Aisha Rahman', username: 'aisha', avatar: 'quran', visible: true },
+      fakeuser102: { uid: 'fakeuser102', monthId: cur, points: 4, activeDays: 2, completions: 4, lastAtMs: 2, displayName: 'Bilal Ahmed', username: 'bilal', avatar: 'lantern', visible: true },
+    },
+  });
+  await goto(page, '#admin');
+  await page.locator('#adminEmail').fill('riseupondeen@gmail.com');
+  await page.locator('#adminPassword').fill(ADMIN_TEST_PASSWORD);
+  await page.locator('#adminLoginBtn').click();
+  await page.locator('[data-admin-view="monthly-winner"]').click();
+  const view = page.locator('.rud-winner-admin');
+  await view.getByLabel('Month').selectOption(cur);
+  await expect(view.locator('.df2-pick.on')).toContainText('Aisha Rahman'); // first place pre-selected
+  await view.getByLabel('Announcement message').fill('MashaAllah, steady every day.');
+  await view.getByRole('button', { name: 'Announce winner' }).click();
+  await expect(page.locator('#toastStack')).toContainText('announced');
+  const doc = (await fakeDocs(page, `deens_monthly_winners/${cur}`))[0];
+  expect(doc).toMatchObject({ monthId: cur, uids: ['fakeuser101'], published: true, message: 'MashaAllah, steady every day.' });
+  // A member sees the announcement at the top of Challenges, before the leaderboard. (The fake
+  // database lives per page, so the member's page starts from the document the admin wrote.)
+  const member = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await prepare(member);
+  await extendSeed(member, { deens_monthly_winners: { [cur]: { ...doc, path: undefined } } });
+  await goto(member, '#deen-friends');
+  await ui(member).getByLabel('Email').fill(DF_USERS.bilal.email);
+  await ui(member).getByLabel('Password', { exact: true }).fill(DF_USERS.bilal.password);
+  await ui(member).getByRole('button', { name: 'Sign in securely' }).click();
+  await ui(member).getByRole('tab', { name: /Challenges/ }).click();
+  page = member;
+  const banner = page.locator('.df2-winner');
+  await expect(banner).toContainText('Aisha Rahman');
+  await expect(banner).toContainText('steady every day');
+  const order = await page.locator('.df2-winner, .df2-leaderboard, [aria-labelledby="df2-daily-title"]').evaluateAll((els) => els.map((e) => e.className));
+  expect(order[0]).toContain('df2-winner');
+  expect(order[1]).toContain('df2-leaderboard');
+  // The winner's visiting card is the gold edition.
+  await banner.getByRole('button', { name: /Aisha Rahman/ }).click();
+  await expect(page.locator('.df2-vcard.is-winner')).toBeVisible();
+  await expect(page.locator('.df2-vcard-badge')).toContainText('Winner');
+});
 });
 
 test('Deen Friends page with all V3 sections renders without errors on both layouts', async ({ page }) => {
@@ -616,4 +661,92 @@ test('Deen Friends page with all V3 sections renders without errors on both layo
   }
   await setHash(page, '#home');
   expect(errors).toEqual([]);
+});
+
+test('People lists every Deen Friends member in small rows; profile opens on tap', async ({ page }) => {
+  await prepare(page);
+  await extendSeed(page, { deens_users: { fakeuser107: extraProfile('fakeuser107', 'omar', 'Omar Farooq') } });
+  await goto(page, '#deen-friends');
+  await signIn(page, DF_USERS.aisha);
+  const people = ui(page).locator('.df2-people');
+  await expect(people).toContainText('Omar Farooq'); // has no public card: listed from accounts
+  await expect(people).toContainText('Bilal Ahmed');
+  await expect(people).not.toContainText('Aisha Rahman'); // never yourself
+  await people.locator('.df2-person-open').filter({ hasText: 'Omar' }).click();
+  await expect(page.locator('.df2-sheet .df2-vcard')).toContainText('@omar');
+  // Requests are inside one small button: closed until tapped.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#df2-requests')).toHaveCount(0);
+  await page.locator('.df2-requests-toggle').click();
+  await expect(page.locator('#df2-requests')).toContainText('No requests');
+});
+
+test('99 Names can be shared in a chat; the shared streak follows activity (no check-in button)', async ({ page }) => {
+  await prepare(page);
+  await extendSeed(page, {
+    content: {
+      'test-name-1': { published: true, type: 'name', name: 'Ar-Rahman', arabic: 'الرَّحْمَٰنُ', meaning: 'The Most Merciful', number: '1', createdAt: { __ts: Date.now() - 3600000 }, updatedAt: { __ts: Date.now() - 3600000 } },
+    },
+    ...circleSeed(),
+    deens_friend_streaks: {
+      [pair('fakeuser101', 'fakeuser102')]: { members: ['fakeuser101', 'fakeuser102'], checkins: {}, count: 0, bothDates: [], lastBothDate: '' },
+    },
+  });
+  await goto(page, '#deen-friends');
+  await signIn(page, DF_USERS.aisha);
+  await ui(page).getByRole('tab', { name: /Chats/ }).click();
+  await ui(page).locator('.df2-chat-list .df2-chat-row').filter({ hasText: 'Bilal' }).click();
+  await page.locator('.df2-fullscreen').getByRole('button', { name: 'Deen action' }).click();
+  await expect(ui(page).locator('.df2-action-tile').filter({ hasText: /Check in/ })).toHaveCount(0);
+  await ui(page).locator('.df2-action-tile').filter({ hasText: 'Names of Allah' }).click();
+  await ui(page).locator('.df2-sheet').last().locator('.df2-share-item').filter({ hasText: 'Ar-Rahman' }).click();
+  const card = page.locator('.df2-fullscreen .df2-shared').last();
+  await expect(card).toContainText('The Most Merciful');
+  await expect(card.locator('.df2-shared-arabic')).toHaveAttribute('dir', 'rtl');
+  const stored = (await fakeDocs(page, 'deens_friend_messages/')).find((m) => m.kind === 'content');
+  expect(stored.sharedContent).toMatchObject({ type: 'name', title: 'Ar-Rahman' });
+  await expect
+    .poll(async () => ((await fakeDocs(page, 'deens_friend_streaks/'))[0]?.checkins || {})[DF_USERS.aisha.uid])
+    .toBeTruthy();
+});
+
+test('install guide is offered automatically to browser visitors on phones, never in the installed app', async ({ browser }) => {
+  const iosUA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+  const context = await browser.newContext({ userAgent: iosUA, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await context.newPage();
+  await prepare(page);
+  await page.addInitScript(() => sessionStorage.removeItem('rud_install_card_session'));
+  await goto(page, '#home');
+  await expect(page.locator('.rud-ix-card')).toContainText('Add Rise Upon Deen to your Home Screen', { timeout: 9000 });
+  await page.locator('.rud-ix-card').getByRole('button', { name: 'Show me how' }).click();
+  await expect(page.locator('.rud-dialog')).toContainText('Step 1 of');
+  await context.close();
+  // Installed (standalone): no install card.
+  const installed = await browser.newContext({ userAgent: iosUA, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const app = await installed.newPage();
+  await prepare(app);
+  await app.addInitScript(() => {
+    sessionStorage.removeItem('rud_install_card_session');
+    Object.defineProperty(navigator, 'standalone', { get: () => true });
+  });
+  await goto(app, '#home');
+  await app.waitForTimeout(5500);
+  await expect(app.locator('.rud-ix-card')).toHaveCount(0);
+  await installed.close();
+});
+
+test('Friday and Ramadan modes use their own card layout', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2027-02-19T10:00:00+05:30')); // a Friday in Ramadan 1448
+  await prepare(page);
+  await goto(page, '#home');
+  for (const id of ['#rudRamadanMode', '#rudFridayMode']) {
+    const card = page.locator(`${id} .rud-occasion-card`);
+    await expect(card).toBeVisible();
+    const box = (await card.boundingBox())!;
+    const actions = (await card.locator('.rud-occasion-actions').boundingBox())!;
+    expect(actions.x).toBeGreaterThanOrEqual(box.x);
+    expect(actions.x + actions.width).toBeLessThanOrEqual(box.x + box.width + 1);
+  }
+  await expect(page.locator('#rudFridayMode')).toContainText('Read Al-Kahf');
+  await expect(page.locator('#rudRamadanMode')).toContainText('Ramadan Mubarak');
 });

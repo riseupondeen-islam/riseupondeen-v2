@@ -56,6 +56,7 @@ test('Add Friend → request → accept: the complete two-user flow', async ({ p
   await addButton.click();
   await expect(page.locator('.rud-note').last()).toContainText('Request sent to @bilal');
   await expect(page.locator('.df2-search-result').getByRole('button', { name: 'Cancel request' })).toBeVisible();
+  await openRequests(page);
   await expect(page.locator('#df2-requests')).toContainText('waiting for reply');
 
   // Exactly one pending request, addressed by UID.
@@ -66,6 +67,7 @@ test('Add Friend → request → accept: the complete two-user flow', async ({ p
   // Sending again is refused without creating a duplicate.
   await signOut(page);
   await signIn(page, DF_USERS.bilal);
+  await openRequests(page);
   await expect(page.locator('#df2-requests')).toContainText('Aisha Rahman');
   await expect(page.locator('.df2-tabs [role=tab]').first()).toContainText('1');
   await page.screenshot({ path: `${SHOTS}/${info.project.name}-03-incoming.png`, fullPage: true });
@@ -102,21 +104,29 @@ test('declining and cancelling requests update the right state', async ({ page }
   await expect(page.locator('.df2-search-result').getByRole('button', { name: 'Cancel request' })).toBeVisible();
   await signOut(page);
   await signIn(page, DF_USERS.bilal);
+  await openRequests(page);
   await page.locator('#df2-requests').getByRole('button', { name: 'Decline' }).click();
   await expect(page.locator('.rud-note').last()).toContainText('declined');
   const statuses = (await fakeDocs(page, 'deens_friend_requests/')).map((r) => r.status).sort();
   expect(statuses).toEqual(['cancelled', 'declined']);
-  await expect(page.locator('#df2-requests')).toHaveCount(0);
+  await expect(page.locator('#df2-requests')).toContainText('No requests');
 });
+
+/** Friend requests live inside a collapsible "Requests" button (V3.1). */
+async function openRequests(page: Page) {
+  const toggle = page.locator('.df2-requests-toggle');
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+}
 
 async function becomeFriends(page: Page) {
   await signIn(page, DF_USERS.aisha);
   await ui(page).getByLabel("Friend's username").fill('bilal');
   await ui(page).getByRole('button', { name: 'Find' }).click();
   await page.locator('.df2-search-result').getByRole('button', { name: 'Add friend' }).click();
-  await expect(page.locator('#df2-requests')).toBeVisible();
+  await expect(page.locator('.df2-search-result').getByRole('button', { name: 'Cancel request' })).toBeVisible();
   await signOut(page);
   await signIn(page, DF_USERS.bilal);
+  await openRequests(page);
   await page.locator('#df2-requests').getByRole('button', { name: 'Accept' }).click();
   await expect(page.locator('.df2-friend-card')).toContainText('Aisha Rahman');
 }
@@ -162,11 +172,10 @@ test('chat: custom challenge, reaction, shared content, check-in, accept and com
   await ui(page).getByRole('button', { name: /^Dua/ }).click();
   await page.locator('.df2-share-item').first().click();
   await expect(page.locator('.df2-shared')).toBeVisible();
-  await ui(page).getByRole('button', { name: 'Deen action' }).click();
-  await ui(page)
-    .getByRole('button', { name: /^Check in/ })
-    .click();
-  await expect(page.locator('.df2-msg-pill')).toContainText('You checked in today');
+  // V3.1: no check-in button — sending Deen actions marks today active on the shared streak.
+  await expect
+    .poll(async () => ((await fakeDocs(page, 'deens_friend_streaks/'))[0]?.checkins || {})[DF_USERS.bilal.uid])
+    .toBeTruthy();
   await page.screenshot({ path: `${SHOTS}/${info.project.name}-07-chat-items.png` });
 
   // Back to the list restores the navbar.
@@ -180,7 +189,7 @@ test('chat: custom challenge, reaction, shared content, check-in, accept and com
     .click();
   await signOut(page);
   await signIn(page, DF_USERS.aisha);
-  await expect(page.locator('.df2-tabs')).toContainText('4'); // 4 unseen items from Bilal
+  await expect(page.locator('.df2-tabs')).toContainText('3'); // 3 unseen items from Bilal (V3.1: no check-in card)
   await ui(page).getByRole('tab', { name: /Chats/ }).click();
   await page.locator('.df2-chat-list .df2-chat-row').first().click();
   await expect(page.locator('.df2-challenge')).toContainText('Bilal challenged you');
@@ -330,6 +339,7 @@ test('notifications: device registered per user, preferences saved, removed on s
   });
 
   await page.locator('.df2-me-chip').click();
+  await ui(page).getByRole('button', { name: 'Notifications' }).click();
   const rise = ui(page).getByRole('checkbox', { name: /Replies from RISE/ });
   await expect(rise).toBeChecked();
   await rise.uncheck();
@@ -348,6 +358,7 @@ test('notifications: unsupported browsers get an explanation instead of a button
   await openDeenFriends(page);
   await signIn(page, DF_USERS.aisha);
   await page.locator('.df2-me-chip').click();
+  await ui(page).getByRole('button', { name: 'Notifications' }).click();
   await expect(page.locator('.df2-sheet-backdrop')).toContainText('This browser cannot receive notifications');
   await expect(ui(page).getByRole('button', { name: 'Turn on notifications' })).toHaveCount(0);
 });

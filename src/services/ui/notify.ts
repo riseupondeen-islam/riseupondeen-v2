@@ -202,6 +202,34 @@ export function notify(message: string, toneInput: string = 'success', options: 
   el.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') remove(entry);
   });
+  // Swipe up to dismiss (touch and pen); a small drag springs back.
+  let startY = 0;
+  let dragging = false;
+  el.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' || (e.target as Element).closest('button')) return;
+    startY = e.clientY;
+    dragging = true;
+    pause(entry);
+    el.classList.add('is-dragging');
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dy = Math.min(0, e.clientY - startY);
+    el.style.transform = `translateY(${dy}px)`;
+    el.style.opacity = String(1 + dy / 120);
+  });
+  const endDrag = (e: PointerEvent) => {
+    if (!dragging) return;
+    dragging = false;
+    el.classList.remove('is-dragging');
+    const dy = e.clientY - startY;
+    el.style.transform = '';
+    el.style.opacity = '';
+    if (dy < -36) remove(entry);
+    else resume(entry);
+  };
+  el.addEventListener('pointerup', endDrag);
+  el.addEventListener('pointercancel', endDrag);
 
   stack.append(el);
   live.push(entry);

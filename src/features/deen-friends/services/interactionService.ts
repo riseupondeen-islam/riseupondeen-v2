@@ -37,7 +37,7 @@ import { prepareCompletion, type ProfileForProgress } from './progressService';
 import { sharedContentForStorage } from './sharedContent';
 import { challengeState, isChallengeActive, localDay, randomId } from './format';
 import { requireSignedIn } from './firebaseSession';
-import { applyCheckin, readStreak } from './streakService';
+import { applyCheckin, readStreak, recordStreakActivity } from './streakService';
 
 const DAY_MS = 86400000;
 /** Seen records are removed 24 hours after the recipient saw them. */
@@ -198,13 +198,14 @@ export async function sendChallenge(
     logError(`challenge create rejected (keys: ${Object.keys(details).join(',')})`, error);
     throw error;
   }
+  recordStreakActivity(friend.friendshipId);
   return id;
 }
 
 export async function respondToChallenge(id: string, accept: boolean): Promise<void> {
   const { db, uid } = await requireSignedIn();
   const ref = doc(db, 'deens_friend_messages', id);
-  await runTransaction(db, async (tx) => {
+  const friendshipId = await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists()) throw new DeenFriendsError('not-found', 'This challenge is no longer available.');
     const row = readInteraction(snap.id, snap.data() as Record<string, unknown>);
@@ -216,7 +217,9 @@ export async function respondToChallenge(id: string, accept: boolean): Promise<v
       respondedAtMs: Date.now(),
       ...(accept ? {} : { purgeAt: new Date(Date.now() + RETENTION_AFTER_SEEN_MS) }),
     });
+    return row.friendshipId;
   });
+  if (accept) recordStreakActivity(friendshipId);
 }
 
 /**
@@ -276,10 +279,16 @@ export async function completeChallenge(id: string, profile: ProfileForProgress 
         { merge: true },
       );
     }
-    return 'done';
-  }).catch((error: unknown) => {
-    throw offlineAware(error);
-  });
+    return { result: 'done' as const, friendshipId: row.friendshipId, bothDone };
+  })
+    .then((out) => {
+      if (typeof out === 'string') return out;
+      if (!out.bothDone) recordStreakActivity(out.friendshipId); // both done already wrote both days
+      return out.result;
+    })
+    .catch((error: unknown) => {
+      throw offlineAware(error);
+    });
 }
 
 export async function sendEncouragement(friend: FriendRef, text: string): Promise<void> {
@@ -292,6 +301,7 @@ export async function sendEncouragement(friend: FriendRef, text: string): Promis
     text,
     expiresAtMs: Date.now() + DAY_MS,
   });
+  recordStreakActivity(friend.friendshipId);
 }
 
 export async function shareContent(friend: FriendRef, content: SharedContent): Promise<void> {
@@ -304,22 +314,9 @@ export async function shareContent(friend: FriendRef, content: SharedContent): P
     sharedContent,
     expiresAtMs: Date.now() + DAY_MS,
   });
+  recordStreakActivity(friend.friendshipId);
 }
 
-/**
- * Posts the "checked in today" card. Call it only right after a NEW check-in: the id is fixed per
- * friend per day (the rules require it), so a second card for the same day would be refused.
- */
-export async function postCheckinCard(friend: FriendRef): Promise<void> {
-  const { db, uid } = await requireSignedIn();
-  await setDoc(doc(db, 'deens_friend_messages', `ck_${friend.friendshipId}_${uid}_${localDay()}`), {
-    ...baseRecord(friend, uid),
-    kind: 'checkin',
-    expiresAtMs: Date.now() + DAY_MS,
-  });
-}
-
-/** Marks records I received as seen (once) and schedules their removal 24h later. */
 const seenRequested = new Set<string>();
 export async function markSeen(rows: Interaction[]): Promise<void> {
   if (typeof document !== 'undefined' && document.hidden) return;

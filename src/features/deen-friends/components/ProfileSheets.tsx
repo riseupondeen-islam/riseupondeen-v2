@@ -1,6 +1,8 @@
 /* Profile visiting cards (friends and other people) and the own-profile editor. */
 import { useEffect, useState, type FormEvent } from 'react';
-import { AVATAR_KEYS, type AvatarKey, type OwnProfile, type PublicProfile } from '../types';
+import { AVATAR_KEYS, type AvatarKey, type OwnProfile, type PublicProfile, type SignatureStyle } from '../types';
+import { SIGNATURE_STYLES } from '../services/format';
+import { SIGNATURE_FONTS, SignatureText } from './Signature';
 import {
   changeOwnPassword,
   requestUsernameChange,
@@ -177,6 +179,7 @@ export function MyProfileSheet({ onClose }: { onClose: () => void }) {
   const [editing, setEditing] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [buildingAvatar, setBuildingAvatar] = useState(false);
+  const [notifyOpen, setNotifyOpen] = useState(false);
   const best = Math.max(0, ...Object.values(s.streaks).map((st) => longestStreak(st.bothDates)));
   const achievements = achievementsFor(s.friendships.length, best);
 
@@ -184,17 +187,11 @@ export function MyProfileSheet({ onClose }: { onClose: () => void }) {
   if (buildingAvatar) return <AvatarCreator profile={me} onClose={() => setBuildingAvatar(false)} />;
   if (previewing)
     return (
-      <Sheet title="Your public profile" kicker="PREVIEW · AS OTHERS SEE YOU" onClose={() => setPreviewing(false)}>
-        <div className="df2-preview-banner" role="note">
-          <Icon name="shield" size={16} /> This is exactly what other members see. Your email, password and private settings are never shown.
-        </div>
+      <Sheet title="Public profile" kicker="PREVIEW" onClose={() => setPreviewing(false)}>
         <PublicProfileCard profile={me} />
-        <ul className="df2-preview-privacy">
-          <li>Challenge streak: {me.privacy.showStreak ? 'visible' : 'hidden'}</li>
-          <li>Milestones: {me.privacy.showAchievements && me.privacy.showStreak ? 'visible' : 'hidden'}</li>
-          <li>Monthly leaderboard: {me.privacy.showOnLeaderboard ? 'shown' : 'hidden'}</li>
-          <li>Friend suggestions: {me.privacy.discoverable ? 'you can be suggested' : 'you are not suggested'}</li>
-        </ul>
+        <p className="df2-preview-note">
+          <Icon name="shield" size={14} /> Exactly what others see. Email and private settings are never shown.
+        </p>
         <div className="df2-sheet-actions">
           <button type="button" className="df2-btn" onClick={() => setPreviewing(false)}>
             Back
@@ -207,50 +204,55 @@ export function MyProfileSheet({ onClose }: { onClose: () => void }) {
               setEditing(true);
             }}
           >
-            <Icon name="edit" size={17} /> Edit what’s public
+            <Icon name="edit" size={17} /> Edit
           </button>
         </div>
       </Sheet>
     );
 
+  const earned = achievements.filter((a) => a.earned);
   return (
-    <Sheet title="Your Deen profile" kicker="HOW FRIENDS SEE YOU" onClose={onClose}>
-      <div className="df2-visiting-card is-own">
-        <div className="df2-visiting-top">
-          <Avatar avatar={me.avatar} config={me.avatarConfig} name={me.displayName} size={76} />
-          <div>
-            <strong>{me.displayName}</strong>
-            <span>@{me.username}</span>
-          </div>
-        </div>
-        <p className="df2-visiting-bio">{me.bio || 'Add a short line about yourself so friends recognise you.'}</p>
-      </div>
-      <h3 className="df2-subhead">Achievements</h3>
-      <ul className="df2-achievements">
-        {achievements.map((a) => (
-          <li key={a.id} className={a.earned ? 'earned' : ''}>
-            <Icon name={a.earned ? 'sparkle' : 'lock'} size={16} />
-            {a.title}
-          </li>
-        ))}
-      </ul>
-      <p className="df2-footnote">
-        Only you can see your achievements. Worship activity is never shared automatically.
-      </p>
-      <h3 className="df2-subhead">Notifications</h3>
-      <NotificationSettings />
-      <div className="df2-sheet-actions">
-        <button type="button" className="df2-btn df2-btn-primary" onClick={() => setEditing(true)}>
-          <Icon name="edit" size={17} /> Edit profile
+    <Sheet title="Your profile" onClose={onClose}>
+      <PublicProfileCard profile={me} />
+      <div className="df2-profile-actions">
+        <button type="button" className="df2-pa" aria-label="Edit profile" onClick={() => setEditing(true)}>
+          <Icon name="edit" size={18} />
+          <span>Edit</span>
         </button>
-        <button type="button" className="df2-btn" onClick={() => setPreviewing(true)} data-tour="df-preview-profile">
-          <Icon name="people" size={17} /> Preview public profile
+        <button type="button" className="df2-pa" onClick={() => setBuildingAvatar(true)}>
+          <Icon name="sparkle" size={18} />
+          <span>Avatar</span>
         </button>
-        <button type="button" className="df2-btn" onClick={() => setBuildingAvatar(true)}>
-          <Icon name="sparkle" size={17} /> Create avatar
+        <button type="button" className="df2-pa" onClick={() => setPreviewing(true)} data-tour="df-preview-profile">
+          <Icon name="people" size={18} />
+          <span>Preview</span>
         </button>
         <InviteButton username={me.username} toast={toast} />
       </div>
+      {earned.length ? (
+        <div className="df2-vcard-chips" aria-label="Achievements">
+          {earned.map((a) => (
+            <span key={a.id} className="df2-vchip is-earned">
+              <Icon name="sparkle" size={12} /> {a.title}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <button
+        type="button"
+        className={`df2-requests-toggle df2-collapse-toggle${notifyOpen ? ' is-open' : ''}`}
+        aria-expanded={notifyOpen}
+        onClick={() => setNotifyOpen((x) => !x)}
+      >
+        <Icon name="bell" size={16} />
+        <span>Notifications</span>
+        <Icon name={notifyOpen ? 'chevronUp' : 'chevronDown'} size={16} />
+      </button>
+      {notifyOpen ? (
+        <div className="df2-collapse-panel">
+          <NotificationSettings />
+        </div>
+      ) : null}
     </Sheet>
   );
 }
@@ -265,7 +267,7 @@ function InviteButton({
   return (
     <button
       type="button"
-      className="df2-btn"
+      className="df2-pa"
       onClick={async () => {
         const link = inviteLink(username);
         try {
@@ -288,7 +290,8 @@ function InviteButton({
         }
       }}
     >
-      <Icon name="share" size={17} /> Invite a friend
+      <Icon name="share" size={18} />
+      <span>Invite</span>
     </button>
   );
 }
@@ -309,11 +312,12 @@ function ProfileEditor({ profile, onDone, onClose }: { profile: OwnProfile; onDo
     favoriteSurah: profile.favoriteSurah,
     languages: profile.languages,
     field: profile.field,
-    shareCheckinCards: profile.privacy.shareCheckinCards,
     showAchievements: profile.privacy.showAchievements,
     showStreak: profile.privacy.showStreak,
     showOnLeaderboard: profile.privacy.showOnLeaderboard,
     discoverable: profile.privacy.discoverable,
+    signatureText: profile.signature?.text || '',
+    signatureStyle: (profile.signature?.style || 'royal') as SignatureStyle,
   });
   const [buildingAvatar, setBuildingAvatar] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -322,7 +326,7 @@ function ProfileEditor({ profile, onDone, onClose }: { profile: OwnProfile; onDo
   const [usernameReq, setUsernameReq] = useState({ requested: '', reason: '', status: '' });
   const [password, setPassword] = useState({ value: '', status: '' });
 
-  const field = (key: 'displayName' | 'bio' | 'deenFocus' | 'currentFocus' | 'favoriteSurah' | 'languages' | 'field') =>
+  const field = (key: 'displayName' | 'bio' | 'deenFocus' | 'currentFocus' | 'favoriteSurah' | 'languages' | 'field' | 'signatureText') =>
     ({
       value: form[key],
       onChange: (e: { target: { value: string } }) => setForm((f) => ({ ...f, [key]: e.target.value })),
@@ -337,12 +341,13 @@ function ProfileEditor({ profile, onDone, onClose }: { profile: OwnProfile; onDo
       const next = await saveOwnProfile(profile, {
         ...form,
         privacy: {
-          shareCheckinCards: form.shareCheckinCards,
+          shareCheckinCards: profile.privacy.shareCheckinCards,
           showAchievements: form.showAchievements,
           showStreak: form.showStreak,
           showOnLeaderboard: form.showOnLeaderboard,
           discoverable: form.discoverable,
         },
+        signature: form.signatureText.trim() ? { text: form.signatureText, style: form.signatureStyle } : { text: form.displayName, style: form.signatureStyle },
       });
       updateOwnProfile(next);
       toast('Profile saved.', 'success');
@@ -357,40 +362,42 @@ function ProfileEditor({ profile, onDone, onClose }: { profile: OwnProfile; onDo
 
   if (buildingAvatar) return <AvatarCreator profile={profile} onClose={() => setBuildingAvatar(false)} />;
 
-  const toggle = (key: 'showStreak' | 'showOnLeaderboard' | 'discoverable' | 'showAchievements', title: string, note: string) => (
-    <label className="df2-toggle">
+  const toggle = (key: 'showStreak' | 'showOnLeaderboard' | 'discoverable' | 'showAchievements', title: string) => (
+    <label className="df2-toggle df2-toggle-compact">
       <input type="checkbox" checked={form[key]} onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.checked }))} />
       <span>
         <strong>{title}</strong>
-        <small>{note}</small>
       </span>
     </label>
   );
+  const signatureName = form.signatureText.trim() || form.displayName || profile.displayName;
 
   return (
-    <Sheet title="Edit your profile" kicker="PRIVATE TO YOUR DEEN CIRCLE" onClose={onClose} wide>
-      <form className="df2-form" onSubmit={save}>
-        <fieldset className="df2-fieldset">
-          <legend>Avatar</legend>
-          <button type="button" className="df2-btn df2-btn-soft df2-btn-sm df2-build-avatar" onClick={() => setBuildingAvatar(true)}>
-            <Icon name="sparkle" size={16} /> {profile.avatarConfig ? 'Edit your built avatar' : 'Create your own avatar'}
+    <Sheet title="Edit profile" onClose={onClose} wide>
+      <form className="df2-form df2-edit-form" onSubmit={save}>
+        <div className="df2-edit-avatar">
+          <Avatar avatar={form.avatar} config={profile.avatarConfig} name={form.displayName} size={60} />
+          <button type="button" className="df2-btn df2-btn-sm df2-build-avatar" onClick={() => setBuildingAvatar(true)}>
+            <Icon name="sparkle" size={16} /> {profile.avatarConfig ? 'Customise avatar' : 'Create avatar'}
           </button>
-          {profile.avatarConfig ? <p className="df2-footnote">Your built avatar is shown. Choosing a classic one below keeps it saved; use “Use classic avatar” in the builder to switch back.</p> : null}
-          <div className="df2-avatar-picker">
-            {AVATAR_KEYS.map((key) => (
-              <button
-                key={key}
-                type="button"
-                className={form.avatar === key ? 'active' : ''}
-                aria-pressed={form.avatar === key}
-                onClick={() => setForm((f) => ({ ...f, avatar: key }))}
-              >
-                <Avatar avatar={key} name={key} size={48} />
-                <small>{AVATAR_LABELS[key]}</small>
-              </button>
-            ))}
-          </div>
-        </fieldset>
+          <details className="df2-details df2-classic-icons">
+            <summary>Classic icons</summary>
+            <div className="df2-avatar-picker">
+              {AVATAR_KEYS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={form.avatar === key ? 'active' : ''}
+                  aria-pressed={form.avatar === key}
+                  onClick={() => setForm((f) => ({ ...f, avatar: key }))}
+                >
+                  <Avatar avatar={key} name={key} size={44} />
+                  <small>{AVATAR_LABELS[key]}</small>
+                </button>
+              ))}
+            </div>
+          </details>
+        </div>
         <div className="df2-form-grid">
           <label className="df2-field">
             <span>Display name</span>
@@ -400,27 +407,28 @@ function ProfileEditor({ profile, onDone, onClose }: { profile: OwnProfile; onDo
             <span>Username</span>
             <input value={`@${profile.username}`} readOnly aria-readonly="true" />
             <button type="button" className="df2-link-btn" onClick={() => setUsernameBox((v) => !v)}>
-              {usernameBox ? 'Hide username request' : 'Request a username change'}
+              {usernameBox ? 'Cancel' : 'Request a change'}
             </button>
           </label>
         </div>
         {usernameBox ? (
           <div className="df2-subcard">
-            <p className="df2-muted">Usernames stay fixed for safety. RISE reviews change requests.</p>
             <input
               className="df2-input"
-              placeholder="new_username"
+              placeholder="newusername"
               value={usernameReq.requested}
               onChange={(e) => setUsernameReq((u) => ({ ...u, requested: e.target.value }))}
               maxLength={24}
+              aria-label="New username"
             />
             <textarea
               className="df2-input"
-              placeholder="Why would you like to change it?"
+              placeholder="Reason (optional)"
               value={usernameReq.reason}
               onChange={(e) => setUsernameReq((u) => ({ ...u, reason: e.target.value }))}
               maxLength={240}
               rows={2}
+              aria-label="Reason"
             />
             <button
               type="button"
@@ -428,7 +436,7 @@ function ProfileEditor({ profile, onDone, onClose }: { profile: OwnProfile; onDo
               onClick={async () => {
                 try {
                   await requestUsernameChange(profile, usernameReq.requested, usernameReq.reason);
-                  setUsernameReq({ requested: '', reason: '', status: 'Request sent. RISE will review it.' });
+                  setUsernameReq({ requested: '', reason: '', status: 'Request sent.' });
                 } catch (err) {
                   setUsernameReq((u) => ({ ...u, status: friendlyMessage(err) }));
                 }
@@ -439,50 +447,66 @@ function ProfileEditor({ profile, onDone, onClose }: { profile: OwnProfile; onDo
             {usernameReq.status ? <p className="df2-inline-note">{usernameReq.status}</p> : null}
           </div>
         ) : null}
+
+        <fieldset className="df2-fieldset df2-signature-edit">
+          <legend>Signature</legend>
+          <div className="df2-signature-preview" aria-hidden="true">
+            <SignatureText value={{ text: signatureName, style: form.signatureStyle }} fallbackName={signatureName} size={36} />
+          </div>
+          <input className="df2-input" {...field('signatureText')} maxLength={40} placeholder={form.displayName} aria-label="Signature text" />
+          <div className="df2-signature-styles" role="radiogroup" aria-label="Signature style">
+            {SIGNATURE_STYLES.map((st) => (
+              <button
+                key={st}
+                type="button"
+                role="radio"
+                aria-checked={form.signatureStyle === st}
+                className={form.signatureStyle === st ? 'active' : ''}
+                onClick={() => setForm((f) => ({ ...f, signatureStyle: st }))}
+              >
+                <span style={{ fontFamily: SIGNATURE_FONTS[st].family }}>{signatureName.split(' ')[0] || 'Name'}</span>
+                <small>{SIGNATURE_FONTS[st].label}</small>
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
         <label className="df2-field">
           <span>About you</span>
           <textarea {...field('bio')} maxLength={180} rows={2} />
         </label>
-        <div className="df2-form-grid">
-          <label className="df2-field">
-            <span>Deen interests</span>
-            <input {...field('deenFocus')} maxLength={120} />
-          </label>
-          <label className="df2-field">
-            <span>Current focus</span>
-            <input {...field('currentFocus')} maxLength={120} />
-          </label>
-          <label className="df2-field">
-            <span>Favourite surah</span>
-            <input {...field('favoriteSurah')} maxLength={60} />
-          </label>
-          <label className="df2-field">
-            <span>Languages</span>
-            <input {...field('languages')} maxLength={80} />
-          </label>
-          <label className="df2-field">
-            <span>Work / study</span>
-            <input {...field('field')} maxLength={80} />
-          </label>
-        </div>
+        <details className="df2-details df2-more-details">
+          <summary>More about you</summary>
+          <div className="df2-form-grid">
+            <label className="df2-field">
+              <span>Interests</span>
+              <input {...field('deenFocus')} maxLength={120} />
+            </label>
+            <label className="df2-field">
+              <span>Current focus</span>
+              <input {...field('currentFocus')} maxLength={120} />
+            </label>
+            <label className="df2-field">
+              <span>Favourite surah</span>
+              <input {...field('favoriteSurah')} maxLength={60} />
+            </label>
+            <label className="df2-field">
+              <span>Languages</span>
+              <input {...field('languages')} maxLength={80} />
+            </label>
+            <label className="df2-field">
+              <span>Work / study</span>
+              <input {...field('field')} maxLength={80} />
+            </label>
+          </div>
+        </details>
 
         <fieldset className="df2-fieldset">
           <legend>Privacy</legend>
-          <label className="df2-toggle">
-            <input
-              type="checkbox"
-              checked={form.shareCheckinCards}
-              onChange={(e) => setForm((f) => ({ ...f, shareCheckinCards: e.target.checked }))}
-            />
-            <span>
-              <strong>Post a card when I check in</strong>
-              <small>Your friend sees “checked in today” in your chat. Your streak works either way.</small>
-            </span>
-          </label>
-          {toggle('showStreak', 'Show my challenge streak on my profile', 'Members who view your profile see your current and longest streak.')}
-          {toggle('showAchievements', 'Show my milestones', 'Badges such as “7-day streak” (only when your streak is visible).')}
-          {toggle('showOnLeaderboard', 'Show me on the monthly leaderboard', 'Your display name, username, avatar and points. Your points still count when hidden.')}
-          {toggle('discoverable', 'Suggest me to people I may know', 'You can appear in “People you may know” (name, username and avatar only).')}
+          {toggle('showStreak', 'Show my streak')}
+          {toggle('showAchievements', 'Show my milestones')}
+          {toggle('showOnLeaderboard', 'Show me on the leaderboard')}
+          {toggle('discoverable', 'Show me in People')}
         </fieldset>
 
         {error ? (
@@ -500,49 +524,52 @@ function ProfileEditor({ profile, onDone, onClose }: { profile: OwnProfile; onDo
         </div>
       </form>
 
-      <h3 className="df2-subhead">Account security</h3>
-      <div className="df2-subcard">
-        <p className="df2-muted">Signed in as {profile.email || 'your account'}.</p>
-        <input
-          className="df2-input"
-          type="password"
-          placeholder="New password (8+ characters)"
-          autoComplete="new-password"
-          value={password.value}
-          onChange={(e) => setPassword({ value: e.target.value, status: '' })}
-          minLength={8}
-          maxLength={128}
-        />
-        <button
-          type="button"
-          className="df2-btn df2-btn-sm"
-          onClick={async () => {
-            try {
-              await changeOwnPassword(password.value);
-              setPassword({ value: '', status: 'Password updated.' });
-            } catch (err) {
-              setPassword((p) => ({ ...p, status: friendlyMessage(err) }));
-            }
-          }}
-        >
-          Change password
-        </button>
-        {password.status ? <p className="df2-inline-note">{password.status}</p> : null}
-        <button
-          type="button"
-          className="df2-btn df2-btn-ghost-danger df2-btn-block"
-          onClick={async () => {
-            try {
-              await signOutOfDeenFriends();
-            } finally {
-              setSignedOut();
-              onClose();
-            }
-          }}
-        >
-          Sign out
-        </button>
-      </div>
+      <details className="df2-details df2-account-details">
+        <summary>Account</summary>
+        <div className="df2-subcard">
+          <p className="df2-muted">{profile.email || 'Your account'}</p>
+          <input
+            className="df2-input"
+            type="password"
+            placeholder="New password (8+ characters)"
+            autoComplete="new-password"
+            value={password.value}
+            onChange={(e) => setPassword({ value: e.target.value, status: '' })}
+            minLength={8}
+            maxLength={128}
+            aria-label="New password"
+          />
+          <button
+            type="button"
+            className="df2-btn df2-btn-sm"
+            onClick={async () => {
+              try {
+                await changeOwnPassword(password.value);
+                setPassword({ value: '', status: 'Password updated.' });
+              } catch (err) {
+                setPassword((p) => ({ ...p, status: friendlyMessage(err) }));
+              }
+            }}
+          >
+            Change password
+          </button>
+          {password.status ? <p className="df2-inline-note">{password.status}</p> : null}
+        </div>
+      </details>
+      <button
+        type="button"
+        className="df2-btn df2-btn-ghost-danger df2-btn-block"
+        onClick={async () => {
+          try {
+            await signOutOfDeenFriends();
+          } finally {
+            setSignedOut();
+            onClose();
+          }
+        }}
+      >
+        Sign out
+      </button>
     </Sheet>
   );
 }

@@ -45,7 +45,7 @@ function busyElsewhere(): boolean {
     document.body.classList.contains('rud-first-visit-open') ||
     document.documentElement.dataset.maintenance === 'active' ||
     /^#(riseupondeen\.admin|admin)/i.test(location.hash) ||
-    !!document.querySelector('.rud-dialog-backdrop, .df2-fullscreen, .df2-sheet-backdrop, #searchOverlay.open, .modal.open, .rud-explore-drawer.open')
+    !!document.querySelector('#preloader:not(.hide), #rudWelcomeIntro:not([hidden]), .rud-dialog-backdrop, .rud-ix-card, .df2-fullscreen, .df2-sheet-backdrop, #searchOverlay.open, .modal.open, .rud-explore-drawer.open')
   );
 }
 
@@ -75,29 +75,41 @@ function visibleElement(selector: string): HTMLElement | null {
   );
 }
 
-function waitForTarget(selector: string, timeout = 3500): Promise<HTMLElement | null> {
+function waitForTarget(selector: string, timeout = 2500): Promise<HTMLElement | null> {
   return new Promise((resolve) => {
     const found = visibleElement(selector);
     if (found || !selector) return resolve(found);
     const started = performance.now();
-    let frame = 0;
+    let poll = 0;
     const observer = new MutationObserver(() => check());
     const check = () => {
       const el = visibleElement(selector);
       if (el || performance.now() - started > timeout) {
         observer.disconnect();
-        cancelAnimationFrame(frame);
+        clearInterval(poll);
         resolve(el);
         return true;
       }
       return false;
     };
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'hidden'] });
-    const tick = () => {
-      if (!check()) frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
+    observer.observe(document.body, { childList: true, subtree: true });
+    poll = window.setInterval(check, 120); // catches visibility changes without watching every attribute
   });
+}
+
+/** The highlighted area around a control (8px breathing room, kept on screen). */
+function holeFor(rect: Rect): Rect {
+  const pad = 8;
+  return {
+    top: Math.max(4, rect.top - pad),
+    left: Math.max(4, rect.left - pad),
+    width: Math.min(window.innerWidth - 8, rect.width + pad * 2),
+    height: rect.height + pad * 2,
+  };
+}
+
+function holeStyle(h: Rect): CSSProperties {
+  return { transform: `translate3d(${h.left}px, ${h.top}px, 0)`, width: h.width, height: h.height };
 }
 
 /** Resolves when smooth scrolling stops (scrollend where supported), or after `max` ms. */
@@ -471,31 +483,47 @@ function TourRunner({
     };
   }, [running.index, steps]);
 
-  /* Keep the spotlight on the control while the page moves or resizes. */
+  /* Keep the spotlight on the control while the page moves or resizes. Scrolling only moves the
+     highlight with a compositor transform written straight to the elements (no React render per
+     frame); React re-renders only when the step or the window size changes. */
+  const shadeRef = useRef<HTMLDivElement>(null);
+  const ringRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const target = state.target;
     if (!target) return;
     let frame = 0;
-    const measure = () => {
-      cancelAnimationFrame(frame);
+    const read = () => {
+      const r = target.getBoundingClientRect();
+      return { top: r.top, left: r.left, width: r.width, height: r.height };
+    };
+    const follow = () => {
+      if (frame) return;
       frame = requestAnimationFrame(() => {
-        if (!target.isConnected) {
-          setRect(null);
-          return;
+        frame = 0;
+        if (!target.isConnected) return;
+        const h = holeFor(read());
+        const t = `translate3d(${h.left}px, ${h.top}px, 0)`;
+        for (const el of [shadeRef.current, ringRef.current]) {
+          if (!el) continue;
+          el.style.transform = t;
+          el.style.width = `${h.width}px`;
+          el.style.height = `${h.height}px`;
         }
-        const r = target.getBoundingClientRect();
-        setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
       });
     };
-    measure();
-    window.addEventListener('resize', measure);
-    window.addEventListener('scroll', measure, true);
-    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
+    const relayout = () => {
+      if (!target.isConnected) setRect(null);
+      else setRect(read());
+    };
+    relayout();
+    window.addEventListener('resize', relayout);
+    window.addEventListener('scroll', follow, { capture: true, passive: true });
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(follow) : null;
     ro?.observe(target);
     return () => {
       cancelAnimationFrame(frame);
-      window.removeEventListener('resize', measure);
-      window.removeEventListener('scroll', measure, true);
+      window.removeEventListener('resize', relayout);
+      window.removeEventListener('scroll', follow, { capture: true });
       ro?.disconnect();
     };
   }, [state.target]);
@@ -525,15 +553,7 @@ function TourRunner({
 
   const index = running.index;
   const last = index === steps.length - 1;
-  const pad = 8;
-  const hole = rect
-    ? {
-        top: Math.max(4, rect.top - pad),
-        left: Math.max(4, rect.left - pad),
-        width: Math.min(window.innerWidth - 8, rect.width + pad * 2),
-        height: rect.height + pad * 2,
-      }
-    : null;
+  const hole = rect ? holeFor(rect) : null;
 
   /* Card placement: below the control if there is room, otherwise above; centred when no control. */
   let cardStyle: CSSProperties | undefined;
@@ -551,14 +571,8 @@ function TourRunner({
 
   return createPortal(
     <div className="rud-v3 rud-tour" aria-live="polite">
-      <div
-        className={`rud-tour-shade${hole ? ' has-hole' : ''}`}
-        style={hole ? { top: hole.top, left: hole.left, width: hole.width, height: hole.height } : undefined}
-        aria-hidden="true"
-      />
-      {hole ? (
-        <div className="rud-tour-ring" style={{ top: hole.top, left: hole.left, width: hole.width, height: hole.height }} aria-hidden="true" />
-      ) : null}
+      <div ref={shadeRef} className={`rud-tour-shade${hole ? ' has-hole' : ''}`} style={hole ? holeStyle(hole) : undefined} aria-hidden="true" />
+      {hole ? <div ref={ringRef} className="rud-tour-ring" style={holeStyle(hole)} aria-hidden="true" /> : null}
       <div
         ref={cardRef}
         className={`rud-tour-card ${placementClass}${state.ready ? '' : ' is-loading'}`}
@@ -585,7 +599,7 @@ function TourRunner({
           <p className="rud-tour-missing">This control isn’t on screen right now (it may need you to sign in, or appear once content loads). You can continue the tour.</p>
         ) : null}
         <div className="rud-tour-progress" aria-hidden="true">
-          <i style={{ width: `${((index + 1) / steps.length) * 100}%` }} />
+          <i style={{ transform: `scaleX(${(index + 1) / steps.length})` }} />
         </div>
         <div className="rud-tour-actions">
           <button type="button" className="rud-btn rud-btn-quiet" onClick={() => onEndRef.current(false)}>
