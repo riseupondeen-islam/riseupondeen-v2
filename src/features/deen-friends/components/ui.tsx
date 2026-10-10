@@ -1,8 +1,11 @@
 /* Small presentational building blocks shared by the Deen Friends screens. */
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import type { AvatarKey } from '../types';
+import type { AvatarConfig, AvatarKey } from '../types';
+import { AvatarArt } from '../../../components/avatar/AvatarArt';
 import { initials } from '../services/format';
+import { notify } from '../../../services/ui/notify';
+import { lockPageScroll } from '../../../services/ui/scrollLock';
 
 /* ---------- icons (inline SVG, inherit currentColor) ---------- */
 
@@ -208,18 +211,23 @@ export const AVATAR_LABELS: Record<AvatarKey, string> = {
 
 export function Avatar({
   avatar,
+  config,
   name,
   size = 44,
   online = false,
 }: {
   avatar?: AvatarKey | null;
+  /** V3 built avatar; shown instead of the classic artwork when present. */
+  config?: AvatarConfig | null;
   name: string;
   size?: number;
   online?: boolean;
 }) {
   return (
-    <span className="df2-avatar" style={{ width: size, height: size }} aria-hidden="true">
-      {avatar ? (
+    <span className={`df2-avatar${config ? ' df2-avatar-built' : ''}`} style={{ width: size, height: size }} aria-hidden="true">
+      {config ? (
+        <AvatarArt config={config} name={name} size={size} />
+      ) : avatar ? (
         <svg viewBox="0 0 72 72" width={size} height={size}>
           {AVATAR_ART[avatar]}
         </svg>
@@ -231,62 +239,52 @@ export function Avatar({
   );
 }
 
-/* ---------- toasts ---------- */
+/* ---------- toasts (rendered by the app-wide notification cards, services/ui/notify.ts) ---------- */
 
-interface ToastItem {
-  id: number;
-  text: string;
-  tone: 'info' | 'success' | 'error';
-}
+type ToastTone = 'info' | 'success' | 'error' | 'warning';
 
-const ToastContext = createContext<(text: string, tone?: ToastItem['tone']) => void>(() => undefined);
+const ToastContext = createContext<(text: string, tone?: ToastTone) => void>(() => undefined);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<ToastItem[]>([]);
-  const nextId = useRef(1);
-  const show = useCallback((text: string, tone: ToastItem['tone'] = 'info') => {
-    const id = nextId.current++;
-    // One toast at a time: a newer message replaces the older one instead of stacking.
-    setItems([{ id, text, tone }]);
-    window.setTimeout(() => setItems((list) => list.filter((t) => t.id !== id)), 2800);
+  const show = useCallback((text: string, tone: ToastTone = 'info') => {
+    notify(text, tone, { className: 'df2-note' });
   }, []);
-  return (
-    <ToastContext.Provider value={show}>
-      {children}
-      {createPortal(
-        <div className="df2-root df2-toasts" role="status" aria-live="polite">
-          {items.map((t) => (
-            <div key={t.id} className={`df2-toast df2-toast-${t.tone}`}>
-              {t.text}
-            </div>
-          ))}
-        </div>,
-        document.body,
-      )}
-    </ToastContext.Provider>
-  );
+  return <ToastContext.Provider value={show}>{children}</ToastContext.Provider>;
 }
 
 export function useToast() {
   return useContext(ToastContext);
 }
 
+/* ---------- chat theme context (V3) ----------
+   Sheets and dialogs are portalled to <body>, outside the themed full-screen chat, so they used to
+   keep the app's colours while the messages used the chat theme. FullScreen provides its theme here
+   and every Sheet opened inside a chat applies the same theme tokens. */
+export const ChatThemeContext = createContext<string>('');
+
 /* ---------- modal sheet (bottom sheet on phones, dialog on larger screens) ---------- */
 
-let openSheets = 0;
 /** Open sheets, top-most last: only the top one reacts to Escape and Tab. */
 const sheetStack: number[] = [];
 let sheetCounter = 0;
+/** How many mounted overlays currently want each body class (so nested overlays never remove it early). */
+const bodyClassUsers = new Map<string, number>();
 
-/** Locks page scroll while at least one sheet or full-screen chat is open. */
+/**
+ * Locks page scroll while at least one sheet or full-screen chat is open (reference-counted, iOS-safe:
+ * services/ui/scrollLock.ts) and keeps a body class for styling (e.g. hiding the site navbar).
+ */
 export function useBodyScrollLock(active: boolean, className = 'df2-sheet-open') {
   useEffect(() => {
     if (!active) return;
-    openSheets += 1;
+    const release = lockPageScroll();
+    bodyClassUsers.set(className, (bodyClassUsers.get(className) || 0) + 1);
     document.body.classList.add(className);
     return () => {
-      openSheets -= 1;
-      document.body.classList.remove(className);
+      const left = (bodyClassUsers.get(className) || 1) - 1;
+      bodyClassUsers.set(className, left);
+      if (left <= 0) document.body.classList.remove(className);
+      release();
     };
   }, [active, className]);
 }
@@ -312,6 +310,7 @@ export function Sheet({
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   useBodyScrollLock(true);
+  const chatTheme = useContext(ChatThemeContext);
   useEffect(() => {
     const sheetId = ++sheetCounter;
     sheetStack.push(sheetId);
@@ -355,6 +354,7 @@ export function Sheet({
   return createPortal(
     <div
       className="df2-root df2-sheet-backdrop"
+      data-chat-theme={chatTheme || undefined}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

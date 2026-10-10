@@ -11,9 +11,10 @@ import { friendlyMessage, logError } from '../services/errors';
 import { challengeState, daysBetween, localDay } from '../services/format';
 import { loadMyFriendChallenges } from '../services/interactionService';
 import { startTasbihChallenge } from '../services/tasbihHandoff';
-import { useDeenFriends } from '../state/deenFriendsStore';
+import { getDeenFriendsState, useDeenFriends } from '../state/deenFriendsStore';
 import { goToDeenFriends } from '../deenFriendsRoute';
 import { EmptyState, Icon, SkeletonRows, useToast } from './ui';
+import { CircleChallengesSection, LeaderboardSection } from './CircleChallenges';
 
 export function ChallengesTab() {
   const s = useDeenFriends();
@@ -55,7 +56,7 @@ export function ChallengesTab() {
     }
     setBusyId(challenge.id);
     try {
-      const progress = await completeDailyChallengeToday(challenge);
+      const progress = await completeDailyChallengeToday(challenge, getDeenFriendsState().profile);
       setDaily((list) => (list || []).map((x) => (x.challenge.id === challenge.id ? { ...x, progress } : x)));
       toast(
         progress.status === 'completed' ? 'MashaAllah — challenge completed!' : 'Today is done. May Allah accept it.',
@@ -220,6 +221,9 @@ export function ChallengesTab() {
           </EmptyState>
         )}
       </section>
+
+      <CircleChallengesSection />
+      <LeaderboardSection />
     </div>
   );
 }

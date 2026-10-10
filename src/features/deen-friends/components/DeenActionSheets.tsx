@@ -57,7 +57,16 @@ export function DeenActionMenu({ onPick, onClose }: { onPick: (action: DeenActio
 
 /* ---------- encouragement ---------- */
 
-export function EncourageSheet({ friend, onClose }: { friend: FriendRef; onClose: () => void }) {
+export function EncourageSheet({
+  friend,
+  onClose,
+  send,
+}: {
+  friend?: FriendRef;
+  onClose: () => void;
+  /** V3: send somewhere other than a friend chat (e.g. a Deen circle). */
+  send?: (text: string) => Promise<void>;
+}) {
   const toast = useToast();
   const [busy, setBusy] = useState('');
   return (
@@ -72,7 +81,8 @@ export function EncourageSheet({ friend, onClose }: { friend: FriendRef; onClose
             onClick={async () => {
               setBusy(text);
               try {
-                await sendEncouragement(friend, text);
+                if (send) await send(text);
+                else if (friend) await sendEncouragement(friend, text);
                 toast('Encouragement sent.', 'success');
                 onClose();
               } catch (err) {
@@ -105,10 +115,15 @@ export function ShareSheet({
   friend,
   initialType,
   onClose,
+  send,
+  sentText = 'Shared with your friend.',
 }: {
-  friend: FriendRef;
+  friend?: FriendRef;
   initialType: 'all' | SharedContentType;
   onClose: () => void;
+  /** V3: share somewhere other than a friend chat (e.g. a Deen circle). */
+  send?: (item: ShareItem) => Promise<void>;
+  sentText?: string;
 }) {
   const toast = useToast();
   const [filter, setFilter] = useState<'all' | SharedContentType>(initialType);
@@ -148,8 +163,9 @@ export function ShareSheet({
   async function share(item: ShareItem) {
     setBusyId(item.id);
     try {
-      await shareContent(friend, item);
-      toast('Shared with your friend.', 'success');
+      if (send) await send(item);
+      else if (friend) await shareContent(friend, item);
+      toast(sentText, 'success');
       onClose();
     } catch (err) {
       logError('share content', err);

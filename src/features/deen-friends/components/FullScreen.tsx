@@ -7,7 +7,7 @@
  * - Escape closes it (unless a sheet is open on top). */
 import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { useBodyScrollLock } from './ui';
+import { ChatThemeContext, useBodyScrollLock } from './ui';
 
 export function FullScreen({
   label,
@@ -62,7 +62,7 @@ export function FullScreen({
       ref={ref}
       data-chat-theme={theme || 'ivory'}
     >
-      {children}
+      <ChatThemeContext.Provider value={theme || 'ivory'}>{children}</ChatThemeContext.Provider>
     </div>,
     document.body,
   );

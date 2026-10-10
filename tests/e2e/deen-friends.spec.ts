@@ -54,7 +54,7 @@ test('Add Friend → request → accept: the complete two-user flow', async ({ p
   await expect(addButton).toBeEnabled();
   await page.screenshot({ path: `${SHOTS}/${info.project.name}-02-search.png` });
   await addButton.click();
-  await expect(page.locator('.df2-toast').last()).toContainText('Request sent to @bilal');
+  await expect(page.locator('.rud-note').last()).toContainText('Request sent to @bilal');
   await expect(page.locator('.df2-search-result').getByRole('button', { name: 'Cancel request' })).toBeVisible();
   await expect(page.locator('#df2-requests')).toContainText('waiting for reply');
 
@@ -70,7 +70,7 @@ test('Add Friend → request → accept: the complete two-user flow', async ({ p
   await expect(page.locator('.df2-tabs [role=tab]').first()).toContainText('1');
   await page.screenshot({ path: `${SHOTS}/${info.project.name}-03-incoming.png`, fullPage: true });
   await page.locator('#df2-requests').getByRole('button', { name: 'Accept' }).click();
-  await expect(page.locator('.df2-toast').last()).toContainText('You are now Deen Friends');
+  await expect(page.locator('.rud-note').last()).toContainText('You are now Deen Friends');
   await expect(page.locator('.df2-friend-card')).toContainText('Aisha Rahman');
 
   const fid = [DF_USERS.aisha.uid, DF_USERS.bilal.uid].sort().join('_');
@@ -94,7 +94,7 @@ test('declining and cancelling requests update the right state', async ({ page }
   await ui(page).getByRole('button', { name: 'Find' }).click();
   await page.locator('.df2-search-result').getByRole('button', { name: 'Add friend' }).click();
   await page.locator('.df2-search-result').getByRole('button', { name: 'Cancel request' }).click();
-  await expect(page.locator('.df2-toast').last()).toContainText('cancelled');
+  await expect(page.locator('.rud-note').last()).toContainText('cancelled');
   expect((await fakeDocs(page, 'deens_friend_requests/'))[0].status).toBe('cancelled');
 
   // A new request after cancelling works (V1 reused the pair id and collided).
@@ -103,7 +103,7 @@ test('declining and cancelling requests update the right state', async ({ page }
   await signOut(page);
   await signIn(page, DF_USERS.bilal);
   await page.locator('#df2-requests').getByRole('button', { name: 'Decline' }).click();
-  await expect(page.locator('.df2-toast').last()).toContainText('declined');
+  await expect(page.locator('.rud-note').last()).toContainText('declined');
   const statuses = (await fakeDocs(page, 'deens_friend_requests/')).map((r) => r.status).sort();
   expect(statuses).toEqual(['cancelled', 'declined']);
   await expect(page.locator('#df2-requests')).toHaveCount(0);

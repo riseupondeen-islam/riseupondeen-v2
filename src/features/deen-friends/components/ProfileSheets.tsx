@@ -15,7 +15,6 @@ import {
   removeFriend,
   sendFriendRequest,
 } from '../services/friendService';
-import { presenceLabel } from '../services/format';
 import { longestStreak, visibleStreakCount } from '../services/streakService';
 import {
   refreshProfile,
@@ -27,6 +26,8 @@ import {
 import { goToDeenFriends } from '../deenFriendsRoute';
 import { NotificationSettings } from './NotificationSettings';
 import { AVATAR_LABELS, Avatar, ConfirmSheet, Icon, Sheet, useToast } from './ui';
+import { PublicProfileCard } from './PublicProfileCard';
+import { AvatarCreator } from './AvatarCreator';
 
 /* ---------- achievements (computed, never stored) ---------- */
 
@@ -76,54 +77,16 @@ export function PersonSheet({ uid, onClose }: { uid: string; onClose: () => void
     }
   }
 
-  const details: Array<[string, string]> = profile
-    ? (
-        [
-          ['Deen interests', profile.deenFocus],
-          ['Current focus', profile.currentFocus],
-          ['Favourite surah', profile.favoriteSurah],
-          ['Work / study', profile.field],
-          ['Languages', profile.languages],
-        ] as Array<[string, string]>
-      ).filter(([, v]) => !!v)
-    : [];
-
   return (
     <>
       <Sheet title={name} kicker={status === 'friends' ? 'DEEN FRIEND' : 'DEEN FRIENDS PROFILE'} onClose={onClose}>
-        <div className="df2-visiting-card">
-          <div className="df2-visiting-top">
-            <Avatar avatar={profile?.avatar} name={name} size={76} />
-            <div>
-              <strong>{name}</strong>
-              <span>@{profile?.username || '…'}</span>
-              {status === 'friends' && profile ? <small>{presenceLabel(profile.lastActiveAt)}</small> : null}
-            </div>
-          </div>
-          <p className="df2-visiting-bio">{profile?.bio || 'Growing in Deen, one good deed at a time.'}</p>
-          {details.length ? (
-            <dl className="df2-detail-list">
-              {details.map(([label, value]) => (
-                <div key={label}>
-                  <dt>{label}</dt>
-                  <dd>{value}</dd>
-                </div>
-              ))}
-            </dl>
-          ) : null}
-          {friendship ? (
-            <div className="df2-stat-row">
-              <span className="df2-stat">
-                <b>{visibleStreakCount(streak)}</b>
-                <small>current streak</small>
-              </span>
-              <span className="df2-stat">
-                <b>{longestStreak(streak?.bothDates || [])}</b>
-                <small>best together</small>
-              </span>
-            </div>
-          ) : null}
-        </div>
+        <PublicProfileCard
+          profile={profile}
+          extras={{
+            presence: status === 'friends',
+            friendStreak: friendship ? { current: visibleStreakCount(streak), best: longestStreak(streak?.bothDates || []) } : null,
+          }}
+        />
         <div className="df2-sheet-actions">
           {status === 'friends' && friendship ? (
             <>
@@ -212,16 +175,49 @@ export function MyProfileSheet({ onClose }: { onClose: () => void }) {
   const toast = useToast();
   const me = s.profile as OwnProfile;
   const [editing, setEditing] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [buildingAvatar, setBuildingAvatar] = useState(false);
   const best = Math.max(0, ...Object.values(s.streaks).map((st) => longestStreak(st.bothDates)));
   const achievements = achievementsFor(s.friendships.length, best);
 
   if (editing) return <ProfileEditor profile={me} onDone={() => setEditing(false)} onClose={onClose} />;
+  if (buildingAvatar) return <AvatarCreator profile={me} onClose={() => setBuildingAvatar(false)} />;
+  if (previewing)
+    return (
+      <Sheet title="Your public profile" kicker="PREVIEW · AS OTHERS SEE YOU" onClose={() => setPreviewing(false)}>
+        <div className="df2-preview-banner" role="note">
+          <Icon name="shield" size={16} /> This is exactly what other members see. Your email, password and private settings are never shown.
+        </div>
+        <PublicProfileCard profile={me} />
+        <ul className="df2-preview-privacy">
+          <li>Challenge streak: {me.privacy.showStreak ? 'visible' : 'hidden'}</li>
+          <li>Milestones: {me.privacy.showAchievements && me.privacy.showStreak ? 'visible' : 'hidden'}</li>
+          <li>Monthly leaderboard: {me.privacy.showOnLeaderboard ? 'shown' : 'hidden'}</li>
+          <li>Friend suggestions: {me.privacy.discoverable ? 'you can be suggested' : 'you are not suggested'}</li>
+        </ul>
+        <div className="df2-sheet-actions">
+          <button type="button" className="df2-btn" onClick={() => setPreviewing(false)}>
+            Back
+          </button>
+          <button
+            type="button"
+            className="df2-btn df2-btn-primary"
+            onClick={() => {
+              setPreviewing(false);
+              setEditing(true);
+            }}
+          >
+            <Icon name="edit" size={17} /> Edit what’s public
+          </button>
+        </div>
+      </Sheet>
+    );
 
   return (
     <Sheet title="Your Deen profile" kicker="HOW FRIENDS SEE YOU" onClose={onClose}>
       <div className="df2-visiting-card is-own">
         <div className="df2-visiting-top">
-          <Avatar avatar={me.avatar} name={me.displayName} size={76} />
+          <Avatar avatar={me.avatar} config={me.avatarConfig} name={me.displayName} size={76} />
           <div>
             <strong>{me.displayName}</strong>
             <span>@{me.username}</span>
@@ -246,6 +242,12 @@ export function MyProfileSheet({ onClose }: { onClose: () => void }) {
       <div className="df2-sheet-actions">
         <button type="button" className="df2-btn df2-btn-primary" onClick={() => setEditing(true)}>
           <Icon name="edit" size={17} /> Edit profile
+        </button>
+        <button type="button" className="df2-btn" onClick={() => setPreviewing(true)} data-tour="df-preview-profile">
+          <Icon name="people" size={17} /> Preview public profile
+        </button>
+        <button type="button" className="df2-btn" onClick={() => setBuildingAvatar(true)}>
+          <Icon name="sparkle" size={17} /> Create avatar
         </button>
         <InviteButton username={me.username} toast={toast} />
       </div>
@@ -309,7 +311,11 @@ function ProfileEditor({ profile, onDone, onClose }: { profile: OwnProfile; onDo
     field: profile.field,
     shareCheckinCards: profile.privacy.shareCheckinCards,
     showAchievements: profile.privacy.showAchievements,
+    showStreak: profile.privacy.showStreak,
+    showOnLeaderboard: profile.privacy.showOnLeaderboard,
+    discoverable: profile.privacy.discoverable,
   });
+  const [buildingAvatar, setBuildingAvatar] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [usernameBox, setUsernameBox] = useState(false);
@@ -330,7 +336,13 @@ function ProfileEditor({ profile, onDone, onClose }: { profile: OwnProfile; onDo
     try {
       const next = await saveOwnProfile(profile, {
         ...form,
-        privacy: { shareCheckinCards: form.shareCheckinCards, showAchievements: form.showAchievements },
+        privacy: {
+          shareCheckinCards: form.shareCheckinCards,
+          showAchievements: form.showAchievements,
+          showStreak: form.showStreak,
+          showOnLeaderboard: form.showOnLeaderboard,
+          discoverable: form.discoverable,
+        },
       });
       updateOwnProfile(next);
       toast('Profile saved.', 'success');
@@ -343,11 +355,27 @@ function ProfileEditor({ profile, onDone, onClose }: { profile: OwnProfile; onDo
     }
   }
 
+  if (buildingAvatar) return <AvatarCreator profile={profile} onClose={() => setBuildingAvatar(false)} />;
+
+  const toggle = (key: 'showStreak' | 'showOnLeaderboard' | 'discoverable' | 'showAchievements', title: string, note: string) => (
+    <label className="df2-toggle">
+      <input type="checkbox" checked={form[key]} onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.checked }))} />
+      <span>
+        <strong>{title}</strong>
+        <small>{note}</small>
+      </span>
+    </label>
+  );
+
   return (
     <Sheet title="Edit your profile" kicker="PRIVATE TO YOUR DEEN CIRCLE" onClose={onClose} wide>
       <form className="df2-form" onSubmit={save}>
         <fieldset className="df2-fieldset">
           <legend>Avatar</legend>
+          <button type="button" className="df2-btn df2-btn-soft df2-btn-sm df2-build-avatar" onClick={() => setBuildingAvatar(true)}>
+            <Icon name="sparkle" size={16} /> {profile.avatarConfig ? 'Edit your built avatar' : 'Create your own avatar'}
+          </button>
+          {profile.avatarConfig ? <p className="df2-footnote">Your built avatar is shown. Choosing a classic one below keeps it saved; use “Use classic avatar” in the builder to switch back.</p> : null}
           <div className="df2-avatar-picker">
             {AVATAR_KEYS.map((key) => (
               <button
@@ -451,6 +479,10 @@ function ProfileEditor({ profile, onDone, onClose }: { profile: OwnProfile; onDo
               <small>Your friend sees “checked in today” in your chat. Your streak works either way.</small>
             </span>
           </label>
+          {toggle('showStreak', 'Show my challenge streak on my profile', 'Members who view your profile see your current and longest streak.')}
+          {toggle('showAchievements', 'Show my milestones', 'Badges such as “7-day streak” (only when your streak is visible).')}
+          {toggle('showOnLeaderboard', 'Show me on the monthly leaderboard', 'Your display name, username, avatar and points. Your points still count when hidden.')}
+          {toggle('discoverable', 'Suggest me to people I may know', 'You can appear in “People you may know” (name, username and avatar only).')}
         </fieldset>
 
         {error ? (

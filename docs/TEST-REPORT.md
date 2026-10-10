@@ -1,5 +1,40 @@
 # Build and test report
 
+## V3 update
+
+Same sandbox limits (no npm registry, no Google/Firebase network). Details and root causes:
+[V3-IMPLEMENTATION.md](V3-IMPLEMENTATION.md).
+
+| Area | Check | Result |
+| --- | --- | --- |
+| Types | strict `tsc` over all TS/TSX (local React/Firebase stubs) | **PASS**, 0 errors |
+| E2E suite | Playwright, Pixel 7 emulation + 1440×900 desktop, in-memory Firebase with rules model | **PASS**: 147 passed, 3 skipped (touch-only tests on desktop), 150 runs — 111 existing + 19 new V3 tests × 2 layouts |
+| Scheduler | `maintenance.test.js` (RISE 24 h retention, suggestions) and existing sender test | **PASS** |
+| Navigation / logos | order Home · My Deen · Notifications · Deen Friends · theme · Explore; equal icon size; icons are the supplied master at 192/512/maskable | **PASS** |
+| Makkah scene | absolute at top, scrolls away; sky layer fixed | **PASS** |
+| Notification cards | tone/title, max 3, dismiss | **PASS** |
+| Tasbih (Chromium/Android engine) | one tap = +1; bounce and number animations actually run | **PASS** (emulation); real Android **NOT VERIFIED** |
+| 99 Names | no offline action in the reader; no empty band in cards | **PASS** |
+| App Guide | first-run card once; tour Next/Back/Skip; replay; route-changing feature tour; no page errors | **PASS** |
+| Admin App Guide editor | save draft, publish v1 | **PASS** |
+| Instagram (Android UA) | card, Chrome intent link, dismissal remembered | **PASS** (UA simulation) |
+| iOS Safari walkthrough | steps, Back/Next/"I've done this", close restores page | **PASS** (UA simulation); real iPhone **NOT VERIFIED** |
+| Android install | real `prompt()` called once, Installing… → Installed on `appinstalled` | **PASS** (events dispatched by the test) |
+| Usernames | spaces/underscore/symbols rejected; `AISHA` taken by `aisha` | **PASS** |
+| Streak / points / leaderboard | one transaction writes completion + activity + streak + entry; first place shown; no email in entry | **PASS** |
+| Deen circles | 4-person minimum guidance; created with friends; 3-person circle refused by rules model; encouragement | **PASS** |
+| Chat scroll lock + themes | body pinned while chat and nested sheet open; position restored; Layl theme reaches sheet and buttons | **PASS** |
+| Shared content | full translation (no truncation), RTL Arabic, transliteration, reference | **PASS** |
+| Suggestions | mutual first; excludes friends, pending, non-discoverable; no email | **PASS** |
+| Avatar + public preview | builder saves validated config; preview shows public card without email | **PASS** |
+| RISE Clear Chat | only when solved; typed username; welcome kept; audit log | **PASS** |
+| 360 px / no horizontal scroll | all Deen Friends tabs | **PASS** |
+| Vite build, rules emulator, real devices, live Firebase | | **NOT VERIFIED** (see V3-IMPLEMENTATION.md §7) |
+
+Two defects were found by the new tests and fixed: the header logo tile and the chat scroll lock
+were both silently overridden by `!important` rules in `01-base.css`; and the rules model let
+unmodelled top-level collections through before the V3 checks ran.
+
 ## V2 update (Deen Friends rebuild, targeted fixes, push notifications)
 
 Same sandbox limits as below. There was no npm registry and no network access to Google, Firebase or

@@ -234,23 +234,123 @@ service cloud.firestore {
         ];
     }
 
+    /* V3: shared Islamic content keeps its COMPLETE text (V2 cut it at 300/1,200 characters).
+       `preview` stays ≤300 for older app versions; the full fields are bounded generously. */
+    function validSharedContent(c) {
+      return c is map
+        && c.keys().hasOnly(['id','type','title','preview','reference','arabic','translation','transliteration','source'])
+        && c.keys().hasAll(['id','type','title'])
+        && isString(c.id, 200)
+        && c.type in ['quran','dua','hadith','zikr','reminder']
+        && isString(c.title, 200)
+        && isString(c.get('preview', ''), 300)
+        && isString(c.get('reference', ''), 200)
+        && isString(c.get('arabic', ''), 8000)
+        && isString(c.get('translation', ''), 8000)
+        && isString(c.get('transliteration', ''), 6000)
+        && isString(c.get('source', ''), 200);
+    }
+
     function validContentMsg(d) {
       return d.kind == 'content'
         && msgKeysOk(d, ['sharedContent'])
         && d.text == ''
-        && d.sharedContent is map
-        && d.sharedContent.keys().hasOnly(['id','type','title','preview','reference','arabic'])
-        && d.sharedContent.keys().hasAll(['id','type','title'])
-        && isString(d.sharedContent.id, 200)
-        && d.sharedContent.type in ['quran','dua','hadith','zikr','reminder']
-        && isString(d.sharedContent.title, 200)
-        && isString(d.sharedContent.get('preview', ''), 300)
-        && isString(d.sharedContent.get('reference', ''), 200)
-        && isString(d.sharedContent.get('arabic', ''), 1200);
+        && validSharedContent(d.sharedContent);
     }
 
     function isChallengeActive(d) {
       return request.time.toMillis() <= d.expiresAtMs;
+    }
+
+    /* ---------- V3 helpers: IST day/month, friendships, avatars, completions ---------- */
+
+    // Streak days and leaderboard months use India Standard Time (UTC+05:30), computed from the
+    // server clock so a device with a wrong date cannot add days (see progressService.ts).
+    function istDay() {
+      return math.floor((request.time.toMillis() + 19800000) / 86400000);
+    }
+    function istMonth() {
+      let t = request.time + duration.value(330, 'm');
+      return string(t.year()) + '-' + (t.month() < 10 ? '0' + string(t.month()) : string(t.month()));
+    }
+    function istDate() {
+      let t = request.time + duration.value(330, 'm');
+      return string(t.year()) + '-'
+        + (t.month() < 10 ? '0' + string(t.month()) : string(t.month())) + '-'
+        + (t.day() < 10 ? '0' + string(t.day()) : string(t.day()));
+    }
+    function pairId(a, b) {
+      return a < b ? a + '_' + b : b + '_' + a;
+    }
+    function isFriendOf(a, b) {
+      return exists(/databases/$(database)/documents/deens_friendships/$(pairId(a, b)));
+    }
+    // Every listed uid (after `from`) is a friend of `me`; no loops in rules, so up to 8 explicitly.
+    function allFriends(me, list, from) {
+      return (list.size() <= from + 0 || isFriendOf(me, list[from + 0]))
+        && (list.size() <= from + 1 || isFriendOf(me, list[from + 1]))
+        && (list.size() <= from + 2 || isFriendOf(me, list[from + 2]))
+        && (list.size() <= from + 3 || isFriendOf(me, list[from + 3]))
+        && (list.size() <= from + 4 || isFriendOf(me, list[from + 4]))
+        && (list.size() <= from + 5 || isFriendOf(me, list[from + 5]))
+        && (list.size() <= from + 6 || isFriendOf(me, list[from + 6]))
+        && (list.size() <= from + 7 || isFriendOf(me, list[from + 7]));
+    }
+    function validAvatarConfig(a) {
+      return a == null || (
+        a is map
+        && a.keys().hasOnly(['v','shape','background','pattern','figure','outfit','accent','motif','initials'])
+        && a.v == 1
+        && a.shape in ['circle','arch','octagon','star']
+        && a.background in ['cream','sage','sand','sky','rose','lilac','night','ink']
+        && a.pattern in ['none','stars','girih','arches','dots']
+        && a.figure in ['none','hijab','kufi','turban','shawl']
+        && a.outfit in ['emerald','navy','maroon','charcoal','sand','teal','plum','ivory']
+        && a.accent in ['gold','silver','rosegold','emerald','ivory']
+        && a.motif in ['none','crescent','lantern','mosque','book','tasbih']
+        && a.initials is bool
+      );
+    }
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/deens_users/$(uid)).data;
+    }
+    function activityPath(uid) {
+      return /databases/$(database)/documents/deens_activity/$(uid + '_' + string(istDay()));
+    }
+    function dailyPart(id, uid) {
+      return /databases/$(database)/documents/deens_daily_challenges/$(id)/participants/$(uid);
+    }
+    function userPart(id, uid) {
+      return /databases/$(database)/documents/deens_user_challenges/$(id)/participants/$(uid);
+    }
+    function friendMsg(id) {
+      return /databases/$(database)/documents/deens_friend_messages/$(id);
+    }
+    // The completion named by `source` ("daily:<id>", "friend:<id>", "user:<id>") is recorded in this
+    // very same write. Starting, sharing or viewing a challenge can never satisfy this.
+    function completionHappened(uid, source) {
+      let parts = source.split(':');
+      let kind = parts[0];
+      let id = parts.size() == 2 ? parts[1] : '';
+      return id.size() > 0 && (
+        (
+          kind == 'daily'
+          && existsAfter(dailyPart(id, uid))
+          && getAfter(dailyPart(id, uid)).data.updatedAt == request.time
+          && getAfter(dailyPart(id, uid)).data.completedCount
+               == (exists(dailyPart(id, uid)) ? get(dailyPart(id, uid)).data.completedCount + 1 : 1)
+        )
+        || (
+          kind == 'friend'
+          && getAfter(friendMsg(id)).data.completedBy.get(uid, '') != ''
+          && get(friendMsg(id)).data.completedBy.get(uid, '') == ''
+        )
+        || (
+          kind == 'user'
+          && exists(userPart(id, uid))
+          && getAfter(userPart(id, uid)).data.completedCount == get(userPart(id, uid)).data.completedCount + 1
+        )
+      );
     }
 
     /*
@@ -458,14 +558,20 @@ service cloud.firestore {
       allow read:
         if signedIn();
 
+      // V3 (Section 17): new usernames are 3–20 English letters/digits, unique without regard to case.
+      // The lowercase key must be reserved for this user in the same transaction
+      // (visitor_usernames/{key} can only be created once), so simultaneous sign-ups cannot collide.
       allow create:
         if
           isOwner(uid) &&
           request.resource.data.uid == uid &&
           isString(request.resource.data.visitorId, 120) &&
           isString(request.resource.data.username, 50) &&
-          isString(request.resource.data.usernameKey, 80) &&
+          request.resource.data.username.matches('^[A-Za-z0-9]{3,20}$') &&
+          request.resource.data.usernameKey == request.resource.data.username.lower() &&
+          getAfter(/databases/$(database)/documents/visitor_usernames/$(request.resource.data.usernameKey)).data.ownerUid == uid &&
           isString(request.resource.data.displayName, 50) &&
+          validAvatarConfig(request.resource.data.get('avatarConfig', null)) &&
           request.resource.data.createdAt is timestamp &&
           request.resource.data.updatedAt is timestamp &&
           request.resource.data.lastActiveAt is int;
@@ -484,6 +590,7 @@ service cloud.firestore {
           request.resource.data.usernameKey == resource.data.usernameKey &&
           isString(request.resource.data.username, 50) &&
           isString(request.resource.data.displayName, 50) &&
+          validAvatarConfig(request.resource.data.get('avatarConfig', null)) &&
           request.resource.data.updatedAt is timestamp &&
           request.resource.data.lastActiveAt is int;
 
@@ -1781,8 +1888,14 @@ service cloud.firestore {
     function riseThreadKeysOk(d) {
       return d.keys().hasOnly([
         'uid','displayName','username','lastMessagePreview','lastFrom','lastMessageAtMs',
-        'unreadByUser','unreadByRise','status','createdAt','updatedAt'
+        'unreadByUser','unreadByRise','status','createdAt','updatedAt',
+        // V3 retention (Section 8): when each side last saw the conversation, status changes, clears
+        'userSeenAtMs','riseSeenAtMs','statusChangedAtMs','clearedAtMs','clearedBy'
       ]);
+    }
+
+    function riseSeenOk(v) {
+      return v is int && v <= request.time.toMillis() + 60000;
     }
 
     function riseThreadFieldsOk(d, uid) {
@@ -1820,6 +1933,15 @@ service cloud.firestore {
             && request.resource.data.status == resource.data.status
             && request.resource.data.get('createdAt', null) == resource.data.get('createdAt', null)
             && request.resource.data.unreadByRise <= resource.data.unreadByRise + 1
+            // the user may only move their own "seen" marker; the support side's fields are theirs
+            && request.resource.data.get('riseSeenAtMs', 0) == resource.data.get('riseSeenAtMs', 0)
+            && request.resource.data.get('clearedAtMs', 0) == resource.data.get('clearedAtMs', 0)
+            && request.resource.data.get('clearedBy', '') == resource.data.get('clearedBy', '')
+            && request.resource.data.get('statusChangedAtMs', 0) == resource.data.get('statusChangedAtMs', 0)
+            && (
+              request.resource.data.get('userSeenAtMs', 0) == resource.data.get('userSeenAtMs', 0)
+              || riseSeenOk(request.resource.data.userSeenAtMs)
+            )
           )
           || (
             isSupportAdmin()
@@ -1827,6 +1949,15 @@ service cloud.firestore {
             && riseThreadFieldsOk(request.resource.data, uid)
             && request.resource.data.displayName == resource.data.displayName
             && request.resource.data.username == resource.data.username
+            && request.resource.data.get('userSeenAtMs', 0) == resource.data.get('userSeenAtMs', 0)
+            && (
+              request.resource.data.get('riseSeenAtMs', 0) == resource.data.get('riseSeenAtMs', 0)
+              || riseSeenOk(request.resource.data.riseSeenAtMs)
+            )
+            && (
+              request.resource.data.get('clearedBy', '') == resource.data.get('clearedBy', '')
+              || request.resource.data.clearedBy == request.auth.uid
+            )
           );
 
       allow delete:
@@ -1885,8 +2016,16 @@ service cloud.firestore {
         allow update:
           if false;
 
+        // V3 "Clear Chat": support admins may delete messages of a conversation that is marked
+        // solved; the one-time automated welcome is always kept. Automatic 24-hour retention runs in
+        // the trusted scheduler (Admin SDK), which is not subject to these rules.
         allow delete:
-          if isSuperAdmin();
+          if isSuperAdmin()
+          || (
+            isSupportAdmin()
+            && messageId != 'welcome'
+            && get(/databases/$(database)/documents/deens_rise_threads/$(uid)).data.status == 'resolved'
+          );
       }
     }
 
@@ -1925,6 +2064,473 @@ service cloud.firestore {
         && request.resource.data.active is bool
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedAtMs is int;
+    }
+
+
+    /* =========================================================
+       V3 · PUBLIC DISCOVERY CARDS AND FRIEND SUGGESTIONS (Section 9)
+
+       deens_public_profiles/{uid}: the minimum needed to suggest a
+       member (name, username, avatar). Readable by signed-in members
+       only while the owner keeps `discoverable` on. No email or
+       private fields can be stored here.
+       deens_suggestions/{uid}: written only by the trusted scheduler.
+       ========================================================= */
+
+    match /deens_public_profiles/{uid} {
+      allow read:
+        if isOwner(uid)
+        || (signedIn() && resource.data.discoverable == true)
+        || isTrustSafetyAdmin();
+
+      allow create, update:
+        if isOwner(uid)
+        && request.resource.data.keys().hasOnly([
+             'uid','username','usernameKey','displayName','avatar','avatarConfig','discoverable','lastActiveDay','updatedAt'
+           ])
+        && request.resource.data.uid == uid
+        && request.resource.data.username == userDoc(uid).username
+        && request.resource.data.usernameKey == userDoc(uid).usernameKey
+        && isString(request.resource.data.displayName, 50)
+        && isString(request.resource.data.avatar, 20)
+        && validAvatarConfig(request.resource.data.get('avatarConfig', null))
+        && request.resource.data.discoverable is bool
+        && request.resource.data.lastActiveDay is int
+        && request.resource.data.lastActiveDay <= istDay() + 1
+        && request.resource.data.updatedAt == request.time;
+
+      allow delete:
+        if isOwner(uid) || isTrustSafetyAdmin();
+    }
+
+    match /deens_suggestions/{uid} {
+      allow read:
+        if isOwner(uid);
+      allow write:
+        if false;
+    }
+
+
+    /* =========================================================
+       V3 · CHALLENGE STREAKS AND THE MONTHLY LEADERBOARD
+       (Sections 7 and 18) — see features/deen-friends/services/
+       progressService.ts for the scoring rules shown to users.
+
+       Each document can only change in the SAME write that records a
+       genuine challenge completion (completionHappened). The rules
+       re-check the arithmetic, the IST day and month from the server
+       clock, at most 3 points per day, and that a completion source
+       is never counted twice.
+       ========================================================= */
+
+    match /deens_activity/{activityId} {
+      allow read:
+        if (signedIn() && activityId.split('_')[0] == request.auth.uid) || isTrustSafetyAdmin();
+
+      allow create:
+        if signedIn()
+        && activityId == request.auth.uid + '_' + string(istDay())
+        && request.resource.data.keys().hasOnly(['uid','dayIndex','monthId','count','sources','updatedAt','createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.dayIndex == istDay()
+        && request.resource.data.monthId == istMonth()
+        && request.resource.data.count == 1
+        && request.resource.data.sources is list
+        && request.resource.data.sources.size() == 1
+        && isString(request.resource.data.sources[0], 200)
+        && completionHappened(request.auth.uid, request.resource.data.sources[0])
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.createdAt == request.time;
+
+      allow update:
+        if signedIn()
+        && activityId == request.auth.uid + '_' + string(istDay())
+        && request.resource.data.keys().hasOnly(['uid','dayIndex','monthId','count','sources','updatedAt','createdAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count','sources','updatedAt'])
+        && request.resource.data.count == resource.data.count + 1
+        && request.resource.data.count <= 3
+        && request.resource.data.sources.size() == resource.data.sources.size() + 1
+        && request.resource.data.sources.hasAll(resource.data.sources)
+        && !resource.data.sources.hasAny([request.resource.data.sources[request.resource.data.sources.size() - 1]])
+        && isString(request.resource.data.sources[request.resource.data.sources.size() - 1], 200)
+        && completionHappened(request.auth.uid, request.resource.data.sources[request.resource.data.sources.size() - 1])
+        && request.resource.data.updatedAt == request.time;
+
+      allow delete:
+        if isSuperAdmin();
+    }
+
+    match /deens_streaks/{uid} {
+      allow read:
+        if isOwner(uid)
+        || (signedIn() && resource.data.visible == true)
+        || isTrustSafetyAdmin();
+
+      allow create, update:
+        if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['uid','current','longest','lastDayIndex','totalDays','visible','updatedAt'])
+        && request.resource.data.uid == uid
+        && request.resource.data.visible is bool
+        && request.resource.data.updatedAt == request.time
+        && (
+          // a new active day: only together with today's first completion
+          (
+            !exists(activityPath(uid))
+            && existsAfter(activityPath(uid))
+            && request.resource.data.lastDayIndex == istDay()
+            && request.resource.data.current
+                 == (resource != null && resource.data.lastDayIndex == istDay() - 1 ? resource.data.current + 1 : 1)
+            && request.resource.data.longest
+                 == (request.resource.data.current > (resource == null ? 0 : resource.data.longest)
+                       ? request.resource.data.current
+                       : (resource == null ? 0 : resource.data.longest))
+            && request.resource.data.totalDays == (resource == null ? 0 : resource.data.totalDays) + 1
+          )
+          ||
+          // privacy only: show or hide the streak
+          (
+            resource != null
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visible','updatedAt'])
+          )
+        );
+
+      allow delete:
+        if isSuperAdmin();
+    }
+
+    match /deens_leaderboard/{monthId}/entries/{uid} {
+      allow read:
+        if isOwner(uid)
+        || (signedIn() && resource.data.visible == true)
+        || isTrustSafetyAdmin();
+
+      allow create, update:
+        if isOwner(uid)
+        && request.resource.data.keys().hasOnly([
+             'uid','monthId','points','activeDays','completions','lastAtMs',
+             'displayName','username','avatar','avatarConfig','visible','updatedAt'
+           ])
+        && request.resource.data.uid == uid
+        && request.resource.data.monthId == monthId
+        && request.resource.data.displayName == userDoc(uid).displayName
+        && isString(request.resource.data.avatar, 20)
+        && validAvatarConfig(request.resource.data.get('avatarConfig', null))
+        && request.resource.data.visible is bool
+        && request.resource.data.updatedAt == request.time
+        && (
+          // a point: only in the same write as a counted completion today
+          (
+            monthId == istMonth()
+            && request.resource.data.username == userDoc(uid).username
+            && existsAfter(activityPath(uid))
+            && getAfter(activityPath(uid)).data.count
+                 == (exists(activityPath(uid)) ? get(activityPath(uid)).data.count + 1 : 1)
+            && request.resource.data.points == (resource == null ? 0 : resource.data.points) + 1
+            && request.resource.data.completions == (resource == null ? 0 : resource.data.completions) + 1
+            && request.resource.data.activeDays
+                 == (resource == null ? 0 : resource.data.activeDays) + (exists(activityPath(uid)) ? 0 : 1)
+            && request.resource.data.lastAtMs is int
+            && request.resource.data.lastAtMs <= request.time.toMillis() + 60000
+          )
+          ||
+          // privacy / public name refresh only
+          (
+            resource != null
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['visible','displayName','avatar','avatarConfig','updatedAt'])
+          )
+        );
+
+      allow delete:
+        if isSuperAdmin();
+    }
+
+
+    /* =========================================================
+       V3 · CIRCLE CHALLENGES (user-created, Section 18)
+
+       Created by a member for up to 8 of their Deen Friends; at most
+       3 per creator per IST day (id = uid_day_0..2). Participants
+       write only their own progress: once per IST day, between the
+       start and end dates, after accepting, never beyond the required
+       days.
+       ========================================================= */
+
+    match /deens_user_challenges/{challengeId} {
+      allow read:
+        if signedIn() && (
+          resource == null
+            ? challengeId.split('_')[0] == request.auth.uid
+            : (resource.data.creatorUid == request.auth.uid || resource.data.invitedUids.hasAny([request.auth.uid]))
+        )
+        || isTrustSafetyAdmin();
+
+      allow create:
+        if signedIn()
+        && challengeId.matches(request.auth.uid + '_' + string(istDay()) + '_[0-2]')
+        && request.resource.data.keys().hasOnly([
+             'creatorUid','title','description','criteria','category','startDate','endDate',
+             'requiredDays','invitedUids','visibility','status','createdAt','createdAtMs'
+           ])
+        && request.resource.data.creatorUid == request.auth.uid
+        && isString(request.resource.data.title, 80) && request.resource.data.title.size() >= 3
+        && isString(request.resource.data.description, 300)
+        && isString(request.resource.data.criteria, 200) && request.resource.data.criteria.size() >= 3
+        && isString(request.resource.data.category, 30)
+        && request.resource.data.startDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.endDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.startDate >= istDate()
+        && request.resource.data.endDate >= request.resource.data.startDate
+        && request.resource.data.requiredDays is int
+        && request.resource.data.requiredDays >= 1
+        && request.resource.data.requiredDays <= 60
+        && request.resource.data.invitedUids is list
+        && request.resource.data.invitedUids.size() >= 1
+        && request.resource.data.invitedUids.size() <= 8
+        && request.resource.data.invitedUids.toSet().size() == request.resource.data.invitedUids.size()
+        && !request.resource.data.invitedUids.hasAny([request.auth.uid])
+        && allFriends(request.auth.uid, request.resource.data.invitedUids, 0)
+        && request.resource.data.visibility == 'invited'
+        && request.resource.data.status == 'active'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.createdAtMs is int;
+
+      allow update:
+        if signedIn()
+        && resource.data.creatorUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','updatedAt'])
+        && request.resource.data.status == 'cancelled';
+
+      allow delete:
+        if isTrustSafetyAdmin();
+
+      match /participants/{pid} {
+        allow read:
+          if isOwner(pid)
+          || (
+            signedIn() && (
+              get(/databases/$(database)/documents/deens_user_challenges/$(challengeId)).data.creatorUid == request.auth.uid
+              || get(/databases/$(database)/documents/deens_user_challenges/$(challengeId)).data.invitedUids.hasAny([request.auth.uid])
+            )
+          )
+          || isTrustSafetyAdmin();
+
+        // accept / decline (also the creator's own record, written with the challenge)
+        allow create:
+          if isOwner(pid)
+          && request.resource.data.keys().hasOnly(['uid','challengeId','status','completedDates','completedCount','updatedAt'])
+          && request.resource.data.uid == pid
+          && request.resource.data.challengeId == challengeId
+          && (
+            getAfter(/databases/$(database)/documents/deens_user_challenges/$(challengeId)).data.creatorUid == pid
+            || getAfter(/databases/$(database)/documents/deens_user_challenges/$(challengeId)).data.invitedUids.hasAny([pid])
+          )
+          && request.resource.data.status in ['accepted', 'declined']
+          && request.resource.data.completedDates.size() == 0
+          && request.resource.data.completedCount == 0
+          && request.resource.data.updatedAt == request.time;
+
+        allow update:
+          if isOwner(pid)
+          && request.resource.data.keys().hasOnly(['uid','challengeId','status','completedDates','completedCount','updatedAt'])
+          && request.resource.data.uid == pid
+          && request.resource.data.challengeId == challengeId
+          && request.resource.data.updatedAt == request.time
+          && (
+            // change of mind before any progress
+            (
+              resource.data.completedCount == 0
+              && request.resource.data.completedCount == 0
+              && request.resource.data.completedDates.size() == 0
+              && request.resource.data.status in ['accepted', 'declined']
+            )
+            ||
+            // one completed IST day, inside the dates, while active and accepted
+            (
+              resource.data.status == 'accepted'
+              && request.resource.data.status == 'accepted'
+              && get(/databases/$(database)/documents/deens_user_challenges/$(challengeId)).data.status == 'active'
+              && request.resource.data.completedCount == resource.data.completedCount + 1
+              && request.resource.data.completedCount
+                   <= get(/databases/$(database)/documents/deens_user_challenges/$(challengeId)).data.requiredDays
+              && request.resource.data.completedDates.size() == request.resource.data.completedCount
+              && request.resource.data.completedDates.hasAll(resource.data.completedDates)
+              && !resource.data.completedDates.hasAny([istDate()])
+              && request.resource.data.completedDates[request.resource.data.completedDates.size() - 1] == istDate()
+              && get(/databases/$(database)/documents/deens_user_challenges/$(challengeId)).data.startDate <= istDate()
+              && get(/databases/$(database)/documents/deens_user_challenges/$(challengeId)).data.endDate >= istDate()
+            )
+          );
+
+        allow delete:
+          if isTrustSafetyAdmin();
+      }
+    }
+
+
+    /* =========================================================
+       V3 · DEEN CIRCLES (group chats, Section 19)
+
+       At least 4 participants including the creator (checked here,
+       not only in the app), no duplicates, and everyone added must
+       already be the adder's Deen Friend. Messages follow the same
+       no-free-text policy as one-to-one chats.
+       ========================================================= */
+
+    function groupData(groupId) {
+      return get(/databases/$(database)/documents/deens_groups/$(groupId)).data;
+    }
+
+    match /deens_groups/{groupId} {
+      allow read:
+        if (signedIn() && resource.data.members.hasAny([request.auth.uid])) || isTrustSafetyAdmin();
+
+      allow create:
+        if signedIn()
+        && groupId.matches('^g_[a-z0-9]{8,40}$')
+        && request.resource.data.keys().hasOnly([
+             'name','avatar','ownerUid','members','admins','memberCount',
+             'lastMessageAtMs','lastPreview','createdAt','createdAtMs','updatedAt'
+           ])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.admins == [request.auth.uid]
+        && request.resource.data.members is list
+        && request.resource.data.members.size() >= 4
+        && request.resource.data.members.size() <= 8
+        && request.resource.data.members[0] == request.auth.uid
+        && request.resource.data.members.toSet().size() == request.resource.data.members.size()
+        && allFriends(request.auth.uid, request.resource.data.members, 1)
+        && request.resource.data.memberCount == request.resource.data.members.size()
+        && isString(request.resource.data.name, 40) && request.resource.data.name.size() >= 2
+        && isString(request.resource.data.avatar, 20)
+        && request.resource.data.lastMessageAtMs is int
+        && isString(request.resource.data.lastPreview, 120)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.createdAtMs is int
+        && request.resource.data.updatedAt == request.time;
+
+      allow update:
+        if signedIn()
+        && resource.data.members.hasAny([request.auth.uid])
+        && request.resource.data.updatedAt == request.time
+        && (
+          // a member posted: last activity only
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessageAtMs','lastPreview','updatedAt'])
+            && request.resource.data.lastMessageAtMs is int
+            && isString(request.resource.data.lastPreview, 120)
+          )
+          ||
+          // an admin renames the circle
+          (
+            resource.data.admins.hasAny([request.auth.uid])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','updatedAt'])
+            && isString(request.resource.data.name, 40) && request.resource.data.name.size() >= 2
+          )
+          ||
+          // an admin adds one of their Deen Friends
+          (
+            resource.data.admins.hasAny([request.auth.uid])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members','memberCount','updatedAt'])
+            && request.resource.data.members.size() == resource.data.members.size() + 1
+            && request.resource.data.members.size() <= 30
+            && request.resource.data.members.hasAll(resource.data.members)
+            && !resource.data.members.hasAny([request.resource.data.members[request.resource.data.members.size() - 1]])
+            && isFriendOf(request.auth.uid, request.resource.data.members[request.resource.data.members.size() - 1])
+            && request.resource.data.memberCount == request.resource.data.members.size()
+          )
+          ||
+          // someone leaves, or an admin removes a member (never the creator)
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members','admins','memberCount','ownerUid','updatedAt'])
+            && request.resource.data.members.size() == resource.data.members.size() - 1
+            && resource.data.members.hasAll(request.resource.data.members)
+            && request.resource.data.memberCount == request.resource.data.members.size()
+            && request.resource.data.members.hasAll(request.resource.data.admins)
+            && (request.resource.data.members.size() == 0 || request.resource.data.admins.size() >= 1)
+            && (
+              !request.resource.data.members.hasAny([request.auth.uid])
+              || (
+                resource.data.admins.hasAny([request.auth.uid])
+                && request.resource.data.members.hasAny([resource.data.ownerUid])
+                && request.resource.data.ownerUid == resource.data.ownerUid
+              )
+            )
+          )
+        );
+
+      allow delete:
+        if isTrustSafetyAdmin();
+
+      match /messages/{messageId} {
+        allow read:
+          if (signedIn() && groupData(groupId).members.hasAny([request.auth.uid])) || isTrustSafetyAdmin();
+
+        allow create:
+          if signedIn()
+          && groupData(groupId).members.hasAny([request.auth.uid])
+          && request.resource.data.senderUid == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.createdAtMs is int
+          && (
+            (
+              request.resource.data.kind == 'encourage'
+              && request.resource.data.keys().hasOnly(['senderUid','kind','text','createdAt','createdAtMs'])
+              && request.resource.data.text in [
+                "MashaAllah, keep going.",
+                "May Allah make it easy for you.",
+                "Keep your Qur'an streak alive.",
+                "Alhamdulillah.",
+                "May Allah accept it from you.",
+                "Ameen 🤲",
+                "JazakAllahu khayran 💚",
+                "BarakAllahu feek ✨",
+                "SubhanAllah 🌙"
+              ]
+            )
+            ||
+            (
+              request.resource.data.kind == 'content'
+              && request.resource.data.keys().hasOnly(['senderUid','kind','text','sharedContent','createdAt','createdAtMs'])
+              && request.resource.data.text == ''
+              && validSharedContent(request.resource.data.sharedContent)
+            )
+          );
+
+        allow update:
+          if false;
+
+        allow delete:
+          if (signedIn() && resource.data.senderUid == request.auth.uid) || isTrustSafetyAdmin();
+      }
+    }
+
+
+    /* =========================================================
+       V3 · APP GUIDE CONFIGURATION (Section 13)
+
+       The published walkthrough is public (read once per session);
+       drafts and publishing are for community-level admins only.
+       ========================================================= */
+
+    match /rud_app_guides/{docId} {
+      allow read:
+        if docId == 'published' || isCommunityAdmin();
+
+      allow create, update:
+        if isCommunityAdmin()
+        && docId in ['draft', 'published']
+        && request.resource.data.enabled is bool
+        && request.resource.data.version is int
+        && request.resource.data.tours is list
+        && request.resource.data.tours.size() <= 24
+        && isString(request.resource.data.firstRunTourId, 60)
+        && request.resource.data.reshowOnVersion is int
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+
+      allow delete:
+        if isSuperAdmin();
     }
 
     /* =========================================================

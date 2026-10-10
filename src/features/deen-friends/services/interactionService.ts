@@ -32,7 +32,9 @@ import {
   writeBatch,
 } from '../../../services/firebase/sdk';
 import type { ChallengeDetails, Interaction, SharedContent } from '../types';
-import { DeenFriendsError, logError } from './errors';
+import { DeenFriendsError, logError, offlineAware } from './errors';
+import { prepareCompletion, type ProfileForProgress } from './progressService';
+import { sharedContentForStorage } from './sharedContent';
 import { challengeState, isChallengeActive, localDay, randomId } from './format';
 import { requireSignedIn } from './firebaseSession';
 import { applyCheckin, readStreak } from './streakService';
@@ -221,7 +223,7 @@ export async function respondToChallenge(id: string, accept: boolean): Promise<v
  * Records MY completion of an accepted challenge. When both friends have completed it, the shared
  * streak advances for today (in the same transaction).
  */
-export async function completeChallenge(id: string): Promise<'done' | 'already'> {
+export async function completeChallenge(id: string, profile: ProfileForProgress | null = null): Promise<'done' | 'already'> {
   const { db, uid } = await requireSignedIn();
   const ref = doc(db, 'deens_friend_messages', id);
   return runTransaction(db, async (tx) => {
@@ -241,6 +243,9 @@ export async function completeChallenge(id: string): Promise<'done' | 'already'>
 
     const streakRef = doc(db, 'deens_friend_streaks', row.friendshipId);
     const streakSnap = bothDone ? await tx.get(streakRef) : null;
+    // V3: my personal challenge streak and monthly points (all reads happen before any write).
+    const progress = await prepareCompletion(tx, db, uid, `friend:${id}`, profile);
+    progress.write();
     tx.update(
       ref,
       bothDone ? { completedBy, purgeAt: new Date(Date.now() + RETENTION_AFTER_SEEN_MS) } : { completedBy },
@@ -272,6 +277,8 @@ export async function completeChallenge(id: string): Promise<'done' | 'already'>
       );
     }
     return 'done';
+  }).catch((error: unknown) => {
+    throw offlineAware(error);
   });
 }
 
@@ -289,14 +296,8 @@ export async function sendEncouragement(friend: FriendRef, text: string): Promis
 
 export async function shareContent(friend: FriendRef, content: SharedContent): Promise<void> {
   const { db, uid } = await requireSignedIn();
-  const sharedContent: SharedContent = {
-    id: String(content.id).slice(0, 200),
-    type: content.type,
-    title: String(content.title || 'Shared reminder').slice(0, 200),
-    preview: String(content.preview || '').slice(0, 300),
-    reference: String(content.reference || '').slice(0, 200),
-    arabic: String(content.arabic || '').slice(0, 1200),
-  };
+  // V3: the complete text (Arabic, transliteration, translation, reference, source) is stored.
+  const sharedContent = sharedContentForStorage(content);
   await setDoc(doc(collection(db, 'deens_friend_messages')), {
     ...baseRecord(friend, uid),
     kind: 'content',

@@ -16,6 +16,7 @@ import { visibleStreakCount } from '../services/streakService';
 import { relationshipSnapshot, useDeenFriends } from '../state/deenFriendsStore';
 import { goToDeenFriends } from '../deenFriendsRoute';
 import { Avatar, Badge, EmptyState, Icon, SkeletonRows, useToast } from './ui';
+import { SuggestionsSection } from './SuggestionsSection';
 
 export function FriendsTab({ onOpenProfile }: { onOpenProfile: (uid: string) => void }) {
   const s = useDeenFriends();
@@ -50,6 +51,7 @@ export function FriendsTab({ onOpenProfile }: { onOpenProfile: (uid: string) => 
           </EmptyState>
         )}
       </section>
+      <SuggestionsSection onOpenProfile={onOpenProfile} />
     </div>
   );
 }
@@ -72,7 +74,7 @@ function FriendCard({ friendship, onOpenProfile }: { friendship: Friendship; onO
         onClick={() => onOpenProfile(friendship.friendUid)}
         aria-label={`View ${name}'s profile`}
       >
-        <Avatar avatar={profile?.avatar} name={name} size={48} online={online} />
+        <Avatar avatar={profile?.avatar} config={profile?.avatarConfig} name={name} size={48} online={online} />
         <span className="df2-friend-copy">
           <strong>{name}</strong>
           <small>{profile ? `@${profile.username} · ${presenceLabel(profile.lastActiveAt)}` : 'Loading…'}</small>
@@ -230,7 +232,7 @@ function AddFriendCard({ onOpenProfile }: { onOpenProfile: (uid: string) => void
       {result && status ? (
         <div className="df2-search-result">
           <button type="button" className="df2-search-person" onClick={() => onOpenProfile(result.uid)}>
-            <Avatar avatar={result.avatar} name={result.displayName} size={46} />
+            <Avatar avatar={result.avatar} config={result.avatarConfig} name={result.displayName} size={46} />
             <span>
               <strong>{result.displayName}</strong>
               <small>@{result.username}</small>
@@ -283,7 +285,7 @@ function RequestsSection({ onOpenProfile }: { onOpenProfile: (uid: string) => vo
     return (
       <li className="df2-request" key={request.id}>
         <button type="button" className="df2-request-person" onClick={() => onOpenProfile(uid)}>
-          <Avatar avatar={profile?.avatar} name={name} size={42} />
+          <Avatar avatar={profile?.avatar} config={profile?.avatarConfig} name={name} size={42} />
           <span>
             <strong>{name}</strong>
             <small>

@@ -332,8 +332,10 @@ export function init() {
         setTimeout(() => ripple?.classList.remove('is-rippling'), 700);
       }
       syncTasbihVisual(n);
+      /* Haptics: Android ignores pulses shorter than ~10 ms on many devices, so 6 ms felt like
+         nothing. iOS Safari has no Vibration API (the call is skipped there). */
       try {
-        if (navigator.vibrate) navigator.vibrate(6);
+        if (typeof navigator.vibrate === 'function') navigator.vibrate(12);
       } catch {}
       if (chCtx && n >= chCtx.targetCount) finishChallenge();
     };

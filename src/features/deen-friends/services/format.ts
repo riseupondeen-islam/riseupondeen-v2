@@ -7,6 +7,7 @@ import {
   type PrivacySettings,
   type PublicProfile,
 } from '../types';
+import { readAvatarConfig } from '../../../components/avatar/avatarConfig';
 
 /* ---------- text ---------- */
 
@@ -135,6 +136,9 @@ export function readPrivacy(value: unknown): PrivacySettings {
   return {
     shareCheckinCards: p.shareCheckinCards !== false,
     showAchievements: p.showAchievements === true,
+    showStreak: p.showStreak !== false,
+    showOnLeaderboard: p.showOnLeaderboard !== false,
+    discoverable: p.discoverable !== false,
   };
 }
 
@@ -148,6 +152,7 @@ export function readPublicProfile(uid: string, data: Record<string, unknown> | u
     usernameKey: String(d.usernameKey || usernameKey(username)),
     displayName: String(d.displayName || d.name || username || 'Deen Friend'),
     avatar: asAvatar(d.avatar),
+    avatarConfig: readAvatarConfig(d.avatarConfig),
     bio: String(d.bio || ''),
     deenFocus: String(d.deenFocus || d.goals || ''),
     currentFocus: String(d.currentFocus || ''),

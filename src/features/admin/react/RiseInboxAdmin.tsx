@@ -6,7 +6,9 @@ import type { RiseMessage, RiseThread } from '../../deen-friends/types';
 import { friendlyMessage } from '../../deen-friends/services/errors';
 import { formatClock, formatDayLabel } from '../../deen-friends/services/format';
 import {
+  adminClearThread,
   adminLogThreadAccess,
+  adminMarkThreadSeen,
   adminReply,
   adminSetThreadStatus,
   listenToRiseInbox,
@@ -33,7 +35,10 @@ export function RiseInboxAdmin() {
 
   const open = threads?.find((t) => t.uid === openUid) || null;
   if (open) return <ThreadView thread={open} onBack={() => setOpenUid('')} />;
-  const visible = (threads || []).filter((t) => filter === 'all' || t.status === filter);
+  // A user can write again after an issue was solved: unread messages always show under "Open".
+  const visible = (threads || []).filter(
+    (t) => filter === 'all' || (filter === 'open' ? t.status === 'open' || t.unreadByRise > 0 : t.status === 'resolved'),
+  );
 
   return (
     <section className="df2-admin-view">
@@ -87,7 +92,16 @@ function ThreadView({ thread, onBack }: { thread: RiseThread; onBack: () => void
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [clearing, setClearing] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+  const [clearBusy, setClearBusy] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+
+  // The RISE side has seen the conversation (needed before the 24-hour retention can start).
+  useEffect(() => {
+    if (document.hidden) return;
+    void adminMarkThreadSeen(thread.uid, thread).catch(() => undefined);
+  }, [thread.uid, thread.lastMessageAtMs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     void adminLogThreadAccess(thread.uid).catch((err) => setError(friendlyMessage(err, 'Access could not be logged.')));
@@ -138,11 +152,64 @@ function ThreadView({ thread, onBack }: { thread: RiseThread; onBack: () => void
           >
             Mark {thread.status === 'open' ? 'resolved' : 'open'}
           </button>
+          {thread.status === 'resolved' ? (
+            <button type="button" className="df2-btn df2-btn-sm df2-btn-danger" onClick={() => setClearing(true)}>
+              Clear chat
+            </button>
+          ) : null}
           <button type="button" className="df2-btn df2-btn-sm" onClick={onBack}>
             Back
           </button>
         </div>
       </header>
+      <p className="df2-inline-note rud-retention-note">
+        {thread.status === 'resolved'
+          ? 'Solved. Messages both sides have seen are removed automatically 24 hours later (the automated welcome is kept).'
+          : 'Open. Messages are kept until the issue is marked solved.'}
+        {thread.clearedAtMs ? ` Last cleared ${formatDayLabel(thread.clearedAtMs)} ${formatClock(thread.clearedAtMs)}.` : ''}
+      </p>
+      {clearing ? (
+        <div className="df2-card rud-clear-confirm" role="alertdialog" aria-labelledby="rudClearTitle" aria-describedby="rudClearBody">
+          <h2 id="rudClearTitle">Clear this conversation?</h2>
+          <p id="rudClearBody">
+            This permanently deletes every message in the conversation with <strong>{thread.displayName}</strong> (@{thread.username}) except the
+            automated welcome. It cannot be undone. Type <strong>@{thread.username}</strong> to confirm.
+          </p>
+          <input
+            className="df2-input"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder={`@${thread.username}`}
+            aria-label="Type the username to confirm"
+            autoFocus
+          />
+          <div className="df2-admin-actions">
+            <button type="button" className="df2-btn df2-btn-sm" disabled={clearBusy} onClick={() => setClearing(false)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="df2-btn df2-btn-sm df2-btn-danger"
+              disabled={clearBusy || confirmText.trim().replace(/^@+/, '').toLowerCase() !== thread.username.toLowerCase()}
+              onClick={async () => {
+                setClearBusy(true);
+                try {
+                  const n = await adminClearThread(thread.uid, thread, confirmText);
+                  toast(n ? `Cleared ${n} message${n === 1 ? '' : 's'}.` : 'Nothing to clear — only the welcome message remains.');
+                  setClearing(false);
+                  setConfirmText('');
+                } catch (err) {
+                  toast(friendlyMessage(err, 'The conversation could not be cleared.'), 'error');
+                } finally {
+                  setClearBusy(false);
+                }
+              }}
+            >
+              {clearBusy ? 'Clearing…' : 'Clear chat'}
+            </button>
+          </div>
+        </div>
+      ) : null}
       {error ? <p className="df2-form-error">{error}</p> : null}
       <div className="df2-admin-messages" ref={listRef}>
         {rows?.map((m) => (

@@ -6,6 +6,7 @@
 import { combinedPublicContent } from '../../ask-rise/askRise';
 import { loadQuranText } from '../../quran/quranText';
 import type { SharedContent, SharedContentType } from '../types';
+import { contentFromPublished } from './sharedContent';
 
 export interface ShareItem extends SharedContent {
   searchText: string;
@@ -28,25 +29,18 @@ function clean(value: unknown, max: number): string {
     .slice(0, max);
 }
 
-/** Published Duas, Zikr, Hadith and reminders (Ask Rise's index). */
+/** Published Duas, Zikr, Hadith and reminders (Ask Rise's index) — complete text, as published. */
 export function publishedShareItems(): ShareItem[] {
   const source = (combinedPublicContent() || []) as Array<Record<string, unknown>>;
   const items: ShareItem[] = [];
   for (const x of source) {
     const type = TYPE_MAP[String(x.type || '').toLowerCase()];
     if (!type || !x.id) continue;
-    const title = clean(x.title || x.name || x.heading || x.reference || 'Beneficial reminder', 200);
-    const preview = clean(x.translation || x.meaning || x.content || x.description || x.reflection || '', 300);
-    const reference = clean(x.reference || x.source || '', 200);
-    const arabic = clean(x.arabic || '', 1200);
+    const full = contentFromPublished(x, type);
     items.push({
-      id: String(x.id),
-      type,
-      title,
-      preview,
-      reference,
-      arabic,
-      searchText: `${title} ${preview} ${reference} ${String(x.category || '')}`.toLowerCase(),
+      ...full,
+      title: clean(full.title, 200),
+      searchText: `${full.title} ${full.translation} ${full.reference} ${String(x.category || '')}`.toLowerCase(),
     });
   }
   return items;
@@ -80,9 +74,11 @@ export async function quranShareItem(surah: number, ayah: number): Promise<Share
     id: `quran-${surah}-${ayah}`,
     type: 'quran',
     title: `${chapter.arabic.englishName} ${surah}:${ayah}`,
-    preview: clean(translation, 300),
+    preview: translation,
+    translation,
     reference: reference.slice(0, 200),
-    arabic: clean(arabic, 1200),
+    source: 'The Noble Qur’an · Saheeh International translation',
+    arabic,
     searchText: '',
   };
 }

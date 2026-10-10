@@ -13,10 +13,13 @@ import {
   getDocs,
   limit,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   where,
 } from '../../../services/firebase/sdk';
+import { prepareCompletion, type ProfileForProgress } from './progressService';
+import { offlineAware } from './errors';
 import type { DailyChallenge, DailyChallengeProgress } from '../types';
 import { DeenFriendsError } from './errors';
 import { daysBetween, localDay } from './format';
@@ -103,25 +106,36 @@ export async function loadMyDailyChallenges(): Promise<DailyChallengeWithProgres
 }
 
 /** Marks today as completed for me (idempotent per day). */
-export async function completeDailyChallengeToday(challenge: DailyChallenge): Promise<DailyChallengeProgress> {
+export async function completeDailyChallengeToday(
+  challenge: DailyChallenge,
+  profile: ProfileForProgress | null = null,
+): Promise<DailyChallengeProgress> {
   const { db, uid } = await requireSignedIn();
   const today = localDay();
   if (!isRunningOn(challenge, today)) throw new DeenFriendsError('invalid', 'This challenge is not running today.');
   const ref = doc(db, 'deens_daily_challenges', challenge.id, 'participants', uid);
-  const snap = await getDoc(ref);
-  const current = readProgress(uid, challenge.id, snap.exists() ? (snap.data() as Record<string, unknown>) : undefined);
-  if (current.completedDates.includes(today)) return current;
-  const completedDates = [...current.completedDates, today].slice(-120);
-  const next: DailyChallengeProgress = {
-    uid,
-    challengeId: challenge.id,
-    completedDates,
-    completedCount: completedDates.length,
-    lastCompletedDate: today,
-    status: completedDates.length >= challenge.requiredDays ? 'completed' : 'active',
-  };
-  await setDoc(ref, { ...next, updatedAt: serverTimestamp(), updatedAtMs: Date.now() });
-  return next;
+  // V3: one transaction records the day AND advances the streak / monthly points, so a completion can
+  // never be counted without being saved (or saved twice).
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const current = readProgress(uid, challenge.id, snap.exists() ? (snap.data() as Record<string, unknown>) : undefined);
+    if (current.completedDates.includes(today)) return current;
+    const progress = await prepareCompletion(tx, db, uid, `daily:${challenge.id}`, profile);
+    const completedDates = [...current.completedDates, today].slice(-120);
+    const next: DailyChallengeProgress = {
+      uid,
+      challengeId: challenge.id,
+      completedDates,
+      completedCount: completedDates.length,
+      lastCompletedDate: today,
+      status: completedDates.length >= challenge.requiredDays ? 'completed' : 'active',
+    };
+    tx.set(ref, { ...next, updatedAt: serverTimestamp(), updatedAtMs: Date.now() });
+    progress.write();
+    return next;
+  }).catch((error: unknown) => {
+    throw offlineAware(error);
+  });
 }
 
 /* ---------- admin side (authorization is enforced by firestore.rules, not by hiding buttons) ---------- */

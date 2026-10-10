@@ -1,4 +1,5 @@
 /* Sign in / create account, shown inside the Deen Friends page when nobody is signed in. */
+import { checkUsername } from '../services/username';
 import { useState, type FormEvent } from 'react';
 import {
   createDeenAccount,
@@ -141,13 +142,20 @@ export function AuthPanel() {
               <input
                 value={form.username}
                 onChange={update('username')}
-                maxLength={30}
+                maxLength={20}
                 autoComplete="username"
                 autoCapitalize="none"
                 spellCheck={false}
+                pattern="[A-Za-z0-9]{3,20}"
+                aria-invalid={!!form.username && !checkUsername(form.username).ok}
+                aria-describedby="df2-username-help"
                 required
               />
-              <small>Friends find you by this. Letters, numbers, dots, dashes.</small>
+              <small id="df2-username-help" className={form.username && !checkUsername(form.username).ok ? 'df2-field-error' : ''}>
+                {form.username && !checkUsername(form.username).ok
+                  ? (checkUsername(form.username) as { message: string }).message
+                  : 'Friends find you by this. 3–20 English letters or numbers; capitals don’t make a different name.'}
+              </small>
             </label>
           </>
         ) : null}

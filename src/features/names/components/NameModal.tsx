@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { NAME_CARD_SELECTOR, readNameCard, type NameDetails } from '../nameDetails';
+import { lockPageScroll } from '../../../services/ui/scrollLock';
 
 const EMPTY: NameDetails = { arabic: '', name: '', meaning: '', reflection: '', when: '' };
 
@@ -19,6 +20,7 @@ export function NameModal() {
   const closeRef = useRef<HTMLButtonElement>(null);
   const openRef = useRef(false);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const releaseScroll = useRef<(() => void) | null>(null);
 
   const show = useCallback((card: Element) => {
     returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -28,7 +30,10 @@ export function NameModal() {
       setOpen(true);
     });
     openRef.current = true;
-    document.body.style.overflow = 'hidden';
+    // V3: iOS-safe, position-preserving lock (overflow:hidden alone let iOS scroll the page behind
+    // the dialog, and the scroll restore on close made the page jump).
+    releaseScroll.current?.();
+    releaseScroll.current = lockPageScroll();
     // The dialog fades in (visibility is animated), and a still-hidden element cannot take focus.
     // The original focused once after 30 ms, which intermittently failed on slower frames; retry
     // on the following frames until focus has actually moved into the dialog.
@@ -43,11 +48,10 @@ export function NameModal() {
 
   const hide = useCallback(() => {
     if (!openRef.current) return;
-    const x = window.scrollX || 0;
-    const y = window.scrollY || 0;
     openRef.current = false;
     flushSync(() => setOpen(false));
-    document.body.style.overflow = '';
+    releaseScroll.current?.();
+    releaseScroll.current = null;
     let target = returnFocus.current;
     // The names grid may have been re-rendered by a content refresh while the dialog was open.
     if (target && !target.isConnected) {
@@ -58,7 +62,6 @@ export function NameModal() {
     }
     target?.focus({ preventScroll: true });
     returnFocus.current = null;
-    if (window.scrollX !== x || window.scrollY !== y) window.scrollTo(x, y);
   }, []);
 
   useEffect(() => {

@@ -9,6 +9,7 @@
  * Sub-routes:  #deen-friends                (Friends)
  *              #deen-friends/streaks | /chats | /challenges | /rise
  *              #deen-friends/chat/<friendshipId>
+ *              #deen-friends/group/<groupId>      (V3 Deen circles)
  */
 import { lazy, Suspense, useEffect, useSyncExternalStore } from 'react';
 import { showReactPage } from '../../app/routing/surfaces';
@@ -29,18 +30,22 @@ export type DeenFriendsTab = 'friends' | 'streaks' | 'chats' | 'challenges' | 'r
 export interface DeenFriendsRoute {
   tab: DeenFriendsTab;
   chatId: string;
+  /** V3: an open Deen circle (#deen-friends/group/<id>). */
+  groupId: string;
 }
 
 export function parseDeenFriendsHash(hash = location.hash): DeenFriendsRoute {
   const parts = hash.replace(/^#/, '').split('/');
-  if (parts[0] !== 'deen-friends') return { tab: 'friends', chatId: '' };
-  if (parts[1] === 'chat' && parts[2]) return { tab: 'chats', chatId: decodeURIComponent(parts[2]) };
+  if (parts[0] !== 'deen-friends') return { tab: 'friends', chatId: '', groupId: '' };
+  if (parts[1] === 'chat' && parts[2]) return { tab: 'chats', chatId: decodeURIComponent(parts[2]), groupId: '' };
+  if (parts[1] === 'group' && parts[2]) return { tab: 'chats', chatId: '', groupId: decodeURIComponent(parts[2]) };
   const tab = (['streaks', 'chats', 'challenges', 'rise'] as const).find((t) => t === parts[1]);
-  return { tab: tab || 'friends', chatId: '' };
+  return { tab: tab || 'friends', chatId: '', groupId: '' };
 }
 
 export function deenFriendsHref(route: Partial<DeenFriendsRoute>): string {
   if (route.chatId) return `#deen-friends/chat/${encodeURIComponent(route.chatId)}`;
+  if (route.groupId) return `#deen-friends/group/${encodeURIComponent(route.groupId)}`;
   return !route.tab || route.tab === 'friends' ? '#deen-friends' : `#deen-friends/${route.tab}`;
 }
 
@@ -49,7 +54,7 @@ let currentRoute = parseDeenFriendsHash();
 const routeListeners = new Set<() => void>();
 function publishRoute() {
   const next = parseDeenFriendsHash();
-  if (next.tab === currentRoute.tab && next.chatId === currentRoute.chatId) return;
+  if (next.tab === currentRoute.tab && next.chatId === currentRoute.chatId && next.groupId === currentRoute.groupId) return;
   currentRoute = next;
   routeListeners.forEach((l) => l());
 }
@@ -73,7 +78,7 @@ export function goToDeenFriends(route: Partial<DeenFriendsRoute>, replace = fals
   const href = deenFriendsHref(route);
   if (location.hash === href) return;
   conversationPushed =
-    !replace && (!!route.chatId || route.tab === 'rise') && location.hash.startsWith('#deen-friends');
+    !replace && (!!route.chatId || !!route.groupId || route.tab === 'rise') && location.hash.startsWith('#deen-friends');
   if (replace) {
     history.replaceState(history.state || {}, '', location.pathname + location.search + href);
     publishRoute();
@@ -150,10 +155,10 @@ async function completeFromTasbih(ctx: TasbihChallengeContext): Promise<void> {
     const { db } = await requireSignedIn();
     const snap = await getDoc(doc(db, 'deens_daily_challenges', ctx.challengeId));
     if (!snap.exists()) throw new Error('This challenge is no longer available.');
-    await completeDailyChallengeToday(readDailyChallenge(snap.id, snap.data() as Record<string, unknown>));
+    await completeDailyChallengeToday(readDailyChallenge(snap.id, snap.data() as Record<string, unknown>), getDeenFriendsState().profile);
     return;
   }
-  await completeChallenge(ctx.challengeId);
+  await completeChallenge(ctx.challengeId, getDeenFriendsState().profile);
 }
 
 function returnToInteraction(friendshipId: string): void {

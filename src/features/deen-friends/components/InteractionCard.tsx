@@ -3,6 +3,7 @@ import { memo } from 'react';
 import type { Interaction } from '../types';
 import { challengeState, formatClock, isTasbihChallenge } from '../services/format';
 import { Icon } from './ui';
+import { SharedContentCard } from './SharedContentCard';
 
 const STATE_LABEL: Record<string, string> = {
   pending: 'Waiting for reply',
@@ -12,14 +13,6 @@ const STATE_LABEL: Record<string, string> = {
   declined: 'Declined',
   expired: 'Expired',
   missed: 'Ended',
-};
-
-const CONTENT_LABEL: Record<string, string> = {
-  quran: 'Qur’an',
-  dua: 'Dua',
-  hadith: 'Hadith',
-  zikr: 'Dhikr',
-  reminder: 'Reminder',
 };
 
 export type ChallengeAction = 'accept' | 'decline' | 'done';
@@ -130,37 +123,13 @@ export const InteractionCard = memo(function InteractionCard({
   }
 
   if (item.kind === 'content' && item.sharedContent) {
-    const shared = item.sharedContent;
     return (
-      <article className={`df2-msg df2-msg-card df2-shared ${mine ? 'mine' : 'theirs'}`}>
-        <header className="df2-card-kicker">
-          <span>
-            <Icon
-              name={
-                shared.type === 'quran'
-                  ? 'book'
-                  : shared.type === 'zikr'
-                    ? 'beads'
-                    : shared.type === 'dua'
-                      ? 'hands'
-                      : 'scroll'
-              }
-              size={15}
-            />{' '}
-            {CONTENT_LABEL[shared.type] || 'Shared'}
-          </span>
-          <b>{mine ? 'You shared' : `From ${firstName}`}</b>
-        </header>
-        <h3>{shared.title}</h3>
-        {shared.arabic ? (
-          <p className="df2-arabic" lang="ar" dir="rtl">
-            {shared.arabic}
-          </p>
-        ) : null}
-        {shared.preview ? <p>{shared.preview}</p> : null}
-        {shared.reference ? <small className="df2-reference">{shared.reference}</small> : null}
-        {meta}
-      </article>
+      <SharedContentCard
+        stored={item.sharedContent}
+        mine={mine}
+        fromLabel={mine ? 'You shared' : `From ${firstName}`}
+        meta={meta}
+      />
     );
   }
 

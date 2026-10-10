@@ -10,6 +10,8 @@ import { rudCanAutoScroll, rudFinalRestoreActive } from './routeState';
 import { handleRoute, rudRouteIsHomeSurface } from './router';
 import { rudSyncFridayMode, rudSyncSmartHome } from '../../features/my-deen/myDeen';
 import { $, DEFAULT_TITLE, publicFooter, publicMain } from '../../runtime/core';
+import { S } from '../../runtime/store';
+import { millis } from '../../utils/ui';
 
 /* ==============================
    PUBLIC ROUTING + READERS
@@ -41,13 +43,49 @@ function rudSettleHeroEntrance() {
 /* Content refreshes (cache, shared cache, network) must not re-run the route
    renderer while Home is already on screen: that re-scrolled to top and rebuilt
    the page. Non-home routes still re-render because their content may have changed. */
+/* V3: a content refresh used to rebuild the open page and scroll it to the top, even when nothing
+   on it had changed (seen as the Names list "jumping" after returning from a Name). The page is now
+   re-rendered only when the published content actually changed, and the reader's position is kept. */
+let rudLastRenderedContent = { hash: '', sig: '' };
+function rudContentSignature() {
+  const items = Array.isArray(S.publicContent) ? S.publicContent : [];
+  let h = items.length;
+  for (const i of items) {
+    const key = `${i?.id || ''}:${millis(i?.updatedAt) || millis(i?.createdAt) || 0}`;
+    for (let n = 0; n < key.length; n++) h = (h * 31 + key.charCodeAt(n)) | 0;
+  }
+  return String(h);
+}
+function rudRememberRenderedContent() {
+  rudLastRenderedContent = { hash: location.hash || '#home', sig: rudContentSignature() };
+}
 function rudRouteAfterContent() {
   if (location.hash.startsWith('#riseupondeen.admin.login.1722')) return;
   const r = (location.hash || '#home').slice(1).split('/')[0] || 'home';
   const homeVisible = !publicMain.hidden && !document.body.classList.contains('route-view');
   const maintenance = !!window.RUD_MAINTENANCE_ACTIVE || document.documentElement.dataset.maintenance === 'active';
   if (homeVisible && rudRouteIsHomeSurface(r) && !maintenance) return;
-  handleRoute();
+  const sig = rudContentSignature();
+  const hash = location.hash || '#home';
+  if (!maintenance && rudLastRenderedContent.hash === hash && rudLastRenderedContent.sig === sig) return;
+  const sameRoute = rudLastRenderedContent.hash === hash && document.body.classList.contains('route-view');
+  if (!sameRoute || maintenance) {
+    handleRoute();
+    rudRememberRenderedContent();
+    return;
+  }
+  /* Same page, new content: re-render in place without moving the reader. */
+  const x = window.scrollX || 0;
+  const y = window.scrollY || 0;
+  const wasRestoring = window.__RUD_SCROLL_RESTORING;
+  window.__RUD_SCROLL_RESTORING = true;
+  try {
+    handleRoute();
+  } finally {
+    window.__RUD_SCROLL_RESTORING = wasRestoring;
+  }
+  rudRememberRenderedContent();
+  if (window.scrollX !== x || window.scrollY !== y) window.scrollTo(x, y);
 }
 function showHome(scrollId = '') {
   const restoringPosition = rudFinalRestoreActive();
@@ -114,6 +152,7 @@ function showPage(html, title, routeVersion = window.__RUD_ROUTE_VERSION) {
   try {
     document.dispatchEvent(new Event('rud-route-rendered'));
   } catch {}
+  rudRememberRenderedContent();
 
   if (!restoringPosition && rudCanAutoScroll()) {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
@@ -155,6 +194,7 @@ function showReactPage(element, title, routeVersion = window.__RUD_ROUTE_VERSION
   try {
     document.dispatchEvent(new Event('rud-route-rendered'));
   } catch {}
+  rudRememberRenderedContent();
 
   if (!restoringPosition && rudCanAutoScroll()) {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });

@@ -5,6 +5,7 @@
  * function declarations; init() runs the original top-level statements and is called once, in
  * the original order, by runtime/legacyRuntime.ts (admin modules: features/admin/adminConsole.ts).
  */
+import { checkUsername } from '../../deen-friends/services/username';
 import { rudDfPasswordReset } from '../../deen-friends/services/accountService';
 import { S } from '../../../runtime/store';
 import { rudDfAdminKey } from '../../home/homeContent';
@@ -753,8 +754,9 @@ async function deenFriendsAdminView() {
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) throw Error('Enter a valid email address.');
         if (pw.length < 8) throw Error('Password must be at least 8 characters.');
         if (name.length < 2 || name.length > 40) throw Error('Display name must contain 2 to 40 characters.');
-        if (!/^[A-Za-z0-9_.-]{3,30}$/.test(un))
-          throw Error('Username must be 3–30 letters, numbers, underscore, dot or hyphen.');
+        /* V3: one username rule everywhere (features/deen-friends/services/username.ts). */
+        const unCheck = checkUsername(un);
+        if (!unCheck.ok) throw Error(unCheck.message);
         if (!S.firebaseReady || !S.db || !S.auth?.currentUser)
           throw Error('The Super Admin session is not ready. Sign in again and retry.');
         b.disabled = true;
@@ -878,6 +880,11 @@ async function deenFriendsAdminView() {
         const usernameKey = rudDfAdminUsernameKey(username);
         if (name.length < 2 || name.length > 40) throw Error('Display name must contain 2 to 40 characters.');
         if (usernameKey.length < 3) throw Error('Username must contain at least 3 valid characters.');
+        /* Existing (legacy) usernames may be kept as they are; a new or changed one must follow the V3 rule. */
+        if (rudDfAdminKey(username) !== rudDfAdminKey(u.username || '')) {
+          const unCheck = checkUsername(username);
+          if (!unCheck.ok) throw Error(unCheck.message);
+        }
         const newUid = String(uid),
           oldKey = rudDfAdminKey(u.username || '');
         await runTransaction(S.db, async (tx) => {
@@ -2166,6 +2173,8 @@ async function deenFriendsAdminView() {
               newKey = rudDfAdminKey(requested),
               oldKey = rudDfAdminKey(request.currentUsername || '');
             if (!uid || newKey.length < 3) throw Error('Invalid username request data.');
+            const reqCheck = checkUsername(requested);
+            if (!reqCheck.ok) throw Error(`This request can't be approved: ${reqCheck.message}`);
             await runTransaction(S.db, async (tx) => {
               const userRef = doc(S.db, 'deens_users', uid),
                 newNameRef = doc(S.db, 'visitor_usernames', newKey),

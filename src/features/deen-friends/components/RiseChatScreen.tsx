@@ -69,10 +69,16 @@ export function RiseChatScreen({ onBack }: { onBack: () => void }) {
     };
   }, [profile?.uid, attempt]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Opening the conversation clears my unread counter.
+  // Opening the conversation clears my unread counter and records that I have seen it (V3: the
+  // retention clock needs both sides' "seen" time). Only while the page is actually visible.
   useEffect(() => {
-    if (thread?.unreadByUser) void markRiseThreadRead(thread).catch((e) => logError('RISE read receipt', e));
-  }, [thread?.unreadByUser]); // eslint-disable-line react-hooks/exhaustive-deps
+    const mark = () => {
+      if (!document.hidden && thread) void markRiseThreadRead(thread).catch((e) => logError('RISE read receipt', e));
+    };
+    mark();
+    document.addEventListener('visibilitychange', mark);
+    return () => document.removeEventListener('visibilitychange', mark);
+  }, [thread?.unreadByUser, thread?.lastMessageAtMs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Server copies replace local "sending" bubbles as soon as they arrive.
   useEffect(() => {

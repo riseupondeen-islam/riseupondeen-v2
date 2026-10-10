@@ -7,6 +7,7 @@
  */
 import { handleRoute } from '../app/routing/router';
 import { $ } from '../runtime/core';
+import { notify } from '../services/ui/notify';
 
 /* ==============================
    UTILITIES
@@ -66,12 +67,10 @@ function route(i) {
   if (i.type === 'site') return '#home';
   return i.type === 'article' ? '#home' : `#${i.type}/${i.id}`;
 }
-function toast(msg, type = 'ok') {
-  const el = document.createElement('div');
-  el.className = 'toast ' + type;
-  el.textContent = msg;
-  $('#toastStack').appendChild(el);
-  setTimeout(() => el.remove(), 3900);
+/* V3: in-app notifications are premium cards (services/ui/notify.ts). Same signature as before:
+   type 'ok' (default) → success, 'error' → error; 'info' and 'warning' are also accepted. */
+function toast(msg, type = 'ok', options) {
+  return notify(msg, type, options);
 }
 function busy(btn, on, text = 'Working…') {
   if (!btn) return;

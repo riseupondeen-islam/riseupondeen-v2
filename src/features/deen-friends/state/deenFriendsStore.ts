@@ -9,6 +9,8 @@
  *   only after Deen Friends has been opened:
  *     - my friendships                    deens_friendships      where members array-contains me
  *     - my shared streaks                 deens_friend_streaks   where members array-contains me
+ *     - my challenge streak (V3)          deens_streaks/{me}
+ *     - my Deen circles (V3)              deens_groups           where members array-contains me
  * Friend profiles are read once and cached; they are refreshed when a chat or profile is opened. */
 import { useSyncExternalStore } from 'react';
 import { collection, limit, onAuthStateChanged, onSnapshot, query, where } from '../../../services/firebase/sdk';
@@ -25,6 +27,9 @@ import {
 import { readStreak } from '../services/streakService';
 import { listenToRiseThread } from '../services/riseChatService';
 import { syncDeenPushDevice } from '../services/pushDeviceService';
+import { listenToMyStreak, type StreakSummary } from '../services/progressService';
+import { listenToMyGroups, type DeenGroup } from '../services/groupService';
+import { syncPublicCard } from '../services/suggestionService';
 
 export type SessionStatus = 'loading' | 'signed-out' | 'signed-in' | 'unavailable';
 
@@ -40,6 +45,11 @@ export interface DeenFriendsState {
   /** friendshipId -> number of records I received and have not seen yet. */
   unreadByFriendship: Record<string, number>;
   riseThread: RiseThread | null;
+  /** V3: my challenge streak (deens_streaks/{me}). */
+  myStreak: StreakSummary | null;
+  /** V3: Deen circles I belong to. */
+  groups: DeenGroup[];
+  groupsLoaded: boolean;
 }
 
 const initialState: DeenFriendsState = {
@@ -53,6 +63,9 @@ const initialState: DeenFriendsState = {
   outgoing: [],
   unreadByFriendship: {},
   riseThread: null,
+  myStreak: null,
+  groups: [],
+  groupsLoaded: false,
 };
 
 let state: DeenFriendsState = initialState;
@@ -212,8 +225,22 @@ export async function startPageListeners(): Promise<void> {
       },
       (error) => logError('streaks listener', error),
     ),
+    listenToMyStreak(
+      (myStreak) => setState({ myStreak }),
+      (error) => logError('my streak listener', error),
+    ),
+    listenToMyGroups(
+      (groups) => setState({ groups, groupsLoaded: true }),
+      (error) => {
+        logError('groups listener', error);
+        setState({ groupsLoaded: true });
+      },
+    ),
   );
-  if (state.profile) void touchPresence(state.profile);
+  if (state.profile) {
+    void touchPresence(state.profile);
+    void syncPublicCard(state.profile).catch((error) => logError('public card sync', error));
+  }
 }
 
 /* ---------- profiles of other people ---------- */

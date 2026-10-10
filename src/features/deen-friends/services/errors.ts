@@ -69,3 +69,20 @@ export function logError(where: string, error: unknown): void {
     message: errorText(error),
   });
 }
+
+/**
+ * Completions are recorded in a transaction (so streaks and points stay exact), which needs a
+ * connection. Offline and clock problems get a specific explanation instead of a generic failure.
+ */
+export function offlineAware(error: unknown): unknown {
+  if (error instanceof DeenFriendsError) return error;
+  const kind = classifyError(error);
+  if (kind === 'offline')
+    return new DeenFriendsError('offline', 'Completing a challenge needs a connection so your streak counts the right day. Please try again when you are online.');
+  if (kind === 'permission')
+    return new DeenFriendsError(
+      'permission',
+      'This completion couldn’t be counted. If your device’s date or time is set manually, switch it to automatic and try again.',
+    );
+  return error;
+}

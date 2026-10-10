@@ -4,10 +4,14 @@ import { presenceLabel } from '../services/format';
 import { useDeenFriends } from '../state/deenFriendsStore';
 import { goToDeenFriends } from '../deenFriendsRoute';
 import { Avatar, Badge, EmptyState, Icon, SkeletonRows } from './ui';
+import { CreateGroupSheet } from './GroupScreens';
+import { formatDayLabel } from '../services/format';
+import type { AvatarKey } from '../types';
 
 export function ChatsTab() {
   const s = useDeenFriends();
   const [filter, setFilter] = useState('');
+  const [creating, setCreating] = useState(false);
   const rows = useMemo(() => {
     const term = filter.trim().toLowerCase();
     return s.friendships
@@ -41,6 +45,36 @@ export function ChatsTab() {
         <Badge count={rise?.unreadByUser || 0} />
       </button>
 
+      <section className="df2-section df2-circles" aria-labelledby="df2-circles-title" data-tour="df-circles">
+        <div className="df2-section-head">
+          <h2 id="df2-circles-title">Deen circles</h2>
+          <button type="button" className="df2-btn df2-btn-sm" onClick={() => setCreating(true)} data-tour="df-new-circle">
+            <Icon name="plus" size={16} /> New circle
+          </button>
+        </div>
+        {!s.groupsLoaded ? null : s.groups.length ? (
+          <ul className="df2-chat-list">
+            {s.groups.map((g) => (
+              <li key={g.id}>
+                <button type="button" className="df2-chat-row" onClick={() => goToDeenFriends({ groupId: g.id })}>
+                  <Avatar avatar={g.avatar as AvatarKey} name={g.name} size={48} />
+                  <span className="df2-chat-row-copy">
+                    <strong>{g.name}</strong>
+                    <small>
+                      {g.members.length} participants · {g.lastPreview || 'Circle'} · {formatDayLabel(g.lastMessageAtMs)}
+                    </small>
+                  </span>
+                  <Icon name="chevron" size={18} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="df2-inline-note">Start a circle with three or more Deen Friends to share reminders and encouragement together.</p>
+        )}
+      </section>
+      {creating ? <CreateGroupSheet onClose={() => setCreating(false)} /> : null}
+
       {!s.friendshipsLoaded ? (
         <SkeletonRows count={3} />
       ) : !s.friendships.length ? (
@@ -73,7 +107,7 @@ export function ChatsTab() {
                     className="df2-chat-row"
                     onClick={() => goToDeenFriends({ chatId: friendship.id })}
                   >
-                    <Avatar avatar={profile?.avatar} name={name} size={48} online={online} />
+                    <Avatar avatar={profile?.avatar} config={profile?.avatarConfig} name={name} size={48} online={online} />
                     <span className="df2-chat-row-copy">
                       <strong>{name}</strong>
                       <small>

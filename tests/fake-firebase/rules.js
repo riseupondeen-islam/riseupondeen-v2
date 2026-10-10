@@ -144,15 +144,24 @@ export function createRules(state) {
       d.kind === 'content' &&
       hasOnly(d, [...msgBaseKeys, 'sharedContent']) &&
       d.text === '' &&
+      validSharedContent(sc)
+    );
+  }
+  // V3: complete shared content (firestore.rules validSharedContent).
+  function validSharedContent(sc) {
+    return (
       isMap(sc) &&
-      hasOnly(sc, ['id', 'type', 'title', 'preview', 'reference', 'arabic']) &&
+      hasOnly(sc, ['id', 'type', 'title', 'preview', 'reference', 'arabic', 'translation', 'transliteration', 'source']) &&
       hasAll(sc, ['id', 'type', 'title']) &&
       isStr(sc.id, 200) &&
       ['quran', 'dua', 'hadith', 'zikr', 'reminder'].includes(sc.type) &&
       isStr(sc.title, 200) &&
       isStr(sc.preview ?? '', 300) &&
       isStr(sc.reference ?? '', 200) &&
-      isStr(sc.arabic ?? '', 1200)
+      isStr(sc.arabic ?? '', 8000) &&
+      isStr(sc.translation ?? '', 8000) &&
+      isStr(sc.transliteration ?? '', 6000) &&
+      isStr(sc.source ?? '', 200)
     );
   }
   const messages = {
@@ -281,6 +290,19 @@ export function createRules(state) {
   };
 
   /* ---------- users ---------- */
+  const validAvatar = (a) =>
+    a === null ||
+    (isMap(a) &&
+      hasOnly(a, ['v', 'shape', 'background', 'pattern', 'figure', 'outfit', 'accent', 'motif', 'initials']) &&
+      a.v === 1 &&
+      ['circle', 'arch', 'octagon', 'star'].includes(a.shape) &&
+      ['cream', 'sage', 'sand', 'sky', 'rose', 'lilac', 'night', 'ink'].includes(a.background) &&
+      ['none', 'stars', 'girih', 'arches', 'dots'].includes(a.pattern) &&
+      ['none', 'hijab', 'kufi', 'turban', 'shawl'].includes(a.figure) &&
+      ['emerald', 'navy', 'maroon', 'charcoal', 'sand', 'teal', 'plum', 'ivory'].includes(a.outfit) &&
+      ['gold', 'silver', 'rosegold', 'emerald', 'ivory'].includes(a.accent) &&
+      ['none', 'crescent', 'lantern', 'mosque', 'book', 'tasbih'].includes(a.motif) &&
+      typeof a.initials === 'boolean');
   const users = {
     read: () => signedIn(),
     create: (id, d) =>
@@ -288,8 +310,10 @@ export function createRules(state) {
       d.uid === id &&
       isStr(d.visitorId, 120) &&
       isStr(d.username, 50) &&
-      isStr(d.usernameKey, 80) &&
+      /^[A-Za-z0-9]{3,20}$/.test(d.username) && // V3 username rule
+      d.usernameKey === d.username.toLowerCase() &&
       isStr(d.displayName, 50) &&
+      validAvatar(d.avatarConfig ?? null) &&
       isTs(d.createdAt) &&
       isTs(d.updatedAt) &&
       isInt(d.lastActiveAt),
@@ -302,6 +326,7 @@ export function createRules(state) {
         d.usernameKey === old.usernameKey &&
         isStr(d.username, 50) &&
         isStr(d.displayName, 50) &&
+        validAvatar(d.avatarConfig ?? null) &&
         isTs(d.updatedAt) &&
         isInt(d.lastActiveAt)
       );
@@ -430,6 +455,11 @@ export function createRules(state) {
     'status',
     'createdAt',
     'updatedAt',
+    'userSeenAtMs',
+    'riseSeenAtMs',
+    'statusChangedAtMs',
+    'clearedAtMs',
+    'clearedBy',
   ];
   const threadOk = (d, owner) =>
     hasOnly(d, threadKeys) &&
@@ -457,8 +487,14 @@ export function createRules(state) {
           threadOk(d, owner) &&
           d.status === old.status &&
           norm(d.createdAt) === norm(old.createdAt) &&
-          d.unreadByRise <= old.unreadByRise + 1) ||
-        (isSupport() && threadOk(d, owner) && d.displayName === old.displayName && d.username === old.username)
+          d.unreadByRise <= old.unreadByRise + 1 &&
+          (d.riseSeenAtMs ?? 0) === (old.riseSeenAtMs ?? 0) &&
+          (d.clearedAtMs ?? 0) === (old.clearedAtMs ?? 0)) ||
+        (isSupport() &&
+          threadOk(d, owner) &&
+          d.displayName === old.displayName &&
+          d.username === old.username &&
+          (d.userSeenAtMs ?? 0) === (old.userSeenAtMs ?? 0))
       );
     },
     delete: () => isSuper(),
@@ -519,11 +555,13 @@ export function createRules(state) {
         }[coll];
         if (coll === 'deens_official_challenges')
           return op === 'read' ? signedIn() && (data(before).active === true || isCommunity()) : isCommunity();
-        if (!table) return true;
-        if (op === 'read') return table.read(before, id);
-        if (op === 'create') return table.create(id, after);
-        if (op === 'update') return table.update(id, before, after);
-        return table.delete(id, before);
+        if (table) {
+          if (op === 'read') return table.read(before, id);
+          if (op === 'create') return table.create(id, after);
+          if (op === 'update') return table.update(id, before, after);
+          return table.delete(id, before);
+        }
+        // Not a legacy table: fall through to the V3 models below (unmodelled collections are allowed at the end).
       }
       if (seg.length === 4 && seg[0] === 'deens_daily_challenges' && seg[2] === 'participants') {
         const p = participants(seg[1], seg[3]);
@@ -536,7 +574,131 @@ export function createRules(state) {
         if (op === 'read') return m.read();
         if (op === 'create') return m.create(after);
         if (op === 'update') return false;
-        return isSuper();
+        // V3 Clear Chat: support admins, solved conversations only, never the welcome.
+        return isSuper() || (isSupport() && seg[3] !== 'welcome' && get(`deens_rise_threads/${seg[1]}`)?.status === 'resolved');
+      }
+      /* ---------- V3 collections (model of firestore.rules; getAfter checks are not modelled) ---------- */
+      const pair = (a, b) => (a < b ? `${a}_${b}` : `${b}_${a}`);
+      const friends = (a, b) => !!get(`deens_friendships/${pair(a, b)}`);
+      if (seg[0] === 'deens_groups' && seg.length === 2) {
+        const before0 = before;
+        if (op === 'read') return signedIn() && (data(before0).members || []).includes(uid());
+        if (op === 'create') {
+          const d = after;
+          const members = d.members || [];
+          return (
+            signedIn() &&
+            /^g_[a-z0-9]{8,40}$/.test(seg[1]) &&
+            d.ownerUid === uid() &&
+            members.length >= 4 && // at least 4 participants including the creator
+            members.length <= 8 &&
+            members[0] === uid() &&
+            new Set(members).size === members.length &&
+            members.slice(1).every((m) => friends(uid(), m)) &&
+            d.memberCount === members.length &&
+            isStr(d.name, 40) &&
+            d.name.length >= 2
+          );
+        }
+        if (op === 'update') {
+          const old = data(before0);
+          if (!(old.members || []).includes(uid())) return false;
+          const changed = changedKeys(old, after);
+          if (changed.every((k) => ['lastMessageAtMs', 'lastPreview', 'updatedAt'].includes(k))) return true;
+          if (changed.every((k) => ['name', 'updatedAt'].includes(k))) return old.admins.includes(uid());
+          if (changed.every((k) => ['members', 'memberCount', 'updatedAt'].includes(k)) && after.members.length === old.members.length + 1) {
+            const added = after.members[after.members.length - 1];
+            return old.admins.includes(uid()) && !old.members.includes(added) && friends(uid(), added) && after.members.length <= 30;
+          }
+          if (after.members.length === old.members.length - 1) {
+            const leaving = !after.members.includes(uid());
+            return leaving || (old.admins.includes(uid()) && after.members.includes(old.ownerUid));
+          }
+          return false;
+        }
+        return isTrust();
+      }
+      if (seg[0] === 'deens_groups' && seg.length === 4 && seg[2] === 'messages') {
+        const g = get(`deens_groups/${seg[1]}`);
+        const member = signedIn() && !!g && (g.members || []).includes(uid());
+        if (op === 'read') return member;
+        if (op === 'create') {
+          const d = after;
+          return (
+            member &&
+            d.senderUid === uid() &&
+            ((d.kind === 'encourage' && ENCOURAGE.includes(d.text)) ||
+              (d.kind === 'content' && d.text === '' && validSharedContent(d.sharedContent)))
+          );
+        }
+        if (op === 'update') return false;
+        return data(before).senderUid === uid() || isTrust();
+      }
+      if (seg[0] === 'deens_user_challenges' && seg.length === 2) {
+        if (op === 'read')
+          return signedIn() && (before ? before.creatorUid === uid() || (before.invitedUids || []).includes(uid()) : seg[1].split('_')[0] === uid());
+        if (op === 'create') {
+          const d = after;
+          const inv = d.invitedUids || [];
+          return (
+            signedIn() &&
+            new RegExp(`^${uid()}_[0-9]+_[0-2]$`).test(seg[1]) &&
+            d.creatorUid === uid() &&
+            inv.length >= 1 &&
+            inv.length <= 8 &&
+            new Set(inv).size === inv.length &&
+            !inv.includes(uid()) &&
+            inv.every((m) => friends(uid(), m)) &&
+            d.requiredDays >= 1 &&
+            d.requiredDays <= 60
+          );
+        }
+        if (op === 'update') return data(before).creatorUid === uid() && after.status === 'cancelled';
+        return isTrust();
+      }
+      if (seg[0] === 'deens_user_challenges' && seg.length === 4) {
+        const ch = get(`deens_user_challenges/${seg[1]}`);
+        if (op === 'read') return isOwner(seg[3]) || (signedIn() && !!ch && (ch.creatorUid === uid() || ch.invitedUids.includes(uid())));
+        if (op === 'delete') return isTrust();
+        if (!isOwner(seg[3])) return false;
+        if (op === 'create') return after.completedCount === 0 && ['accepted', 'declined'].includes(after.status);
+        const old = data(before);
+        return (
+          (old.completedCount === 0 && after.completedCount === 0) ||
+          (old.status === 'accepted' && after.completedCount === old.completedCount + 1 && after.completedCount <= (ch?.requiredDays ?? 0))
+        );
+      }
+      if (seg[0] === 'deens_activity' && seg.length === 2) {
+        if (op === 'read') return signedIn() && seg[1].split('_')[0] === uid();
+        if (op === 'delete') return isSuper();
+        const d = after;
+        const okId = seg[1] === `${uid()}_${d.dayIndex}`;
+        if (op === 'create') return okId && d.uid === uid() && d.count === 1 && d.sources.length === 1;
+        const old = data(before);
+        return okId && d.count === old.count + 1 && d.count <= 3 && d.sources.length === old.sources.length + 1 && !old.sources.includes(d.sources[d.sources.length - 1]);
+      }
+      if (seg[0] === 'deens_streaks' && seg.length === 2) {
+        if (op === 'read') return isOwner(seg[1]) || (signedIn() && data(before).visible === true);
+        if (op === 'delete') return isSuper();
+        return isOwner(seg[1]) && after.uid === seg[1] && typeof after.visible === 'boolean';
+      }
+      if (seg[0] === 'deens_leaderboard' && seg.length === 4) {
+        if (op === 'read') return isOwner(seg[3]) || (signedIn() && data(before).visible === true);
+        if (op === 'delete') return isSuper();
+        const old = before || { points: 0, completions: 0 };
+        const pointUp = after.points === old.points + 1 && after.completions === old.completions + 1;
+        const privacyOnly = !!before && changedKeys(before, after).every((k) => ['visible', 'displayName', 'avatar', 'avatarConfig', 'updatedAt'].includes(k));
+        return isOwner(seg[3]) && after.monthId === seg[1] && (pointUp || privacyOnly);
+      }
+      if (seg[0] === 'deens_public_profiles' && seg.length === 2) {
+        if (op === 'read') return isOwner(seg[1]) || (signedIn() && data(before).discoverable === true);
+        if (op === 'delete') return isOwner(seg[1]) || isTrust();
+        return isOwner(seg[1]) && after.uid === seg[1] && !('email' in after) && typeof after.discoverable === 'boolean';
+      }
+      if (seg[0] === 'deens_suggestions' && seg.length === 2) return op === 'read' ? isOwner(seg[1]) : false;
+      if (seg[0] === 'rud_app_guides' && seg.length === 2) {
+        if (op === 'read') return seg[1] === 'published' || isCommunity();
+        return isCommunity() && ['draft', 'published'].includes(seg[1]);
       }
       if (seg.length === 4 && seg[0] === 'deens_push_devices' && seg[2] === 'devices') {
         const [, owner, , deviceId] = seg;

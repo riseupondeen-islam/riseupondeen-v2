@@ -1,10 +1,12 @@
-import { memo, useEffect } from 'react';
+import { lazy, memo, Suspense, useEffect, useState } from 'react';
 import { AppShell } from './AppShell';
 import { ReactPageOutlet } from './pages/reactPageOutlet';
 import { useZoomLock } from '../hooks/useZoomLock';
 import { usePageVisibilityClass } from '../hooks/usePageVisibilityClass';
 import { useDevicePerformanceClass } from '../hooks/useDevicePerformanceClass';
 import { useRouteChromeBodyClasses } from '../hooks/useRouteChrome';
+
+const GlobalLayer = lazy(() => import('./overlays/GlobalLayer'));
 
 /** The shell never needs to re-render; memo makes that explicit. */
 const StaticShell = memo(AppShell);
@@ -19,10 +21,14 @@ export function App() {
   usePageVisibilityClass();
   useDevicePerformanceClass();
   useRouteChromeBodyClasses();
+  const [runtimeReady, setRuntimeReady] = useState(false);
   useEffect(() => {
     let cancelled = false;
     import('../runtime/legacyRuntime').then(({ startLegacyRuntime }) => {
-      if (!cancelled) startLegacyRuntime();
+      if (!cancelled) {
+        startLegacyRuntime();
+        setRuntimeReady(true);
+      }
     });
     return () => {
       cancelled = true;
@@ -32,6 +38,11 @@ export function App() {
     <>
       <StaticShell />
       <ReactPageOutlet />
+      {runtimeReady ? (
+        <Suspense fallback={null}>
+          <GlobalLayer />
+        </Suspense>
+      ) : null}
     </>
   );
 }

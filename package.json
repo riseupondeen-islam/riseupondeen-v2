@@ -1,9 +1,9 @@
 {
   "name": "rise-upon-deen",
   "private": true,
-  "version": "2.1.0",
+  "version": "3.0.0",
   "type": "module",
-  "description": "Rise Upon Deen V2 — React + Vite + TypeScript",
+  "description": "Rise Upon Deen V2 \u2014 React + Vite + TypeScript",
   "engines": {
     "node": ">=20.19"
   },
@@ -16,7 +16,7 @@
     "build:e2e": "vite build --mode e2e",
     "preview:e2e": "vite preview --outDir dist-e2e --port 4174 --strictPort",
     "test:e2e": "playwright test",
-    "test:scheduler": "node push-scheduler/test/deenFriends.test.js",
+    "test:scheduler": "node push-scheduler/test/deenFriends.test.js && node push-scheduler/test/maintenance.test.js",
     "deploy:hosting": "npm run build && firebase deploy --only hosting"
   },
   "dependencies": {

@@ -12,6 +12,7 @@ push scheduler are unchanged. The internal architecture is new, and a set of ver
 - Bundle size and performance: [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md)
 - **V2:** Deen Friends rebuild, data contracts, root causes and the TTL setup: [`docs/DEEN-FRIENDS.md`](docs/DEEN-FRIENDS.md)
 - **V2:** Free push notifications (FCM + GitHub Actions): [`docs/PUSH-NOTIFICATIONS.md`](docs/PUSH-NOTIFICATIONS.md)
+- **V3:** streaks and monthly leaderboard, Deen circles, suggestions, avatar builder, install guides, App Guide, RISE chat retention — root causes, rules changes, deployment and what still needs a real device: [`docs/V3-IMPLEMENTATION.md`](docs/V3-IMPLEMENTATION.md)
 
 ## Requirements
 
@@ -37,7 +38,7 @@ npx playwright install chromium   # only needed for the end-to-end tests
 | `npm run build` | Type-check (`tsc -b`) and production build into `dist/` |
 | `npm run preview` | Serve `dist/` locally on http://localhost:4173 |
 | `npm run typecheck` | TypeScript only |
-| `npm run test:scheduler` | Offline test of the Deen Friends notification sender (no credentials, sends nothing) |
+| `npm run test:scheduler` | Offline tests of the scheduler: Deen Friends notifications and V3 maintenance (RISE retention, suggestions). No credentials, sends nothing |
 | `npm run test:e2e` | Builds with `--mode e2e` (Firebase replaced by an in-memory test double) and runs the Playwright suite. It never touches production data. |
 | `npm run deploy:hosting` | Build, then `firebase deploy --only hosting` |
 
@@ -62,7 +63,11 @@ firebase emulators:start --only firestore,auth   # optional check
 firebase deploy --only firestore:rules,firestore:indexes
 npm run build && firebase deploy --only hosting
 gcloud firestore fields ttls update purgeAt --collection-group=deens_friend_messages --enable-ttl
+# V3: 24-hour retention for solved Official RISE conversations
+gcloud firestore fields ttls update purgeAt --collection-group=messages --enable-ttl
 ```
+
+**V3 also changed `firestore.rules` and `firestore.indexes.json`** — see `docs/V3-IMPLEMENTATION.md` §5–6.
 
 The push scheduler (`push-scheduler/`) now also sends Deen Friends notifications. It needs the
 `FIREBASE_SERVICE_ACCOUNT_JSON` repository secret, as before (see docs/PUSH-NOTIFICATIONS.md).

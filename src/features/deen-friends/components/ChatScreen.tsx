@@ -15,7 +15,7 @@ import {
 } from '../services/interactionService';
 import { checkInToday } from '../services/streakService';
 import { startTasbihChallenge } from '../services/tasbihHandoff';
-import { refreshProfile, useDeenFriends } from '../state/deenFriendsStore';
+import { getDeenFriendsState, refreshProfile, useDeenFriends } from '../state/deenFriendsStore';
 import { ChatSettingsSheet, readChatTheme, type ChatThemeId } from './ChatSettingsSheet';
 import { ChallengeSheet, DeenActionMenu, EncourageSheet, ShareSheet, type DeenAction } from './DeenActionSheets';
 import { FullScreen } from './FullScreen';
@@ -127,7 +127,7 @@ export function ChatScreen({
         if (action === 'accept') await respondToChallenge(item.id, true);
         else if (action === 'decline') await respondToChallenge(item.id, false);
         else {
-          const outcome = await completeChallenge(item.id);
+          const outcome = await completeChallenge(item.id, getDeenFriendsState().profile);
           toast(outcome === 'already' ? 'You already completed this.' : 'Alhamdulillah — marked as done.', 'success');
         }
       } catch (err) {
@@ -183,7 +183,7 @@ export function ChatScreen({
           <Icon name="back" />
         </button>
         <button type="button" className="df2-chat-person" onClick={() => onOpenProfile(friendship.friendUid)}>
-          <Avatar avatar={friend?.avatar} name={friendName} size={40} online={online} />
+          <Avatar avatar={friend?.avatar} config={friend?.avatarConfig} name={friendName} size={40} online={online} />
           <span>
             <strong>{friendName}</strong>
             <small>{friend ? presenceLabel(friend.lastActiveAt) : '…'}</small>

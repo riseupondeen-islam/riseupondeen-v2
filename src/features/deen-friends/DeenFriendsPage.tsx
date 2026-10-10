@@ -8,6 +8,8 @@ import { FriendsTab } from './components/FriendsTab';
 import { MyProfileSheet, PersonSheet } from './components/ProfileSheets';
 import { RiseChatScreen } from './components/RiseChatScreen';
 import { StreaksTab } from './components/StreaksTab';
+import { GroupChatScreen } from './components/GroupScreens';
+import { completedToday, liveStreak } from './services/progressService';
 import { Avatar, Badge, Icon, SkeletonRows, ToastProvider, type IconName } from './components/ui';
 import { goToDeenFriends, leaveConversation, useDeenFriendsRoute, type DeenFriendsTab } from './deenFriendsRoute';
 import { startPageListeners, startSession, useDeenFriends } from './state/deenFriendsStore';
@@ -85,6 +87,8 @@ function DeenFriendsContent() {
   const chatUnread = Object.values(s.unreadByFriendship).reduce((a, b) => a + b, 0) + (s.riseThread?.unreadByUser || 0);
   const activeTab = route.tab === 'rise' ? 'chats' : route.tab;
   const openFriendship = route.chatId ? s.friendships.find((f) => f.id === route.chatId) : undefined;
+  const openGroup = route.groupId ? s.groups.find((g) => g.id === route.groupId) : undefined;
+  const streakNow = liveStreak(s.myStreak);
 
   return (
     <section className="df2-root df2-page">
@@ -100,11 +104,22 @@ function DeenFriendsContent() {
           <div className="df2-hero-actions">
             <button
               type="button"
+              className={`df2-streak-chip${completedToday(s.myStreak) ? ' is-today' : ''}`}
+              data-tour="df-streak"
+              onClick={() => goToDeenFriends({ tab: 'streaks' }, true)}
+              aria-label={`Challenge streak: ${streakNow} day${streakNow === 1 ? '' : 's'}${completedToday(s.myStreak) ? ', completed today' : ''}`}
+              title="Your challenge streak"
+            >
+              <Icon name="flame" size={17} />
+              <b>{streakNow}</b>
+            </button>
+            <button
+              type="button"
               className="df2-me-chip"
               onClick={() => setMyProfileOpen(true)}
               aria-label="Your Deen profile"
             >
-              <Avatar avatar={me.avatar} name={me.displayName} size={40} />
+              <Avatar avatar={me.avatar} config={me.avatarConfig} name={me.displayName} size={40} />
               <span>
                 <strong>{me.displayName}</strong>
                 <small>@{me.username}</small>
@@ -163,6 +178,8 @@ function DeenFriendsContent() {
       ) : null}
       {route.chatId && !openFriendship && s.friendshipsLoaded ? <MissingConversation /> : null}
       {route.tab === 'rise' ? <RiseChatScreen onBack={leaveConversation} /> : null}
+      {route.groupId && openGroup ? <GroupChatScreen group={openGroup} onBack={leaveConversation} onOpenProfile={setProfileUid} /> : null}
+      {route.groupId && !openGroup && s.groupsLoaded ? <MissingConversation /> : null}
 
       {profileUid ? <PersonSheet uid={profileUid} onClose={() => setProfileUid('')} /> : null}
       {myProfileOpen ? <MyProfileSheet onClose={() => setMyProfileOpen(false)} /> : null}

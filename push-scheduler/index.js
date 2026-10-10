@@ -2,6 +2,7 @@ const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { processDeenFriendsEvents } = require('./deenFriends');
+const { runMaintenance } = require('./maintenance');
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '{}');
 if (!serviceAccount.project_id || !serviceAccount.client_email || !serviceAccount.private_key) {
@@ -165,5 +166,8 @@ async function processPrayerNotifications(){
   // Deen Friends events are independent: a failure there must never block prayer or queued reminders.
   let deenFriends;
   try{deenFriends=await processDeenFriendsEvents(db,messaging);}catch(e){console.warn('Deen Friends notifications failed',e?.message||e);deenFriends={error:String(e?.message||e)};}
-  console.log(JSON.stringify({ok:true,at:new Date().toISOString(),jobs,prayers,deenFriends}));
+  // V3 maintenance (RISE chat 24h retention, friend suggestions) is also independent of the rest.
+  let maintenance;
+  try{maintenance=await runMaintenance(db);}catch(e){console.warn('Maintenance failed',e?.message||e);maintenance={error:String(e?.message||e)};}
+  console.log(JSON.stringify({ok:true,at:new Date().toISOString(),jobs,prayers,deenFriends,maintenance}));
 })().catch(error=>{console.error(error);process.exit(1);});

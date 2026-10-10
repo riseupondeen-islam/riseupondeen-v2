@@ -1,7 +1,8 @@
 /* Markup migrated verbatim from the original index.html (static app shell).
    Text nodes are explicit string literals so whitespace and wording are preserved exactly.
    Legacy feature controllers attach behaviour to these elements by id/class after mount. */
-/* Canonical app header: logo, Home/notifications/Explore/theme actions. */
+/* Canonical app header: logo, then Home · My Deen · Notifications · Deen Friends · Light/Dark · Explore.
+   (V3 order and icons; ids, routes and handlers are unchanged.) */
 import brandLogoUrl from '../../assets/images/brand-logo.png';
 import { ThemeToggle } from '../controls/ThemeToggle';
 
@@ -23,7 +24,7 @@ export function AppHeader() {
       {'\n'}
       <div className="rud-topbar-actions">
         {'\n'}
-        <a aria-label="Home" className="rud-topbar-icon" href="#home" title="Home">
+        <a aria-label="Home" className="rud-topbar-icon" data-tour="nav-home" href="#home" title="Home">
           <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
             <path
               d="M4.5 10.6 12 4.5l7.5 6.1v8.2a.7.7 0 0 1-.7.7H5.2a.7.7 0 0 1-.7-.7v-8.2Z"
@@ -35,11 +36,27 @@ export function AppHeader() {
           </svg>
         </a>
         {'\n'}
+        <a aria-label="My Deen" className="rud-topbar-icon" data-tour="nav-my-deen" href="#my-deen" title="My Deen">
+          <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+            <path
+              d="M12 19.6s-7.1-4.2-7.1-9.4A3.9 3.9 0 0 1 12 8a3.9 3.9 0 0 1 7.1 2.2c0 5.2-7.1 9.4-7.1 9.4Z"
+              stroke="currentColor"
+              strokeLinejoin="round"
+              strokeWidth="1.5"
+            />
+            <path
+              d="M17.6 2.9l.55 1.45 1.45.55-1.45.55-.55 1.45-.55-1.45-1.45-.55 1.45-.55.55-1.45Z"
+              fill="currentColor"
+            />
+          </svg>
+        </a>
+        {'\n'}
         <button
-          aria-label="Reminder settings"
+          aria-label="Notifications and reminders"
           className="rud-topbar-icon"
+          data-tour="nav-notifications"
           id="rudNotificationShortcut"
-          title="Reminder settings"
+          title="Notifications"
           type="button"
         >
           <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
@@ -58,72 +75,21 @@ export function AppHeader() {
           </svg>
         </button>
         {'\n'}
-        <a aria-label="My Deen" className="rud-topbar-icon" href="#my-deen" title="My Deen">
-          <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
-            <path
-              d="M5.5 7.5 12 4l6.5 3.5v11L12 21l-6.5-2.5v-11Z"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.5"
-            />
-            <path
-              d="M12 4v17M5.5 9.4 12 12l6.5-2.6"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.5"
-            />
-            <path
-              d="M6.2 8.2 12 10.5l5.8-2.3"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.15"
-            />
-          </svg>
-        </a>
-        {'\n'}
         <a
           aria-label="Deen Friends"
           className="rud-topbar-icon rud-deen-friends-nav"
+          data-tour="nav-deen-friends"
           href="#deen-friends"
           id="rudDeenFriendsNav"
           title="Deen Friends"
         >
-          {'\n'}
           <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
-            {'\n'}
-            <circle cx="9" cy="8.5" r="3" stroke="currentColor" strokeWidth="1.55" />
-            {'\n'}
-            <circle cx="16.2" cy="9.7" r="2.25" stroke="currentColor" strokeWidth="1.45" />
-            {'\n'}
-            <path
-              d="M3.8 18.4c.7-3 2.45-4.55 5.2-4.55s4.5 1.55 5.2 4.55"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeWidth="1.55"
-            />
-            {'\n'}
-            <path
-              d="M14.2 14.2c2.9-.25 4.95 1.05 5.7 3.75"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeWidth="1.45"
-            />
-            {'\n'}
-            <path
-              d="M12 4.1v2.8M10.6 5.5h2.8"
-              opacity=".7"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeWidth="1.15"
-            />
-            {'\n'}
+            <circle cx="9" cy="8.6" r="3.1" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M3.6 19c.6-3.2 2.5-4.9 5.4-4.9s4.8 1.7 5.4 4.9" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
+            <circle cx="16.4" cy="9.4" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M15.6 14.2c2.6-.3 4.4 1.2 5 4.1" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
           </svg>
-          {'\n'}
           <span aria-hidden="true" className="rud-nav-badge" hidden id="rudDfNavBadge" />
-          {'\n'}
         </a>
         {'\n'}
         <ThemeToggle />
@@ -133,6 +99,7 @@ export function AppHeader() {
           aria-expanded="false"
           aria-label="Open Explore"
           className="rud-topbar-icon"
+          data-tour="nav-explore"
           id="rudExploreBtn"
           title="Explore"
           type="button"

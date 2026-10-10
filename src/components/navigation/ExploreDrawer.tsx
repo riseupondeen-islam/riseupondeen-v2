@@ -1,6 +1,8 @@
 /* Markup migrated verbatim from the original index.html (static app shell).
    Text nodes are explicit string literals so whitespace and wording are preserved exactly.
-   Legacy feature controllers attach behaviour to these elements by id/class after mount. */
+   Legacy feature controllers attach behaviour to these elements by id/class after mount.
+   V3: adds Deen Friends to "Your space" and a "Help & display" group (App Guide, Light/Dark). */
+import { ExploreHelpGroup } from './ExploreHelpGroup';
 
 export function ExploreDrawer() {
   return (
@@ -35,6 +37,9 @@ export function ExploreDrawer() {
             </button>
             <a className="rud-explore-link" data-rud-explore-route="my-deen" href="#my-deen">
               {'My Deen'}
+            </a>
+            <a className="rud-explore-link" data-rud-explore-route="deen-friends" href="#deen-friends">
+              {'Deen Friends'}
             </a>
             <button className="rud-explore-link" hidden id="rudExploreInstall" type="button">
               {'Install Rise Upon Deen'}
@@ -80,6 +85,8 @@ export function ExploreDrawer() {
             </a>
           </nav>
         </section>
+        {'\n'}
+        <ExploreHelpGroup />
         {'\n'}
         <div className="rud-explore-foot">{'Free · local-first · no premium · no paywall'}</div>
         {'\n'}

@@ -24,9 +24,13 @@ import {
   where,
 } from '../../../services/firebase/sdk';
 import { rudVisitorId } from '../../analytics/visitorAnalytics';
-import type { OwnProfile, PrivacySettings } from '../types';
+import type { AvatarConfig, OwnProfile, PrivacySettings } from '../types';
+import { avatarConfigForStorage } from '../../../components/avatar/avatarConfig';
+import { syncPublicCard } from './suggestionService';
+import { syncProgressVisibility } from './progressService';
 import { DeenFriendsError, classifyError, logError } from './errors';
-import { asAvatar, cleanText, readPublicProfile, usernameKey } from './format';
+import { checkUsername } from './username';
+import { asAvatar, cleanText, readPublicProfile } from './format';
 import { currentDeenUser, requireSignedIn, waitForFirebase } from './firebaseSession';
 import { removeDeenPushDevice } from './pushDeviceService';
 
@@ -140,8 +144,8 @@ export interface NewAccountInput {
 
 export function validateNewAccount(input: NewAccountInput): string | null {
   if (cleanText(input.displayName, 40).length < 2) return 'Please enter your name (at least 2 characters).';
-  const key = usernameKey(input.username);
-  if (key.length < 3) return 'Choose a username with at least 3 letters or numbers.';
+  const name = checkUsername(input.username);
+  if (!name.ok) return name.message;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim())) return 'Please enter a valid email address.';
   if (input.password.length < 8) return 'Password must be at least 8 characters.';
   return null;
@@ -156,7 +160,7 @@ export async function createDeenAccount(input: NewAccountInput): Promise<OwnProf
   const problem = validateNewAccount(input);
   if (problem) throw new DeenFriendsError('invalid', problem);
   const displayName = cleanText(input.displayName, 40);
-  const username = cleanText(input.username, 30).replace(/^@+/, '');
+  const username = (checkUsername(input.username) as { username: string }).username;
   const email = input.email.trim().toLowerCase();
   const visitorId = String(rudVisitorId() || '').slice(0, 120);
   if (!visitorId) throw new DeenFriendsError('invalid', 'Could not create a visitor identity. Please reload.');
@@ -198,7 +202,10 @@ async function writeNewProfile(
   input: { displayName: string; username: string; email: string; visitorId: string },
 ): Promise<OwnProfile> {
   const { db } = await requireSignedIn();
-  const key = usernameKey(input.username);
+  const name = checkUsername(input.username);
+  if (!name.ok) throw new DeenFriendsError('invalid', name.message);
+  // Case-insensitive uniqueness: the lowercase key is what gets reserved.
+  const key = name.key;
   const profileRef = doc(db, 'deens_users', uid);
   const usernameRef = doc(db, 'visitor_usernames', key);
   try {
@@ -260,10 +267,10 @@ export async function createProfileForCurrentUser(input: {
   username: string;
 }): Promise<OwnProfile> {
   const displayName = cleanText(input.displayName, 40);
-  const username = cleanText(input.username, 30).replace(/^@+/, '');
   if (displayName.length < 2) throw new DeenFriendsError('invalid', 'Please enter your name (at least 2 characters).');
-  if (usernameKey(username).length < 3)
-    throw new DeenFriendsError('invalid', 'Choose a username with at least 3 letters or numbers.');
+  const name = checkUsername(input.username);
+  if (!name.ok) throw new DeenFriendsError('invalid', name.message);
+  const username = name.username;
   const user = currentDeenUser();
   if (!user) throw new DeenFriendsError('auth', 'Please sign in again.');
   const visitorId = String(rudVisitorId() || '').slice(0, 120);
@@ -330,6 +337,8 @@ export interface ProfileEdits {
   languages: string;
   field: string;
   privacy: PrivacySettings;
+  /** V3 built avatar: an object to set, null to go back to the classic artwork, undefined to keep. */
+  avatarConfig?: AvatarConfig | null;
 }
 
 /** Saves the editable profile fields. Username and usernameKey are never changed here. */
@@ -349,6 +358,7 @@ export async function saveOwnProfile(current: OwnProfile, edits: ProfileEdits): 
     languages: cleanText(edits.languages, 80),
     field: cleanText(edits.field, 80),
     privacy: { ...edits.privacy },
+    avatarConfig: edits.avatarConfig === undefined ? current.avatarConfig : edits.avatarConfig ? avatarConfigForStorage(edits.avatarConfig) : null,
     visitorId: current.visitorId || String(rudVisitorId() || '').slice(0, 120),
   };
   // The update rule requires uid, username, displayName, visitorId (unchanged), updatedAt and lastActiveAt.
@@ -361,6 +371,7 @@ export async function saveOwnProfile(current: OwnProfile, edits: ProfileEdits): 
       usernameKey: next.usernameKey,
       displayName: next.displayName,
       avatar: next.avatar,
+      avatarConfig: next.avatarConfig,
       bio: next.bio,
       deenFocus: next.deenFocus,
       currentFocus: next.currentFocus,
@@ -374,6 +385,9 @@ export async function saveOwnProfile(current: OwnProfile, edits: ProfileEdits): 
     { merge: true },
   );
   writeCachedProfile(next);
+  // Keep the discovery card and the public streak / leaderboard visibility in step (best effort).
+  void syncPublicCard(next).catch((error) => logError('public card sync', error));
+  void syncProgressVisibility(next).catch((error) => logError('progress visibility sync', error));
   return next;
 }
 
@@ -404,11 +418,11 @@ export async function touchPresence(profile: OwnProfile): Promise<void> {
 }
 
 export async function requestUsernameChange(profile: OwnProfile, requested: string, reason: string): Promise<void> {
-  const wanted = requested.trim().replace(/^@+/, '').toLowerCase();
+  const name = checkUsername(requested.trim());
+  if (!name.ok) throw new DeenFriendsError('invalid', name.message);
+  const wanted = name.username;
   const why = cleanText(reason, 240);
-  if (!/^[a-z0-9_]{3,24}$/.test(wanted))
-    throw new DeenFriendsError('invalid', 'Use 3–24 letters, numbers or underscores.');
-  if (wanted === profile.username.toLowerCase()) throw new DeenFriendsError('invalid', 'Enter a different username.');
+  if (name.key === profile.username.toLowerCase()) throw new DeenFriendsError('invalid', 'Enter a different username.');
   if (!why) throw new DeenFriendsError('invalid', 'Please add a short reason.');
   const { db, uid } = await requireSignedIn();
   const pendingRequests = await getDocs(

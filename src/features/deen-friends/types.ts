@@ -14,6 +14,25 @@ export interface PrivacySettings {
   shareCheckinCards: boolean;
   /** Show my milestone badges on my profile card to friends. Default: false. */
   showAchievements: boolean;
+  /** V3: show my challenge streak on my public profile. Default: true. */
+  showStreak: boolean;
+  /** V3: appear (display name, username, avatar, points) on the monthly leaderboard. Default: true. */
+  showOnLeaderboard: boolean;
+  /** V3: may be suggested to other members as a possible friend. Default: true. */
+  discoverable: boolean;
+}
+
+/** V3: a built (faceless, non-photographic) avatar — see components/avatar/avatarConfig.ts. */
+export interface AvatarConfig {
+  v: 1;
+  shape: 'circle' | 'arch' | 'octagon' | 'star';
+  background: string;
+  pattern: 'none' | 'stars' | 'girih' | 'arches' | 'dots';
+  figure: 'none' | 'hijab' | 'kufi' | 'turban' | 'shawl';
+  outfit: string;
+  accent: string;
+  motif: 'none' | 'crescent' | 'lantern' | 'mosque' | 'book' | 'tasbih';
+  initials: boolean;
 }
 
 /** deens_users/{uid} as seen by other signed-in users (email is never read into this type). */
@@ -23,6 +42,8 @@ export interface PublicProfile {
   usernameKey: string;
   displayName: string;
   avatar: AvatarKey;
+  /** V3 built avatar; when present it is shown instead of `avatar`. */
+  avatarConfig: AvatarConfig | null;
   bio: string;
   deenFocus: string;
   currentFocus: string;
@@ -94,9 +115,16 @@ export interface SharedContent {
   id: string;
   type: SharedContentType;
   title: string;
+  /** Legacy short text (V2 stored at most 300 characters here). */
   preview?: string;
   reference?: string;
   arabic?: string;
+  /** V3: the complete translation / text, as published. */
+  translation?: string;
+  /** V3: the complete transliteration when the source has one (never generated). */
+  transliteration?: string;
+  /** V3: collection / source line, e.g. "Sahih al-Bukhari 1" or "Hisn al-Muslim". */
+  source?: string;
 }
 
 export type ChallengeStatus = 'pending' | 'accepted' | 'declined';
@@ -189,4 +217,9 @@ export interface RiseThread {
   unreadByUser: number;
   unreadByRise: number;
   status: 'open' | 'resolved';
+  /** V3 read markers for the 24-hour retention policy (epoch ms; 0 = never). */
+  userSeenAtMs: number;
+  riseSeenAtMs: number;
+  /** V3: when an admin last cleared the conversation (0 = never). */
+  clearedAtMs: number;
 }

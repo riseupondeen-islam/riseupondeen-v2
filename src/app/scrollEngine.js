@@ -41,6 +41,9 @@ export function init() {
 
     function saveNow() {
       if (restoring) return;
+      /* V3: while an overlay pins <body> (services/ui/scrollLock.ts) the window reports scrollY 0;
+         never record that temporary position as the page's position. */
+      if (window.__RUD_SCROLL_LOCK_DEPTH > 0) return;
 
       const x = window.scrollX || 0;
       const y = window.scrollY || 0;

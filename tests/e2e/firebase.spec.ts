@@ -151,7 +151,7 @@ test('admin Deen Friends console: Messages tab, profile edit, accepting a reques
   await page.locator('#rudDfAdminDrawerClose').click();
   await page.locator('#rudDfEditUser').click();
   await page.locator('#rudDfEditName').fill('Aisha R.');
-  await page.locator('#rudDfEditUsername').fill('aisha_r');
+  await page.locator('#rudDfEditUsername').fill('AishaR');
   await page.locator('#rudDfEditUserSave').click();
   await expect(page.locator('#toastStack')).toContainText('User profile updated.');
 

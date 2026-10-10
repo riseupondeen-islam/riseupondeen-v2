@@ -12,6 +12,7 @@
 import {
   collection,
   doc,
+  getDocs,
   limit,
   onSnapshot,
   orderBy,
@@ -43,6 +44,9 @@ export function readRiseThread(uid: string, data: Record<string, unknown> | unde
     unreadByUser: Math.max(0, Number(data.unreadByUser) || 0),
     unreadByRise: Math.max(0, Number(data.unreadByRise) || 0),
     status: data.status === 'resolved' ? 'resolved' : 'open',
+    userSeenAtMs: Number(data.userSeenAtMs) || 0,
+    riseSeenAtMs: Number(data.riseSeenAtMs) || 0,
+    clearedAtMs: Number(data.clearedAtMs) || 0,
   };
 }
 
@@ -203,12 +207,22 @@ export function newRiseMessageId(): string {
   return `u_${Date.now().toString(36)}_${randomId(8)}`;
 }
 
-/** Clears my unread counter when I open the conversation. */
+/**
+ * Clears my unread counter and records that I have seen the conversation up to now (V3: the 24-hour
+ * retention clock only starts once BOTH the user and the RISE team have seen a message).
+ * Writes only when something is new, so reopening the chat costs nothing.
+ */
 export async function markRiseThreadRead(thread: RiseThread | null): Promise<void> {
-  if (!thread || !thread.unreadByUser) return;
+  if (!thread) return;
+  const needsSeen = thread.lastMessageAtMs > thread.userSeenAtMs;
+  if (!thread.unreadByUser && !needsSeen) return;
   const { db, uid } = await requireSignedIn();
   const batch = writeBatch(db);
-  batch.set(doc(db, 'deens_rise_threads', uid), { unreadByUser: 0, updatedAt: serverTimestamp() }, { merge: true });
+  batch.set(
+    doc(db, 'deens_rise_threads', uid),
+    { unreadByUser: 0, userSeenAtMs: Date.now(), updatedAt: serverTimestamp() },
+    { merge: true },
+  );
   await batch.commit();
 }
 
@@ -250,10 +264,74 @@ export async function adminSetThreadStatus(threadUid: string, status: 'open' | '
   const batch = writeBatch(db);
   batch.set(
     doc(db, 'deens_rise_threads', threadUid),
-    { status, unreadByRise: 0, updatedAt: serverTimestamp() },
+    // statusChangedAtMs lets the trusted scheduler find threads whose retention state changed.
+    { status, unreadByRise: 0, statusChangedAtMs: Date.now(), updatedAt: serverTimestamp() },
     { merge: true },
   );
   await batch.commit();
+}
+
+/** Records that the RISE team has seen the conversation up to now (support side of the retention policy). */
+export async function adminMarkThreadSeen(threadUid: string, thread: RiseThread): Promise<void> {
+  if (thread.lastMessageAtMs <= thread.riseSeenAtMs && !thread.unreadByRise) return;
+  const { db } = await requireSignedIn();
+  const batch = writeBatch(db);
+  batch.set(
+    doc(db, 'deens_rise_threads', threadUid),
+    { riseSeenAtMs: Date.now(), unreadByRise: 0, updatedAt: serverTimestamp() },
+    { merge: true },
+  );
+  await batch.commit();
+}
+
+/**
+ * Admin "Clear Chat" (Section 8): deletes every message of ONE resolved conversation except the
+ * one-time automated welcome, then records who cleared it and when. firestore.rules allow support
+ * admins to delete messages only while the thread is resolved; the audit log keeps who/when/how many
+ * (never message text). Returns the number of deleted messages.
+ */
+export async function adminClearThread(threadUid: string, thread: RiseThread, confirmUsername: string): Promise<number> {
+  if (thread.uid !== threadUid) throw new DeenFriendsError('invalid', 'This conversation changed. Please reopen it.');
+  if (thread.status !== 'resolved') throw new DeenFriendsError('invalid', 'Mark the issue as solved before clearing the chat.');
+  if (confirmUsername.trim().replace(/^@+/, '').toLowerCase() !== thread.username.toLowerCase())
+    throw new DeenFriendsError('invalid', `Type @${thread.username} exactly to confirm which conversation to clear.`);
+  const { db, uid } = await requireSignedIn();
+  let deleted = 0;
+  // Bounded pages of 400 (a batch allows 500 writes); stop when only the welcome remains.
+  for (let page = 0; page < 25; page++) {
+    const snap = await getDocs(query(collection(db, 'deens_rise_threads', threadUid, 'messages'), orderBy('createdAtMs', 'asc'), limit(400)));
+    const targets = snap.docs.filter((d) => d.id !== 'welcome');
+    if (!targets.length) break;
+    const batch = writeBatch(db);
+    targets.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+    deleted += targets.length;
+    if (snap.size < 400) break;
+  }
+  const now = Date.now();
+  const batch = writeBatch(db);
+  batch.set(
+    doc(db, 'deens_rise_threads', threadUid),
+    {
+      lastMessagePreview: 'Conversation cleared by the RISE team.',
+      lastFrom: 'rise',
+      unreadByUser: 0,
+      unreadByRise: 0,
+      clearedAtMs: now,
+      clearedBy: uid,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+  batch.set(doc(collection(db, 'deens_admin_audit_logs')), {
+    adminUid: uid,
+    action: 'RISE_THREAD_CLEARED',
+    target: `deens_rise_threads/${threadUid}`,
+    reason: `Cleared ${deleted} message(s) after the issue was marked solved`,
+    timestamp: serverTimestamp(),
+  });
+  await batch.commit();
+  return deleted;
 }
 
 export async function adminLogThreadAccess(threadUid: string): Promise<void> {
