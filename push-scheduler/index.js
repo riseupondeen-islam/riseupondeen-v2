@@ -32,7 +32,7 @@ function zoneParts(date,timeZone){
 }
 function localNow(timeZone){
   const p=zoneParts(new Date(),timeZone||'UTC');
-  return {date:`${p.year}-${p.month}-${p.day}`,hour:Number(p.hour),minute:Number(p.minute)};
+  return {date:`${p.year}-${p.month}-${p.day}`,hour:Number(p.hour),minute:Number(p.minute),timeZone:timeZone||'UTC'};
 }
 function apiDate(date){const m=String(date).match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:'';}
 function validPrayers(prayers){return PRAYER_KEYS.every(k=>!!cleanTime(prayers?.timings?.[k]));}
