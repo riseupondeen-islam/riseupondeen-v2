@@ -1054,7 +1054,6 @@ html.light-mode .rud-utility-card{background:#fff}
 .rud-utility-card p{margin:0;color:var(--muted);font-size:11px;line-height:1.5}
 .rud-my-deen-page .rud-utility-card .premium-btn{margin-top:13px;min-height:42px;padding:0 16px;font-size:14px}
 .rud-my-deen-page .rud-inline-actions{align-items:center;gap:8px}
-.rud-my-deen-page .rud-reminder-center :is(.premium-btn,.rud-mini-btn){min-height:42px!important;padding:0 16px!important;font-size:14px!important}
 .rud-reminder-settings-mount:empty{display:none}.rud-reminder-settings-mount:not(:empty){margin-top:10px}
 .rud-reminder-settings-mount .rud-reminder-center{margin-top:0}
 .rud-private-note{margin-top:14px;padding:14px 16px;border:1px solid var(--rud-v2-stroke);border-radius:17px;color:var(--muted);font-size:11px;line-height:1.55;background:rgba(255,255,255,.014)}
@@ -1087,17 +1086,37 @@ html.light-mode .rud-private-note{background:#fff}
   background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.012)),var(--rud-v2-panel);
   box-shadow:var(--rud-v2-shadow)
 }
-.rud-reminder-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}
-.rud-reminder-head h2{margin:6px 0 4px;font-size:clamp(1.65rem,3vw,2.35rem);letter-spacing:-.04em}
-.rud-reminder-head p{margin:0;color:var(--muted);font-size:.9rem}
-.rud-permission-pill{white-space:nowrap;padding:8px 11px;border:1px solid var(--rud-v2-stroke);border-radius:999px;color:#aeb0b5;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
-.rud-push-intro{padding:18px;border:1px solid rgba(216,187,121,.16);border-radius:18px;background:rgba(216,187,121,.055);margin-bottom:16px}
-.rud-push-intro strong{display:block;margin-bottom:5px;font-size:1.05rem}
-.rud-push-intro p{margin:0;color:var(--muted);font-size:.85rem;line-height:1.55}
-.rud-push-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
-.rud-reminder-list{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}
-.rud-reminder-row{min-height:58px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 12px 10px 15px;border:1px solid var(--rud-v2-stroke);border-radius:16px;background:rgba(255,255,255,.022)}
-.rud-reminder-row span:first-child{font-size:.88rem;font-weight:650}
+/* Reminder settings card (V3.5.2): one status line, grouped switches, quiet actions. */
+.rud-rc-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;margin-bottom:18px}
+.rud-rc-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:15px;border:1px solid rgba(216,187,121,.28);background:linear-gradient(145deg,rgba(216,187,121,.22),rgba(216,187,121,.06));color:#e3c98b}
+.rud-rc-icon svg{width:22px;height:22px}
+.rud-rc-title h2{margin:0!important;font-size:1.3rem!important;line-height:1.15!important;letter-spacing:-.02em!important}
+.rud-rc-title p{margin:4px 0 0;color:var(--muted);font-size:.82rem;line-height:1.45}
+.rud-rc-chip{padding:5px 10px;border:1px solid var(--rud-v2-stroke);border-radius:999px;color:var(--muted);font-size:.66rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.rud-rc-chip.is-on{border-color:rgba(216,187,121,.4);background:rgba(216,187,121,.12);color:#e9d29a}
+.rud-rc-chip.is-blocked{border-color:rgba(224,167,160,.35);color:#e0a7a0}
+.rud-rc-cta{display:flex;align-items:center;justify-content:center;width:100%;min-height:50px;margin:0 0 6px;border:0;border-radius:15px;background:linear-gradient(135deg,#f0d892,#c09a4c);box-shadow:0 12px 28px rgba(192,154,76,.25);color:#1a1408;font:700 .95rem/1 "Manrope",system-ui,sans-serif;cursor:pointer}
+.rud-rc-cta:active{transform:scale(.99)}
+.rud-rc-group{margin-top:16px}
+.rud-rc-group h3{margin:0 0 8px 4px!important;color:var(--rud-v2-gold);font-size:.66rem!important;font-weight:800;letter-spacing:.14em!important;text-transform:uppercase}
+.rud-rc-list{overflow:hidden;border:1px solid var(--rud-v2-stroke);border-radius:16px;background:rgba(255,255,255,.02)}
+.rud-rc-row{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:54px;padding:10px 14px;cursor:pointer}
+.rud-rc-row+.rud-rc-row{border-top:1px solid var(--rud-v2-stroke)}
+.rud-rc-row-text{display:grid;gap:2px;min-width:0}
+.rud-rc-row-text>span{font-size:.9rem;font-weight:650}
+.rud-rc-row-text small{color:var(--muted);font-size:.72rem;line-height:1.4}
+.rud-rc-row input[type=time]{min-height:38px;padding:0 10px;border:1px solid var(--rud-v2-stroke);border-radius:11px;background:rgba(255,255,255,.05);color:inherit;font:inherit;color-scheme:dark}
+.rud-rc-foot{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 14px;margin-top:16px}
+.rud-rc-foot small{color:var(--muted);font-size:.74rem}
+.rud-rc-foot-actions{display:flex;flex-wrap:wrap;gap:4px}
+.rud-rc-link{min-height:36px;padding:0 10px;border:0;border-radius:10px;background:transparent;color:var(--muted);font:600 .8rem/1 "Manrope",system-ui,sans-serif;cursor:pointer}
+.rud-rc-link:hover{background:rgba(255,255,255,.05);color:inherit}
+html.light-mode .rud-rc-icon{border-color:rgba(148,112,31,.25);background:linear-gradient(145deg,rgba(184,145,63,.16),rgba(184,145,63,.04));color:#94701f}
+html.light-mode .rud-rc-chip.is-on{border-color:rgba(148,112,31,.35);background:rgba(184,145,63,.12);color:#7c5b14}
+html.light-mode .rud-rc-cta{background:linear-gradient(135deg,#b8913f,#8a6519);color:#fff}
+html.light-mode .rud-rc-list{background:#fff}
+html.light-mode .rud-rc-row input[type=time]{background:#fff;color-scheme:light}
+html.light-mode .rud-rc-link:hover{background:rgba(0,0,0,.04)}
 .rud-v2-switch{position:relative;width:44px;height:26px;flex:0 0 44px}
 .rud-v2-switch input{position:absolute;opacity:0;pointer-events:none}
 .rud-v2-switch i{position:absolute;inset:0;border:1px solid var(--rud-v2-stroke);border-radius:999px;background:rgba(255,255,255,.07);transition:background .18s ease,border-color .18s ease}
@@ -1107,15 +1126,6 @@ html.light-mode .rud-private-note{background:#fff}
 html.light-mode .rud-v2-switch i{background:#eee}
 html.light-mode .rud-v2-switch i::after{background:#7b7b7b}
 html.light-mode .rud-v2-switch input:checked+i::after{background:#9b7432}
-.rud-reminder-time{display:flex;align-items:center;justify-content:space-between;gap:15px;margin:14px 0;padding:14px 15px;border:1px solid var(--rud-v2-stroke);border-radius:16px}
-.rud-reminder-time label{font-size:.86rem;font-weight:700}
-.rud-reminder-time input{min-height:40px;padding:0 10px;border:1px solid var(--rud-v2-stroke);border-radius:12px;background:rgba(255,255,255,.05);color:inherit;font:inherit;color-scheme:dark}
-html.light-mode .rud-reminder-time input{background:#fff;color-scheme:light}
-.rud-reminder-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-top:16px;margin-top:16px;border-top:1px solid var(--rud-v2-stroke)}
-.rud-reminder-foot small{max-width:620px;color:var(--muted);line-height:1.5}
-.rud-push-note-error{color:#d8a3a3!important}
-.rud-push-note-ok{color:#b5cfbd!important}
-html.light-mode .rud-push-note-ok{color:#3e7352!important}
 
 /* Admin notification composer */
 #adminApp .rud-push-admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -1127,9 +1137,6 @@ html.light-mode .rud-push-note-ok{color:#3e7352!important}
 #adminApp .rud-push-config-state{margin-top:14px;padding:12px 14px;border-radius:14px;border:1px solid var(--rud-v2-stroke);color:var(--muted);font-size:.8rem;line-height:1.55}
 
 @media(max-width:760px){
-  .rud-reminder-head{display:block}
-  .rud-permission-pill{display:inline-flex;margin-top:10px}
-  .rud-reminder-list{grid-template-columns:1fr}
   #adminApp .rud-push-admin-grid{grid-template-columns:1fr}
   #adminApp .rud-push-admin-grid .wide{grid-column:auto}
 }

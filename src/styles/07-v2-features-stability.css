@@ -26,10 +26,11 @@ html.rud-hero-settled .premium-hero-intro .mood-launcher{
 /* Keep the page width stable when an overlay locks body scroll (no sideways jump). */
 html{scrollbar-gutter:stable}
 /* NAVBAR NOTIFICATION BADGE: absolutely positioned so the icon never moves or resizes. */
-.rud-deen-friends-nav{position:relative;overflow:visible!important}
+.rud-deen-friends-nav,#rudNotificationShortcut{position:relative;overflow:visible!important}
 .rud-nav-badge{position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:999px;background:#d8c9a5;color:#0b1116;font:800 9px/16px "Manrope",system-ui,sans-serif;text-align:center;pointer-events:none;box-shadow:0 0 0 2px #07131c}
 html.light-mode .rud-nav-badge{box-shadow:0 0 0 2px #fff;background:#a8812f;color:#fff}
 .rud-nav-badge[hidden]{display:none!important}
+.rud-nav-dot{top:-1px;right:-1px;min-width:10px;width:10px;height:10px;padding:0}
 
 /* PREMIUM TASBIH — existing markup/logic, redesigned only visually. */
 @property --rud-tasbih-progress{

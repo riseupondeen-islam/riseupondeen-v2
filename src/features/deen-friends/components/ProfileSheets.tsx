@@ -2,7 +2,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { AVATAR_KEYS, type AvatarKey, type OwnProfile, type PublicProfile, type SignatureStyle } from '../types';
 import { SIGNATURE_STYLES } from '../services/format';
-import { SIGNATURE_FONTS, SignatureText } from './Signature';
+import { SIGNATURE_FONTS, SignatureSample, SignatureText } from './Signature';
 import {
   changeOwnPassword,
   requestUsernameChange,
@@ -464,7 +464,7 @@ function ProfileEditor({ profile, onDone, onClose }: { profile: OwnProfile; onDo
                 className={form.signatureStyle === st ? 'active' : ''}
                 onClick={() => setForm((f) => ({ ...f, signatureStyle: st }))}
               >
-                <span style={{ fontFamily: SIGNATURE_FONTS[st].family }}>{signatureName.split(' ')[0] || 'Name'}</span>
+                <SignatureSample style={st} text={signatureName.split(' ')[0] || 'Name'} />
                 <small>{SIGNATURE_FONTS[st].label}</small>
               </button>
             ))}

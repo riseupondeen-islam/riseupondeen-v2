@@ -107,7 +107,20 @@ function rudSavePushPrefs(next) {
     localStorage.setItem(RUD_PUSH_PREF_KEY, JSON.stringify(prefs));
   } catch {}
   rudMirrorPushPrefsToIdb(prefs);
+  rudSyncBellDot();
   return prefs;
+}
+/* Dot on the bell (V3.5.2): shown until reminders are turned on for this device, like the Deen Friends
+   badge. Not shown where notifications are impossible (the browser cannot receive them). */
+function rudSyncBellDot() {
+  const bell = document.getElementById('rudNotificationShortcut');
+  const dot = document.getElementById('rudBellNavDot');
+  if (!bell || !dot) return;
+  const capability = rudPushCapability();
+  const on = capability === 'supported' && Notification.permission === 'granted' && rudPushPrefs().enabled;
+  const show = capability !== 'unsupported' && !on;
+  dot.hidden = !show;
+  bell.setAttribute('aria-label', show ? 'Notifications and reminders, not turned on' : 'Notifications and reminders');
 }
 function rudPushIsIOS() {
   return (
@@ -127,14 +140,6 @@ function rudPushCapability() {
     return 'unsupported';
   if (rudPushIsIOS() && !rudPushStandalone()) return 'install-required';
   return 'supported';
-}
-function rudPushPermissionLabel() {
-  if (!('Notification' in window)) return 'Unavailable';
-  return Notification.permission === 'granted'
-    ? 'Granted'
-    : Notification.permission === 'denied'
-      ? 'Denied'
-      : 'Not decided';
 }
 function rudPushPlatform() {
   if (rudPushIsIOS()) return rudPushStandalone() ? 'ios-home-screen' : 'ios-browser';
@@ -582,53 +587,52 @@ async function rudClearNotificationData(button) {
     rudRefreshReminderCenter();
   }
 }
-function rudPushStatusMessage() {
-  const capability = rudPushCapability(),
-    prefs = rudPushPrefs();
-  if (capability === 'unsupported')
-    return { text: 'Notifications are not available on this device/browser.', kind: 'error' };
+/** The device's reminder state in one short line (shown at the top of the reminder settings). */
+function rudReminderState(prefs, capability) {
+  if (capability === 'unsupported') return { key: 'off', chip: 'Unavailable', line: 'This browser can’t show notifications.' };
   if (capability === 'install-required')
-    return {
-      text: 'On iPhone/iPad, add Rise Upon Deen to the Home Screen first, then enable reminders from the installed app.',
-      kind: 'info',
-    };
+    return { key: 'off', chip: 'Off', line: 'Add Rise Upon Deen to your Home Screen, then turn reminders on from the app.' };
   if (Notification.permission === 'denied')
-    return {
-      text: 'Notifications are blocked. Rise Upon Deen will not ask again automatically; you can change permission from browser/site settings.',
-      kind: 'error',
-    };
+    return { key: 'blocked', chip: 'Blocked', line: 'Notifications are blocked. Allow them for this site in your browser settings.' };
   if (Notification.permission === 'granted' && !RUD_PUSH_VAPID_KEY)
-    return { text: 'Browser permission is granted, but Firebase Web Push is not configured.', kind: 'error' };
+    return { key: 'off', chip: 'Off', line: 'Reminders aren’t available right now.' };
   if (Notification.permission === 'granted' && prefs.enabled && !rudPushLocalToken())
-    return {
-      text: 'Notifications are enabled, but this device is not registered for cloud delivery yet. Tap Test Notification to verify the browser, then refresh this page and enable reminders again if needed.',
-      kind: 'error',
-    };
-  if (Notification.permission === 'granted' && prefs.enabled)
-    return {
-      text: 'Deen Reminders are enabled. Test Notification confirms this device can display alerts; admin messages are delivered through the free scheduler.',
-      kind: 'ok',
-    };
-  return {
-    text: 'Receive gentle reminders from Rise Upon Deen. Permission is requested only after you tap Enable.',
-    kind: 'info',
-  };
+    return { key: 'on', chip: 'On', line: 'Connecting this device… If reminders don’t arrive, turn them off and on again.' };
+  if (Notification.permission === 'granted' && prefs.enabled) return { key: 'on', chip: 'On', line: 'Reminders are on for this device.' };
+  return { key: 'off', chip: 'Off', line: 'Prayer times, adhkar and gentle reminders — only what you choose.' };
 }
+const RUD_REMINDER_GROUPS = [
+  ['Prayer & Adhkar', ['prayer', 'morning', 'evening']],
+  ["Qur'an", ['quran', 'continueQuran', 'friday']],
+  ['Daily & Updates', ['daily', 'newDua', 'newHadith', 'announcement']],
+];
 function rudReminderCenterHtml() {
   const prefs = rudPushPrefs();
-  const status = rudPushStatusMessage();
-  const capability = rudPushCapability(),
-    prayerSchedule = rudResolvedPrayerSchedule();
-  const canEnable = capability === 'supported' && Notification.permission !== 'denied';
-  const prayerStatus = prefs.categories.prayer
-    ? `<div class="rud-push-intro"><strong>Prayer-time reminders</strong><p>${prayerSchedule ? `Using today’s resolved Prayer & Qiblah times (${RUD_PRAYER_KEYS.map((k) => `${k[0].toUpperCase() + k.slice(1)} ${rudPrayerClockText(prayerSchedule.timings[k])}`).join(' · ')}).` : `Open Prayer & Qiblah once today to refresh the local prayer schedule.`} While the app is open, these resolved times drive one deduplicated local check per prayer/date. When the Rise Upon Deen notification backend is deployed, prayer alerts are sent by Firebase even while this website is fully closed.</p></div>`
+  const capability = rudPushCapability();
+  const state = rudReminderState(prefs, capability);
+  const canEnable = capability === 'supported' && Notification.permission !== 'denied' && !prefs.enabled;
+  const labels = Object.fromEntries(RUD_PUSH_CATEGORY_DEFS);
+  const prayerSchedule = prefs.categories.prayer ? rudResolvedPrayerSchedule() : null;
+  const prayerHint = prefs.categories.prayer
+    ? prayerSchedule
+      ? RUD_PRAYER_KEYS.map((k) => `${k[0].toUpperCase() + k.slice(1)} ${rudPrayerClockText(prayerSchedule.timings[k])}`).join(' · ')
+      : 'Open Prayer once today to set your times.'
     : '';
-  return `<section class="rud-reminder-center" id="rudReminderCenter">
-    <div class="rud-reminder-head"><div><span class="eyebrow">REMINDER SETTINGS</span><h2>Deen Reminders</h2><p>Gentle reminders, not constant interruptions.</p></div><span class="rud-permission-pill">Permission · ${esc(rudPushPermissionLabel())}</span></div>
-    <div class="rud-push-intro"><strong>Stay Connected to Your Deen</strong><p class="${status.kind === 'error' ? 'rud-push-note-error' : status.kind === 'ok' ? 'rud-push-note-ok' : ''}">${esc(status.text)}</p>${canEnable && !prefs.enabled ? `<div class="rud-push-actions"><button type="button" class="premium-btn primary" id="rudEnablePush">Enable Deen Reminders</button></div>` : prefs.enabled ? `<div class="rud-push-actions"><button type="button" class="premium-btn" id="rudTestPush">Test Notification</button></div>` : ''}</div>
-    <div class="rud-reminder-list">${RUD_PUSH_CATEGORY_DEFS.map(([key, labelText]) => `<label class="rud-reminder-row"><span>${esc(labelText)}</span><span class="rud-v2-switch"><input type="checkbox" data-rud-push-category="${key}" ${prefs.categories[key] ? 'checked' : ''}><i aria-hidden="true"></i></span></label>`).join('')}</div>${prayerStatus}
-    <div class="rud-reminder-time"><label for="rudPushTime">Preferred reminder time <small>· local-first</small></label><input id="rudPushTime" type="time" value="${esc(prefs.reminderTime || '08:00')}" aria-label="Preferred reminder time"></div>
-    <div class="rud-reminder-foot"><small>Preferences stay on-device first. Prayer reminders reuse only the prayer times already resolved by Prayer & Qiblah; precise coordinates are not stored in notification preferences. A minimal schedule is synced only when needed for the existing background push delivery. Opening this screen does not upload anything.</small><div class="rud-push-actions"><button type="button" class="premium-btn" id="rudClearPushData">Clear Reminder Data</button><button type="button" class="premium-btn" id="rudDisablePush">Disable All Notifications</button></div></div>
+  const row = (key) =>
+    `<label class="rud-rc-row"><span class="rud-rc-row-text"><span>${esc(labels[key])}</span>${key === 'prayer' && prayerHint ? `<small>${esc(prayerHint)}</small>` : ''}</span><span class="rud-v2-switch"><input type="checkbox" data-rud-push-category="${key}" ${prefs.categories[key] ? 'checked' : ''}><i aria-hidden="true"></i></span></label>`;
+  return `<section class="rud-reminder-center" id="rudReminderCenter" aria-labelledby="rudReminderTitle">
+    <div class="rud-rc-head">
+      <span class="rud-rc-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M6.8 9.5a5.2 5.2 0 0 1 10.4 0c0 6 2.1 6.2 2.1 6.2H4.7s2.1-.2 2.1-6.2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9.8 18.2c.4 1 1.1 1.5 2.2 1.5s1.8-.5 2.2-1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+      <div class="rud-rc-title"><h2 id="rudReminderTitle">Deen Reminders</h2><p>${esc(state.line)}</p></div>
+      <span class="rud-rc-chip is-${state.key}">${esc(state.chip)}</span>
+    </div>
+    ${canEnable ? `<button type="button" class="rud-rc-cta" id="rudEnablePush">Turn on reminders</button>` : ''}
+    ${RUD_REMINDER_GROUPS.map(([title, keys]) => `<div class="rud-rc-group"><h3>${esc(title)}</h3><div class="rud-rc-list">${keys.map(row).join('')}</div></div>`).join('')}
+    <div class="rud-rc-group"><div class="rud-rc-list"><label class="rud-rc-row" for="rudPushTime"><span class="rud-rc-row-text"><span>Reminder time</span></span><input id="rudPushTime" type="time" value="${esc(prefs.reminderTime || '08:00')}"></label></div></div>
+    <div class="rud-rc-foot">
+      <small>Your choices stay on this device.</small>
+      <div class="rud-rc-foot-actions">${prefs.enabled ? `<button type="button" class="rud-rc-link" id="rudTestPush">Send a test</button>` : ''}<button type="button" class="rud-rc-link" id="rudDisablePush">Turn off all</button><button type="button" class="rud-rc-link" id="rudClearPushData">Clear data</button></div>
+    </div>
   </section>`;
 }
 function rudBindReminderCenter() {
@@ -820,7 +824,7 @@ export function init() {
     ['continueQuran', "Continue Qur'an"],
     ['newDua', 'New Dua'],
     ['newHadith', 'New Hadith'],
-    ['announcement', 'Important Rise Upon Deen announcements'],
+    ['announcement', 'Announcements'],
   ];
   RUD_PUSH_DEFAULTS = {
     enabled: false,
@@ -854,8 +858,14 @@ export function init() {
     window.rudRefreshPrayerCacheIfStale?.();
     rudSyncPrayerReminderClock();
   });
+  rudSyncBellDot();
+  navigator.permissions
+    ?.query({ name: 'notifications' })
+    .then((status) => status.addEventListener('change', rudSyncBellDot))
+    .catch(() => undefined);
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
+      rudSyncBellDot();
       window.rudRefreshPrayerCacheIfStale?.();
       rudSyncPrayerReminderClock();
       if (typeof rudSyncSmartHome === 'function') rudSyncSmartHome();

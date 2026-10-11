@@ -70,7 +70,7 @@ test('navigation order, icons and the exact supplied logo', async ({ page, reque
   await prepare(page);
   await goto(page, '#home');
   const labels = await page.locator('.rud-topbar-actions > *').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label') || ''));
-  expect(labels.slice(0, 4)).toEqual(['Home', 'My Deen', 'Notifications and reminders', 'Deen Friends']);
+  expect(labels.slice(0, 4)).toEqual(['Home', 'My Deen', expect.stringMatching(/^Notifications and reminders/), 'Deen Friends']);
   expect(labels[4]).toMatch(/Switch to (Dark|Light) Mode/);
   expect(labels[5]).toBe('Open Explore');
   // All topbar icons share one size (no misaligned icon).
@@ -543,14 +543,15 @@ test('avatar builder and public profile preview (same card others see, privacy r
   await expect(preview.locator('.df2-public-card')).toContainText('@aisha');
   await expect(preview).not.toContainText(DF_USERS.aisha.email);
   await expect(preview.locator('.df2-public-card .df2-avatar-built')).toHaveCount(1);
-  // Signature: the original script font first; if it cannot load (Google Fonts are blocked in these
-  // tests, like an offline app), an elegant installed script face — never the bare generic cursive.
+  // Signature: Google Fonts are blocked in these tests (like a phone that cannot reach the font
+  // host). The signature must never be drawn in any other font: it stays invisible.
   const sig = preview.locator('.df2-public-card .df2-signature');
-  await expect(sig).toHaveClass(/is-ready/, { timeout: 7000 });
-  const family = await sig.evaluate((e) => getComputedStyle(e).fontFamily);
-  expect(family.startsWith('"Great Vibes"')).toBe(true);
-  expect(family).toContain('Snell Roundhand');
-  expect(family).toContain('Segoe Script');
+  await page.waitForTimeout(1500);
+  expect(await sig.evaluate((e) => [getComputedStyle(e).fontFamily, e.classList.contains('is-ready'), getComputedStyle(e).opacity])).toEqual([
+    '"Great Vibes", cursive',
+    false,
+    '0',
+  ]);
 });
 
 test.describe('admin console (desktop layout)', () => {
@@ -1093,4 +1094,82 @@ test('avatars: every brothers’/sisters’ style renders a faceless bust in bot
     expect(errors).toEqual([]);
     await context.close();
   }
+});
+
+test('signature: only its own font is requested, and it appears only in that font', async ({ page }) => {
+  const requested: string[] = [];
+  await prepare(page);
+  // Serve the signature font locally (a stand-in file registered under the real family name).
+  await page.route(/fonts\.googleapis\.com\/css2/, (route) => {
+    requested.push(new URL(route.request().url()).searchParams.getAll('family').join('|'));
+    return route.fulfill({ contentType: 'text/css', body: "@font-face{font-family:'Great Vibes';src:url(https://fonts.gstatic.com/test-great-vibes.ttf) format('truetype');font-display:swap}" });
+  });
+  await page.route(/fonts\.gstatic\.com\/test-great-vibes\.ttf/, (route) => route.fulfill({ path: '/usr/share/fonts/truetype/crosextra/Caladea-Regular.ttf', contentType: 'font/ttf' }));
+  await goto(page, '#deen-friends');
+  await signIn(page, DF_USERS.aisha);
+  await page.locator('.df2-me-chip').click();
+  const sig = ui(page).locator('.df2-vcard .df2-signature').first();
+  await expect(sig).toHaveClass(/is-ready/, { timeout: 8000 });
+  expect(await sig.evaluate((e) => getComputedStyle(e).fontFamily)).toBe('"Great Vibes", cursive');
+  expect(await page.evaluate(() => document.fonts.check("32px 'Great Vibes'"))).toBe(true);
+  expect(requested.filter((r) => /Great Vibes/.test(r))).toHaveLength(1); // one font, requested once
+  expect(requested.some((r) => /Allura|Pinyon|Delafield/.test(r))).toBe(false); // the other styles are not downloaded
+});
+
+test('intro: every moving part animates only opacity/transform on HTML layers (GPU-smooth on phones)', async ({ page }) => {
+  await prepare(page, { returningVisitor: false });
+  await page.goto('/#home', { waitUntil: 'commit' });
+  await expect(page.locator('#preloader')).toBeVisible();
+  const report = await page.evaluate(() =>
+    document.getAnimations().flatMap((a) => {
+      const effect = a.effect as KeyframeEffect | null;
+      const target = effect?.target as Element | null;
+      if (!target || !target.closest('#preloader')) return [];
+      const props = new Set(effect!.getKeyframes().flatMap((k) => Object.keys(k).filter((p) => !['offset', 'computedOffset', 'easing', 'composite'].includes(p))));
+      return [{ el: target.className && typeof target.className === 'string' ? target.className : target.tagName, svg: target instanceof SVGElement, props: [...props] }];
+    }),
+  );
+  expect(report.length).toBeGreaterThan(8);
+  for (const r of report) {
+    expect(r.svg, `${r.el} animates an SVG part`).toBe(false);
+    expect(r.props.every((p) => p === 'opacity' || p === 'transform'), `${r.el}: ${r.props}`).toBe(true);
+  }
+});
+
+test('bell: a dot shows until reminders are on; the reminder card is short and keeps every control', async ({ browser }) => {
+  const run = async (setup: () => void) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await prepare(page);
+    await page.addInitScript(setup);
+    await goto(page, '#home');
+    const dot = await page.locator('#rudBellNavDot').isVisible();
+    const label = await page.locator('#rudNotificationShortcut').getAttribute('aria-label');
+    return { page, context, dot, label };
+  };
+  // Not turned on yet → dot (and an accessible label saying so).
+  const off = await run(() => Object.defineProperty(Notification, 'permission', { get: () => 'default' }));
+  expect([off.dot, off.label]).toEqual([true, 'Notifications and reminders, not turned on']);
+  await off.page.locator('#rudNotificationShortcut').click();
+  const card = off.page.locator('#rudReminderCenter');
+  await expect(card.getByRole('button', { name: 'Turn on reminders' })).toBeVisible();
+  await expect(card).toContainText('Prayer & Adhkar');
+  await expect(card).not.toContainText(/local-first|deduplicated|Permission ·|backend/);
+  for (const id of ['#rudEnablePush', '#rudDisablePush', '#rudClearPushData', '#rudPushTime']) await expect(card.locator(id)).toHaveCount(1);
+  await expect(card.locator('[data-rud-push-category]')).toHaveCount(10);
+  await off.context.close();
+  // Turned on → no dot.
+  const on = await run(() => {
+    Object.defineProperty(Notification, 'permission', { get: () => 'granted' });
+    localStorage.setItem('rud_push_preferences_v2', JSON.stringify({ enabled: true }));
+    localStorage.setItem('rud_fcm_token_v2', 'test-token');
+  });
+  expect([on.dot, on.label]).toEqual([false, 'Notifications and reminders']);
+  await on.context.close();
+  // A browser that can never show notifications → no dot.
+  const none = await run(() => {
+    delete (window as unknown as { PushManager?: unknown }).PushManager;
+  });
+  expect(none.dot).toBe(false);
+  await none.context.close();
 });

@@ -1,62 +1,71 @@
-/* Handwritten-style signature for the visiting card (V3.1). Four slim, clean script styles from
- * Google Fonts (already used by the app), loaded only when a signature is first shown. */
+/* Handwritten-style signature for the visiting card. Four script styles from Google Fonts — the same
+ * four since the visiting card was introduced (V3.2): Great Vibes (Royal, the default), Allura,
+ * Pinyon Script and Mrs Saint Delafield.
+ *
+ * V3.5.1 — the same font on every device. Previously all four fonts were requested together, and after
+ * a fixed wait the signature was shown anyway in whatever script face the phone had (Snell Roundhand on
+ * iOS, Android's built-in cursive). On slower mobile connections that is what people saw. Now:
+ *  - only the font a signature uses is requested (one small file, so it arrives sooner);
+ *  - a signature is never drawn in any other font: it stays invisible until its own font is loaded,
+ *    then fades in. If the font host cannot be reached at all, the signature is simply not shown
+ *    (and is retried the next time it is displayed). */
 import { useEffect, useState } from 'react';
 import type { Signature as SignatureValue, SignatureStyle } from '../types';
 
-/* The signature fonts are the same four used since the visiting card was introduced (V3.2). V3.5:
- * when a font cannot be loaded (offline Home Screen app, slow or blocked font host), the browser
- * used to fall back to the generic `cursive` face — Comic Sans on Windows — so the signature looked
- * like a different, unrefined font. Each style now falls back to elegant script faces the devices
- * already have (iOS/macOS: Snell Roundhand / Apple Chancery; Windows: Segoe Script / Brush Script;
- * Android: its built-in cursive), and `cursive` only last. */
-const SCRIPT_FALLBACK = "'Snell Roundhand', 'Apple Chancery', 'Segoe Script', 'Brush Script MT', cursive";
 export const SIGNATURE_FONTS: Record<SignatureStyle, { family: string; primary: string; label: string; scale: number }> = {
-  royal: { family: `'Great Vibes', ${SCRIPT_FALLBACK}`, primary: 'Great Vibes', label: 'Royal', scale: 1 },
-  slim: { family: `'Allura', ${SCRIPT_FALLBACK}`, primary: 'Allura', label: 'Slim', scale: 1.05 },
-  classic: { family: `'Pinyon Script', ${SCRIPT_FALLBACK}`, primary: 'Pinyon Script', label: 'Classic', scale: 0.86 },
-  autograph: { family: `'Mrs Saint Delafield', ${SCRIPT_FALLBACK}`, primary: 'Mrs Saint Delafield', label: 'Autograph', scale: 1.15 },
+  royal: { family: "'Great Vibes', cursive", primary: 'Great Vibes', label: 'Royal', scale: 1 },
+  slim: { family: "'Allura', cursive", primary: 'Allura', label: 'Slim', scale: 1.05 },
+  classic: { family: "'Pinyon Script', cursive", primary: 'Pinyon Script', label: 'Classic', scale: 0.86 },
+  autograph: { family: "'Mrs Saint Delafield', cursive", primary: 'Mrs Saint Delafield', label: 'Autograph', scale: 1.15 },
 };
 
-/** How long a signature waits for its own font before showing (in the fallback face). */
-const FONT_WAIT_MS = 5000;
+const loads = new Map<SignatureStyle, Promise<boolean>>();
+const loaded = new Set<SignatureStyle>();
 
-let fontsRequested = false;
-let fontsReady: Promise<void> | null = null;
-
-/** Adds the signature font stylesheet once (non-blocking) and resolves when the fonts are usable. */
-export function ensureSignatureFonts(): Promise<void> {
-  if (!fontsRequested && typeof document !== 'undefined') {
-    fontsRequested = true;
+/** Loads one signature font (once). Resolves true only when that exact font is ready to draw. */
+export function loadSignatureFont(style: SignatureStyle): Promise<boolean> {
+  const existing = loads.get(style);
+  if (existing) return existing;
+  const { primary } = SIGNATURE_FONTS[style];
+  const promise = new Promise<boolean>((resolve) => {
+    const fonts = typeof document !== 'undefined' ? (document as Document & { fonts?: FontFaceSet }).fonts : undefined;
+    if (!fonts) return resolve(false);
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href =
-      'https://fonts.googleapis.com/css2?family=Allura&family=Great+Vibes&family=Mrs+Saint+Delafield&family=Pinyon+Script&display=swap';
+    link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(primary).replace(/%20/g, '+')}&display=swap`;
+    link.onload = () =>
+      fonts
+        .load(`32px '${primary}'`)
+        .then((faces) => resolve(faces.some((f) => f.status === 'loaded')))
+        .catch(() => resolve(false));
+    link.onerror = () => resolve(false);
     document.head.appendChild(link);
-    fontsReady = new Promise((resolve) => {
-      link.onload = () => {
-        const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
-        if (!fonts) return resolve();
-        Promise.all(Object.values(SIGNATURE_FONTS).map((f) => fonts.load(`32px '${f.primary}'`).catch(() => undefined)))
-          .then(() => resolve())
-          .catch(() => resolve());
-      };
-      link.onerror = () => resolve();
-      setTimeout(resolve, FONT_WAIT_MS);
-    });
-  }
-  return fontsReady || Promise.resolve();
+  }).then((ok) => {
+    if (ok) loaded.add(style);
+    else loads.delete(style); // try again the next time a signature is shown
+    return ok;
+  });
+  loads.set(style, promise);
+  return promise;
 }
 
-export function SignatureText({ value, fallbackName, size = 30 }: { value: SignatureValue | null; fallbackName: string; size?: number }) {
-  const [ready, setReady] = useState(fontsRequested && !!fontsReady);
+/** True once the style's own font is ready (re-renders when it arrives). */
+function useSignatureFont(style: SignatureStyle): boolean {
+  const [ready, setReady] = useState(() => loaded.has(style));
   useEffect(() => {
     let alive = true;
-    void ensureSignatureFonts().then(() => alive && setReady(true));
+    setReady(loaded.has(style));
+    void loadSignatureFont(style).then((ok) => alive && setReady(ok));
     return () => {
       alive = false;
     };
-  }, []);
+  }, [style]);
+  return ready;
+}
+
+export function SignatureText({ value, fallbackName, size = 30 }: { value: SignatureValue | null; fallbackName: string; size?: number }) {
   const style = value?.style || 'royal';
+  const ready = useSignatureFont(style);
   const font = SIGNATURE_FONTS[style];
   const text = value?.text || fallbackName;
   return (
@@ -68,4 +77,10 @@ export function SignatureText({ value, fallbackName, size = 30 }: { value: Signa
       {text}
     </span>
   );
+}
+
+/** The small sample in the signature style picker — also only ever shown in its own font. */
+export function SignatureSample({ style, text }: { style: SignatureStyle; text: string }) {
+  const ready = useSignatureFont(style);
+  return <span style={{ fontFamily: SIGNATURE_FONTS[style].family, visibility: ready ? 'visible' : 'hidden' }}>{text}</span>;
 }

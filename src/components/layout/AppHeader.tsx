@@ -68,6 +68,7 @@ export function AppHeader() {
               strokeWidth="1.5"
             />
           </svg>
+          <span aria-hidden="true" className="rud-nav-badge rud-nav-dot" hidden id="rudBellNavDot" />
         </button>
         {'\n'}
         <a
