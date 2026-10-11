@@ -29,7 +29,7 @@ import { requireSignedIn } from './firebaseSession';
 
 /** Must match RISE_WELCOME_TEXT in firestore.rules exactly. */
 export const RISE_WELCOME_TEXT =
-  'Assalamu alaikum! This is your private conversation with the RiseUponDeen team. Share a question, a suggestion, something you are struggling with, or a problem with the app. A member of the team reads every message and replies here, in sha Allah. This first message is automated.';
+  'Assalamu Alaikum! I am Khan, behind RiseUponDeen. Have an idea, suggestion, or something on your mind? Feel free to share it here. Your feedback and reviews help RISE grow, in sha Allah.';
 
 export const RISE_MESSAGE_MAX = 2000;
 

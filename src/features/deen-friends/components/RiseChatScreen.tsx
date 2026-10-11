@@ -165,7 +165,7 @@ export function RiseChatScreen({ onBack }: { onBack: () => void }) {
             <strong>
               RISE <Icon name="verified" size={15} label="Official account" />
             </strong>
-            <small>The RiseUponDeen team · usually replies within a few days</small>
+            <small>Your voice, our amanah</small>
           </span>
         </div>
         <button
@@ -252,7 +252,7 @@ export function RiseChatScreen({ onBack }: { onBack: () => void }) {
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Write to RISE — a question, a feeling, a problem or a suggestion"
+          placeholder="Speak Freely"
           rows={1}
           maxLength={RISE_MESSAGE_MAX}
         />
@@ -260,8 +260,7 @@ export function RiseChatScreen({ onBack }: { onBack: () => void }) {
           <Icon name="send" />
         </button>
         <p className="df2-composer-note">
-          <Icon name="lock" size={12} /> Only you and the RiseUponDeen support team can read this conversation. In an
-          emergency, contact local emergency services.
+          <Icon name="lock" size={12} /> Private with RISE support.
         </p>
       </form>
 

@@ -1926,7 +1926,7 @@ service cloud.firestore {
        ========================================================= */
 
     function riseWelcomeText() {
-      return 'Assalamu alaikum! This is your private conversation with the RiseUponDeen team. Share a question, a suggestion, something you are struggling with, or a problem with the app. A member of the team reads every message and replies here, in sha Allah. This first message is automated.';
+      return 'Assalamu Alaikum! I am Khan, behind RiseUponDeen. Have an idea, suggestion, or something on your mind? Feel free to share it here. Your feedback and reviews help RISE grow, in sha Allah.';
     }
 
     function riseThreadKeysOk(d) {
