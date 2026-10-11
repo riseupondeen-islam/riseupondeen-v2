@@ -25,10 +25,16 @@ interface Outgoing {
 
 const RISE_THREAD_THEME_ID = 'rise-official';
 
+/** Messages of this session's last visit (memory only, per account — never stored on the device). */
+let riseRowsCache: { uid: string; rows: RiseMessage[] | null } = { uid: '', rows: null };
+
 export function RiseChatScreen({ onBack }: { onBack: () => void }) {
   const s = useDeenFriends();
   const toast = useToast();
-  const [rows, setRows] = useState<RiseMessage[] | null>(null);
+  // This session's last messages (same account) are on screen in the very first render.
+  const [rows, setRows] = useState<RiseMessage[] | null>(() =>
+    s.profile && riseRowsCache.uid === s.profile.uid ? riseRowsCache.rows : null,
+  );
   const [loadError, setLoadError] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [draft, setDraft] = useState('');
@@ -39,30 +45,42 @@ export function RiseChatScreen({ onBack }: { onBack: () => void }) {
   const profile = s.profile;
   const thread = s.riseThread;
 
-  // Create the thread + one-time welcome (idempotent), then listen for messages.
+  // V3.3 performance: the message listener starts at once (it never waited for anything but the
+  // thread setup), the last messages of this session show instantly, and the thread/welcome
+  // transaction runs only when the first server answer shows the welcome is missing — i.e. once per
+  // account, instead of three extra round trips (2 reads + commit) before every opening.
   useEffect(() => {
     if (!profile) return;
-    let stop = () => undefined as void;
     let cancelled = false;
+    let ensured = false;
     setLoadError('');
-    setRows(null);
-    void ensureRiseThread(profile)
-      .catch((error) => logError('RISE thread setup', error))
-      .finally(() => {
+    const t0 = performance.now();
+    const timing: Record<string, number> = {};
+    (window as unknown as { __RUD_RISE_TIMING?: Record<string, number> }).__RUD_RISE_TIMING = timing;
+    const cached = riseRowsCache.uid === profile.uid ? riseRowsCache.rows : null;
+    setRows((current) => (current === cached ? current : cached)); // no extra render when already shown
+    if (cached) timing.cachedMessages = 0;
+    const stop = listenToRiseMessages(
+      null,
+      (next) => {
         if (cancelled) return;
-        stop = listenToRiseMessages(
-          null,
-          (next) => setRows(next),
-          (error) => {
-            logError('RISE messages listener', error);
-            setLoadError(
-              classifyError(error) === 'permission'
-                ? 'The RISE conversation is not available on this server yet. Please try again in a little while.'
-                : friendlyMessage(error, 'The conversation could not be loaded.'),
-            );
-          },
+        if (timing.firstMessages === undefined) timing.firstMessages = Math.round(performance.now() - t0);
+        riseRowsCache = { uid: profile.uid, rows: next };
+        setRows(next);
+        if (!ensured && !next.some((m) => m.id === 'welcome')) {
+          ensured = true;
+          void ensureRiseThread(profile).catch((error) => logError('RISE thread setup', error));
+        }
+      },
+      (error) => {
+        logError('RISE messages listener', error);
+        setLoadError(
+          classifyError(error) === 'permission'
+            ? 'The RISE conversation is not available on this server yet. Please try again in a little while.'
+            : friendlyMessage(error, 'The conversation could not be loaded.'),
         );
-      });
+      },
+    );
     return () => {
       cancelled = true;
       stop();

@@ -6,7 +6,6 @@
  * the original order, by runtime/legacyRuntime.ts (admin modules: features/admin/adminConsole.ts).
  */
 /** Runs this module's original top-level statements. Called once, in original order, by runtime/legacyRuntime. */
-import { introAlreadySeen, introDuration } from '../../components/layout/Preloader';
 
 export function init() {
   /* =========================================================
@@ -22,37 +21,18 @@ export function init() {
     const coarsePointer = true; /* Performance mode: disables decorative parallax/tilt/custom-cursor loops. */
     const isMobile = window.matchMedia('(max-width: 760px)').matches;
 
-    /* ---------------- PRELOADER ---------------- */
-    const preloader = $('#preloader');
-    const introStartedAt = window.__rudIntroStartedAt || Date.now();
-    const introSessionKey = 'rud_intro_seen_session_v1';
-    /* V3.1: same rule as the Preloader component — once per browser session, and at most every
-       12 hours (shorter) in the installed Home Screen app. */
-    const introSeen = introAlreadySeen();
-    try {
-      sessionStorage.setItem(introSessionKey, '1');
-      if (!introSeen) localStorage.setItem('rud_intro_seen_at', String(Date.now()));
-    } catch {}
-    const hidePreloader = () => {
-      const root = document.documentElement;
-      const light = (window.__rudThemeAfterIntro || 'light') !== 'dark';
-      root.classList.add('rud-theme-switching');
-      root.classList.toggle('light-mode', light);
-      root.style.backgroundColor = light ? '#ffffff' : '#050505';
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', light ? '#ffffff' : '#050505');
-      document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', light ? 'light' : 'dark');
-      preloader?.classList.add('hide');
-      requestAnimationFrame(() => root.classList.remove('rud-theme-switching'));
-    };
-    if (introSeen) {
-      if (preloader) preloader.style.transition = 'none';
-      hidePreloader();
-    } else setTimeout(hidePreloader, Math.max(0, introDuration() - (Date.now() - introStartedAt)));
+    /* ---------------- INTRO ----------------
+       The intro is static markup in index.html with its own small state machine (it paints with the
+       first frame, so it can never "blink" on a slow phone). The app only reports that it is ready;
+       the intro leaves once it has played (~3.6 s) and the app is ready. */
+    const intro = window.__rudIntro;
+    const introSeen = !intro || intro.skipped;
+    intro?.ready();
 
     /* V3.2: the hero's entrance animation plays once. Without this, CSS restarted it every time Home
        was shown again (display none → block), so returning to Home made the title and buttons jump. */
     const markHomePlayed = () => document.documentElement.classList.add('rud-home-played');
-    setTimeout(markHomePlayed, introSeen ? 1600 : introDuration() + 1600);
+    setTimeout(markHomePlayed, introSeen ? 1600 : intro.duration + 1600);
     window.addEventListener('hashchange', markHomePlayed, { once: true });
 
     /* ---------------- DYNAMIC YEAR ---------------- */

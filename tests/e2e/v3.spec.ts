@@ -210,7 +210,12 @@ test('first-run App Guide: offered once, tour highlights real controls, never tr
   await page.getByRole('button', { name: /Tasbih/ }).click();
   await expect(page).toHaveURL(/#tasbih$/);
   await expect(page.locator('.rud-tour-card')).toContainText('Tap to count');
-  for (let i = 0; i < 3; i++) await page.locator('.rud-tour-card [data-primary]').click();
+  // Advance step by step (each click waits for the step to change, as a person would).
+  for (let i = 0; i < 6 && (await page.locator('.rud-tour').count()); i++) {
+    const before = await page.locator('.rud-tour-card').textContent().catch(() => '');
+    await page.locator('.rud-tour-card [data-primary]').click().catch(() => undefined);
+    await expect.poll(async () => (await page.locator('.rud-tour').count()) === 0 || (await page.locator('.rud-tour-card').textContent().catch(() => '')) !== before).toBe(true);
+  }
   await expect(page.locator('.rud-tour')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
@@ -808,4 +813,123 @@ test('first visit: 4-second intro in the visitor theme, then the name card; ente
   await page.locator('#rudWelcomeContinue').click();
   await expect(page.locator('#rudWelcomeIntro')).toBeHidden();
   expect(await page.evaluate(() => localStorage.getItem('rud_visitor_name'))).toBe('Ameen');
+});
+
+test('intro: static markup paints before any script, plays ~4 s once per launch, never blinks on a slow start', async ({ page, request }) => {
+  // 1) It is in the HTML itself, so it shows with the first frame (no wait for the JS bundle).
+  const html = await (await request.get('/')).text();
+  expect(html).toContain('id="preloader"');
+  expect(html).toContain('rud-intro-mosque');
+  // 2) Slow phone: hold the app bundle back 5 s. The intro must stay on screen until the app is ready and
+  //    leave only once the app is ready (the old version vanished almost at once in this case).
+  await prepare(page, { theme: 'dark', returningVisitor: false });
+  await page.route(/\/assets\/index-[^/]+\.js$/, async (route) => {
+    await new Promise((r) => setTimeout(r, 5000));
+    await route.fallback();
+  });
+  await page.goto('/#home', { waitUntil: 'commit' });
+  await expect(page.locator('#preloader')).toBeVisible();
+  const visibleAt = await page.evaluate(() => performance.now());
+  await page.waitForFunction(() => (window as unknown as { __rudIntro?: { state: string } }).__rudIntro?.state !== 'playing', null, { timeout: 15000, polling: 50 });
+  const leftAt = await page.evaluate(() => performance.now());
+  expect(leftAt - visibleAt).toBeGreaterThan(4800); // a full intro that waits for the app, not a blink
+  await expect(page.locator('#preloader')).toHaveClass(/hide/);
+  // 3) Played once: a second load in the same session skips it with no flash.
+  await page.unroute(/\/assets\/index-[^/]+\.js$/);
+  await page.reload();
+  expect(await page.evaluate(() => [document.documentElement.dataset.intro, (window as unknown as { __rudIntro: { skipped: boolean } }).__rudIntro.skipped])).toEqual(['skip', true]);
+  expect(await page.locator('#preloader').evaluate((e) => getComputedStyle(e).display)).toBe('none');
+});
+
+test('intro: normal start leaves at about 4 s; reduced motion is short and still', async ({ browser }) => {
+  for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+    const context = await browser.newContext({ reducedMotion });
+    const page = await context.newPage();
+    await prepare(page, { theme: 'light', returningVisitor: false });
+    await page.goto('/#home');
+    const t = await page.evaluate(async () => {
+      const w = window as unknown as { __rudIntro: { state: string; duration: number } };
+      while (w.__rudIntro.state === 'playing') await new Promise((r) => setTimeout(r, 20));
+      return { at: performance.now(), duration: w.__rudIntro.duration, anims: document.querySelectorAll('.rud-intro-min').length && getComputedStyle(document.querySelector('.rud-intro-min')!).animationName };
+    });
+    if (reducedMotion === 'reduce') {
+      expect(t.duration).toBeLessThan(2000);
+      expect(t.anims).toBe('none');
+    } else {
+      expect(t.duration).toBe(4000);
+      expect(t.at).toBeGreaterThan(3500);
+      expect(t.at).toBeLessThan(6000);
+    }
+    await context.close();
+  }
+});
+
+test('Home stays still: back/forward and rapid taps keep the position, layout shift stays under 0.1', async ({ page }) => {
+  await prepare(page);
+  await page.addInitScript(() => {
+    (window as unknown as { __cls: number[] }).__cls = [];
+    new PerformanceObserver((l) => {
+      for (const e of l.getEntries() as unknown as Array<{ value: number; hadRecentInput: boolean }>)
+        if (!e.hadRecentInput) (window as unknown as { __cls: number[] }).__cls.push(e.value);
+    }).observe({ type: 'layout-shift', buffered: true });
+  });
+  await goto(page, '#home');
+  await page.waitForTimeout(1500);
+  await page.mouse.wheel(0, 1400);
+  await page.waitForTimeout(500);
+  const y0 = await page.evaluate(() => Math.round(scrollY));
+  const watch = (ms: number) =>
+    page.evaluate(async (ms) => {
+      const ys = new Set<number>();
+      const t0 = performance.now();
+      while (performance.now() - t0 < ms) {
+        ys.add(Math.round(scrollY));
+        await new Promise((r) => requestAnimationFrame(r));
+      }
+      return [...ys];
+    }, ms);
+  await setHash(page, '#quran');
+  await page.waitForTimeout(800);
+  await page.goBack();
+  expect(await watch(1000)).toEqual([y0]); // restored once, no jump on the way
+  await page.goForward();
+  await page.waitForTimeout(120);
+  await page.goBack();
+  expect(await watch(1000)).toEqual([y0]);
+  for (const h of ['#my-deen', '#home', '#deen-friends', '#home', '#quran', '#home']) {
+    await page.evaluate((h) => (location.hash = h), h);
+    await page.waitForTimeout(80);
+  }
+  // Rapid taps pass through Home twice on the way, so where Home lands depends on timing; what
+  // matters is that it settles on one position and never jumps between positions.
+  expect(await watch(1000)).toHaveLength(1);
+  const cls = await page.evaluate(() => (window as unknown as { __cls: number[] }).__cls.reduce((a, b) => a + b, 0));
+  expect(cls).toBeLessThan(0.1);
+});
+
+test('install guide is a centred modal in portrait and landscape; page scroll is locked, then restored', async ({ browser }) => {
+  const iosUA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+  for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }]) {
+    const context = await browser.newContext({ userAgent: iosUA, viewport, isMobile: true, hasTouch: true });
+    const page = await context.newPage();
+    await prepare(page);
+    await goto(page, '#home');
+    await page.mouse.wheel(0, 600);
+    await page.waitForTimeout(300);
+    const y = await page.evaluate(() => Math.round(scrollY));
+    await page.locator('#rudExploreBtn').click();
+    await page.locator('#rudExploreInstall').click();
+    await page.locator('.rud-dialog').evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+    const box = (await page.locator('.rud-dialog').boundingBox())!;
+    // Fully on screen and centred (not stuck to the bottom edge).
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+    expect(Math.abs(box.x + box.width / 2 - viewport.width / 2)).toBeLessThan(2);
+    expect(Math.abs(box.y + box.height / 2 - viewport.height / 2)).toBeLessThan(2);
+    expect(await page.evaluate(() => document.body.style.position)).toBe('fixed');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.rud-dialog')).toHaveCount(0);
+    expect(await page.evaluate(() => [document.body.style.position, Math.round(scrollY)])).toEqual(['', y]);
+    await context.close();
+  }
 });

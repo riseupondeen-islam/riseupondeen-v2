@@ -8,6 +8,7 @@
 import { orderNamesForDisplay } from '../names/nameOrder';
 import { S } from '../../runtime/store';
 import { showPage } from '../../app/routing/surfaces';
+import { rudExportRisePoster } from './posterExport';
 
 import { combinedPublicContent, findPublicItem, openSearch } from '../ask-rise/askRise';
 import { card, mediaBlock } from '../home/homeContent';
@@ -28,7 +29,6 @@ import {
   label,
   paragraphs,
   route,
-  safeFileName,
   safeUrl,
   shareItem,
   toast,
@@ -46,188 +46,13 @@ function duaCard(i) {
   const displayTitle = String(i.title || 'Dua').trim() || 'Dua';
   return `<article class="dua-library-card"><a class="dua-library-link" href="${route(i)}" aria-label="${esc(`Open ${displayTitle}`)}"><span class="dua-library-kicker">Dua</span><span class="dua-library-ornament" aria-hidden="true">۞</span><div class="dua-library-copy"><h3>${esc(displayTitle)}</h3></div><span class="dua-library-open" aria-hidden="true">Read <b>↗</b></span></a></article>`;
 }
-async function rudExportRisePoster({
-  kind = 'GUIDANCE',
-  title = 'Rise Upon Deen',
-  arabic = '',
-  transliteration = '',
-  body = '',
-  reference = '',
-  fileName = 'rise-upon-deen',
-} = {}) {
-  try {
-    if (document.fonts?.ready) await document.fonts.ready;
-    const canvas = document.createElement('canvas'),
-      W = 1080,
-      H = 1350,
-      ctx = canvas.getContext('2d');
-    canvas.width = W;
-    canvas.height = H;
-    const bg = ctx.createLinearGradient(0, 0, W, H);
-    bg.addColorStop(0, '#071015');
-    bg.addColorStop(0.58, '#0b0d0f');
-    bg.addColorStop(1, '#050607');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, W, H);
-    const glow = ctx.createRadialGradient(W * 0.76, H * 0.12, 0, W * 0.76, H * 0.12, 520);
-    glow.addColorStop(0, 'rgba(202,168,103,.16)');
-    glow.addColorStop(1, 'rgba(202,168,103,0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = 'rgba(202,168,103,.42)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(44, 44, W - 88, H - 88);
-    ctx.strokeStyle = 'rgba(255,255,255,.08)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(58, 58, W - 116, H - 116);
-    const gold = '#caa867',
-      paper = '#f4efe4',
-      muted = '#b9b2a5',
-      wrap = (text, maxWidth, font) => {
-        ctx.font = font;
-        const words = String(text || '')
-            .trim()
-            .split(/\s+/)
-            .filter(Boolean),
-          lines = [];
-        let line = '';
-        for (const word of words) {
-          const test = line ? line + ' ' + word : word;
-          if (ctx.measureText(test).width > maxWidth && line) {
-            lines.push(line);
-            line = word;
-          } else line = test;
-        }
-        if (line) lines.push(line);
-        return lines;
-      },
-      draw = (lines, y, font, color, lineHeight, max = 8) => {
-        ctx.font = font;
-        ctx.fillStyle = color;
-        ctx.textAlign = 'center';
-        for (const line of lines.slice(0, max)) {
-          ctx.fillText(line, W / 2, y);
-          y += lineHeight;
-        }
-        return y;
-      };
-    const logo = document.querySelector('.brand-logo');
-    if (logo?.complete && logo.naturalWidth) {
-      try {
-        ctx.drawImage(logo, 82, 72, 64, 64);
-      } catch {}
-    }
-    ctx.textAlign = 'left';
-    ctx.font = '600 25px Manrope, Arial';
-    ctx.fillStyle = gold;
-    ctx.fillText('RISE UPON DEEN', 164, 112);
-    ctx.textAlign = 'center';
-    ctx.font = '700 18px Manrope, Arial';
-    ctx.fillStyle = muted;
-    ctx.fillText(String(kind).toUpperCase(), W / 2, 172);
-    ctx.fillStyle = gold;
-    ctx.fillRect(W / 2 - 36, 198, 72, 2);
-    let y = 282;
-    y =
-      draw(
-        wrap(title, 820, '600 62px "Cormorant Garamond", Georgia, serif'),
-        y,
-        '600 62px "Cormorant Garamond", Georgia, serif',
-        paper,
-        70,
-        3,
-      ) + 22;
-    if (arabic)
-      y =
-        draw(
-          wrap(arabic, 860, '500 48px "Noto Naskh Arabic", Amiri, serif'),
-          y,
-          '500 48px "Noto Naskh Arabic", Amiri, serif',
-          paper,
-          72,
-          4,
-        ) + 26;
-    if (transliteration)
-      y =
-        draw(
-          wrap(transliteration, 820, 'italic 30px "Cormorant Garamond", Georgia, serif'),
-          y,
-          'italic 30px "Cormorant Garamond", Georgia, serif',
-          muted,
-          42,
-          4,
-        ) + 20;
-    if (body) {
-      ctx.fillStyle = 'rgba(255,255,255,.055)';
-      ctx.fillRect(112, y - 18, W - 224, 2);
-      y += 42;
-      draw(wrap(body, 800, '400 32px Manrope, Arial'), y, '400 32px Manrope, Arial', paper, 48, 8);
-    }
-    if (reference) {
-      ctx.fillStyle = 'rgba(255,255,255,.055)';
-      ctx.fillRect(180, 1128, W - 360, 1);
-      ctx.font = '500 21px Manrope, Arial';
-      ctx.fillStyle = muted;
-      ctx.textAlign = 'center';
-      ctx.fillText(String(reference).slice(0, 150), W / 2, 1178);
-    }
-    ctx.fillStyle = 'rgba(255,255,255,.03)';
-    ctx.fillRect(86, 1202, W - 172, 88);
-    ctx.fillStyle = 'rgba(202,168,103,.34)';
-    ctx.fillRect(86, 1202, W - 172, 1);
-    ctx.fillStyle = gold;
-    ctx.fillRect(W / 2 - 26, 1201, 52, 3);
-    ctx.textAlign = 'left';
-    ctx.font = '700 14px Manrope, Arial';
-    ctx.fillStyle = muted;
-    ctx.fillText('RISE UPON DEEN', 116, 1238);
-    ctx.font = '600 17px Manrope, Arial';
-    ctx.fillStyle = gold;
-    ctx.fillText('riseupondeen.web.app', 116, 1267);
-    ctx.textAlign = 'right';
-    ctx.font = '500 12px Manrope, Arial';
-    ctx.fillStyle = muted;
-    ctx.fillText('VERIFIED CONTENT', W - 116, 1238);
-    ctx.font = '600 17px Manrope, Arial';
-    ctx.fillStyle = paper;
-    ctx.fillText('@riseupondeen', W - 116, 1267);
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 1));
-    if (!blob) throw new Error('poster-export-failed');
-    const clean = safeFileName(fileName || title || 'rise-upon-deen'),
-      downloadName = `${clean}-rise-upon-deen.png`;
-    if (navigator.share && navigator.canShare && typeof File === 'function') {
-      const file = new File([blob], downloadName, { type: 'image/png' });
-      if (navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({ title: String(title), files: [file] });
-          toast('Poster ready to share.');
-          return;
-        } catch (e) {
-          if (e?.name === 'AbortError') return;
-        }
-      }
-    }
-    const a = document.createElement('a'),
-      url = URL.createObjectURL(blob);
-    a.href = url;
-    a.download = downloadName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1200);
-    toast('Poster downloaded.');
-  } catch (e) {
-    console.warn(e);
-    toast('Unable to create the poster on this device.', 'error');
-  }
-}
 async function downloadGuidanceCard(i) {
   if (!i || !['dua', 'hadith', 'reminder'].includes(i.type)) return;
   const body = String(
     i.type === 'hadith'
       ? i.translation || i.content || ''
       : i.type === 'dua'
-        ? i.meaning || ''
+        ? i.meaning || i.translation || ''
         : i.content || i.description || i.meaning || '',
   ).trim();
   return rudExportRisePoster({

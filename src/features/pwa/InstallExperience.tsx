@@ -335,84 +335,82 @@ function AndroidInstallCard({ onClose, onManual }: { onClose: () => void; onManu
   };
 
   return (
-    <div className="rud-v3 rud-ix-card" role="dialog" aria-modal="false" aria-labelledby="rudIxAndroidTitle" data-phase={phase}>
-      <button type="button" className="rud-dialog-close" onClick={later} aria-label="Close install card">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-          <path d="M6 6l12 12M18 6 6 18" />
-        </svg>
-      </button>
-      <div className="rud-ix-card-head">
-        <span className={`rud-ix-iconwrap phase-${phase}`} aria-hidden="true">
-          <AppIcon />
-          <svg className="rud-ix-ring" viewBox="0 0 64 64">
-            <circle cx="32" cy="32" r="29" />
-          </svg>
-          {phase === 'done' ? (
-            <span className="rud-ix-check">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m6 12.5 4 4 8-9" />
-              </svg>
-            </span>
+    // V3.4: a centred modal (shared AppDialog: backdrop, focus trap, Escape, scroll lock restored on close).
+    <AppDialog className="rud-ix-modal" label="Install the Rise Upon Deen app" closeLabel="Close install card" onClose={later}>
+      <div className="rud-ix-card" data-phase={phase}>
+        <div className="rud-ix-card-head">
+          <span className={`rud-ix-iconwrap phase-${phase}`} aria-hidden="true">
+            <AppIcon />
+            <svg className="rud-ix-ring" viewBox="0 0 64 64">
+              <circle cx="32" cy="32" r="29" />
+            </svg>
+            {phase === 'done' ? (
+              <span className="rud-ix-check">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m6 12.5 4 4 8-9" />
+                </svg>
+              </span>
+            ) : null}
+          </span>
+          <div>
+            <span className="rud-dialog-kicker">Rise Upon Deen app</span>
+            <h2 id="rudIxAndroidTitle">
+              {phase === 'done'
+                ? 'Installed — alhamdulillah'
+                : phase === 'installing'
+                  ? 'Installing…'
+                  : phase === 'confirm'
+                    ? 'Confirm in the dialog'
+                    : phase === 'accepted'
+                      ? 'Almost there'
+                      : 'Install the app'}
+            </h2>
+          </div>
+        </div>
+        <div className="rud-ix-card-body" aria-live="polite">
+          {phase === 'idle' ? (
+            <ul className="rud-ix-benefits">
+              {BENEFITS.map(([title, text]) => (
+                <li key={title}>
+                  <strong>{title}</strong>
+                  <span>{text}</span>
+                </li>
+              ))}
+            </ul>
           ) : null}
-        </span>
-        <div>
-          <span className="rud-dialog-kicker">Rise Upon Deen app</span>
-          <h2 id="rudIxAndroidTitle">
-            {phase === 'done'
-              ? 'Installed — alhamdulillah'
-              : phase === 'installing'
-                ? 'Installing…'
-                : phase === 'confirm'
-                  ? 'Confirm in the dialog'
-                  : phase === 'accepted'
-                    ? 'Almost there'
-                    : 'Install the app'}
-          </h2>
+          {phase === 'confirm' ? <p>Your browser is asking for permission. Tap <strong>Install</strong> in its dialog to continue.</p> : null}
+          {phase === 'installing' ? <p>Your browser accepted and is adding Rise Upon Deen to your device.</p> : null}
+          {phase === 'accepted' ? (
+            <p>Your browser accepted the install and finishes it in the background. Look for the icon on your Home Screen or app drawer.</p>
+          ) : null}
+          {phase === 'done' ? <p>Find Rise Upon Deen on your Home Screen. It opens full-screen, like any app.</p> : null}
+          {phase === 'cancelled' ? <p>No problem — you can install any time from Explore → Install Rise Upon Deen.</p> : null}
+          {phase === 'error' ? <p>The browser couldn’t show its install dialog. You can still add the app from the browser menu.</p> : null}
+        </div>
+        <div className="rud-ix-card-actions">
+          {phase === 'idle' ? (
+            <>
+              <button type="button" className="rud-btn rud-btn-primary" onClick={install}>
+                Install App
+              </button>
+              <button type="button" className="rud-btn rud-btn-quiet" onClick={later}>
+                Not now
+              </button>
+            </>
+          ) : null}
+          {phase === 'error' ? (
+            <button type="button" className="rud-btn rud-btn-primary" onClick={onManual}>
+              Show me how
+            </button>
+          ) : null}
+          {phase === 'done' || phase === 'accepted' || phase === 'cancelled' || phase === 'error' ? (
+            <button type="button" className="rud-btn rud-btn-quiet" onClick={onClose}>
+              Close
+            </button>
+          ) : null}
         </div>
       </div>
-      <div className="rud-ix-card-body" aria-live="polite">
-        {phase === 'idle' ? (
-          <ul className="rud-ix-benefits">
-            {BENEFITS.map(([title, text]) => (
-              <li key={title}>
-                <strong>{title}</strong>
-                <span>{text}</span>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        {phase === 'confirm' ? <p>Your browser is asking for permission. Tap <strong>Install</strong> in its dialog to continue.</p> : null}
-        {phase === 'installing' ? <p>Your browser accepted and is adding Rise Upon Deen to your device.</p> : null}
-        {phase === 'accepted' ? (
-          <p>Your browser accepted the install and finishes it in the background. Look for the icon on your Home Screen or app drawer.</p>
-        ) : null}
-        {phase === 'done' ? <p>Find Rise Upon Deen on your Home Screen. It opens full-screen, like any app.</p> : null}
-        {phase === 'cancelled' ? <p>No problem — you can install any time from Explore → Install Rise Upon Deen.</p> : null}
-        {phase === 'error' ? <p>The browser couldn’t show its install dialog. You can still add the app from the browser menu.</p> : null}
-      </div>
-      <div className="rud-ix-card-actions">
-        {phase === 'idle' ? (
-          <>
-            <button type="button" className="rud-btn rud-btn-primary" onClick={install}>
-              Install App
-            </button>
-            <button type="button" className="rud-btn rud-btn-quiet" onClick={later}>
-              Not now
-            </button>
-          </>
-        ) : null}
-        {phase === 'error' ? (
-          <button type="button" className="rud-btn rud-btn-primary" onClick={onManual}>
-            Show me how
-          </button>
-        ) : null}
-        {phase === 'done' || phase === 'accepted' || phase === 'cancelled' || phase === 'error' ? (
-          <button type="button" className="rud-btn rud-btn-quiet" onClick={onClose}>
-            Close
-          </button>
-        ) : null}
-      </div>
-    </div>
+    </AppDialog>
   );
 }
 
@@ -462,33 +460,30 @@ function ManualInstallGuide({ onClose }: { onClose: () => void }) {
 
 function IosSuggestion({ onOpen, onClose }: { onOpen: () => void; onClose: () => void }) {
   return (
-    <div className="rud-v3 rud-ix-card" role="dialog" aria-modal="false" aria-labelledby="rudIxIosSuggest">
-      <button type="button" className="rud-dialog-close" onClick={onClose} aria-label="Close">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-          <path d="M6 6l12 12M18 6 6 18" />
-        </svg>
-      </button>
-      <div className="rud-ix-card-head">
-        <span className="rud-ix-iconwrap" aria-hidden="true">
-          <AppIcon />
-        </span>
-        <div>
-          <span className="rud-dialog-kicker">Install the app</span>
-          <h2 id="rudIxIosSuggest">Add Rise Upon Deen to your Home Screen</h2>
+    <AppDialog className="rud-ix-modal" label="Add Rise Upon Deen to your Home Screen" onClose={onClose}>
+      <div className="rud-ix-card">
+        <div className="rud-ix-card-head">
+          <span className="rud-ix-iconwrap" aria-hidden="true">
+            <AppIcon />
+          </span>
+          <div>
+            <span className="rud-dialog-kicker">Install the app</span>
+            <h2 id="rudIxIosSuggest">Add Rise Upon Deen to your Home Screen</h2>
+          </div>
+        </div>
+        <div className="rud-ix-card-body">
+          <p>It opens full-screen like an app and keeps your Qur’an and saved content close. It takes a few taps.</p>
+        </div>
+        <div className="rud-ix-card-actions">
+          <button type="button" className="rud-btn rud-btn-primary" onClick={onOpen}>
+            Show me how
+          </button>
+          <button type="button" className="rud-btn rud-btn-quiet" onClick={onClose}>
+            Not now
+          </button>
         </div>
       </div>
-      <div className="rud-ix-card-body">
-        <p>It opens full-screen like an app and keeps your Qur’an and saved content close. It takes a few taps.</p>
-      </div>
-      <div className="rud-ix-card-actions">
-        <button type="button" className="rud-btn rud-btn-primary" onClick={onOpen}>
-          Show me how
-        </button>
-        <button type="button" className="rud-btn rud-btn-quiet" onClick={onClose}>
-          Not now
-        </button>
-      </div>
-    </div>
+    </AppDialog>
   );
 }
 

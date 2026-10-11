@@ -1,7 +1,7 @@
 /* "People" — everyone on Deen Friends, in small rows (V3.1). Mutual-friend suggestions (prepared
  * server-side) come first, then every other member, paged. Tapping a row opens the profile. Only
  * display name, username and avatar are shown; people who turned discovery off are not listed. */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { QueryDocumentSnapshot } from 'firebase/firestore';
 import { friendlyMessage, logError } from '../services/errors';
 import { connectionStatus, sendFriendRequest } from '../services/friendService';
@@ -47,8 +47,25 @@ export function SuggestionsSection({ onOpenProfile }: { onOpenProfile: (uid: str
     }
   }, []);
 
+  // Load when the section comes near the screen (it sits below the circle), not on page open.
+  const sectionRef = useRef<HTMLElement>(null);
   useEffect(() => {
-    void load();
+    const el = sectionRef.current;
+    if (!el || typeof IntersectionObserver !== 'function') {
+      void load();
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          io.disconnect();
+          void load();
+        }
+      },
+      { rootMargin: '400px 0px' },
+    );
+    io.observe(el);
+    return () => io.disconnect();
   }, [load]);
 
   const rel = relationshipSnapshot(s);
@@ -102,7 +119,7 @@ export function SuggestionsSection({ onOpenProfile }: { onOpenProfile: (uid: str
   }
 
   return (
-    <section className="df2-section df2-suggestions" aria-labelledby="df2-suggest-title" data-tour="df-suggestions">
+    <section ref={sectionRef} className="df2-section df2-suggestions" aria-labelledby="df2-suggest-title" data-tour="df-suggestions">
       <div className="df2-section-head">
         <h2 id="df2-suggest-title">People</h2>
         {items.length ? <span className="df2-section-meta">{items.length}{done ? '' : '+'}</span> : null}

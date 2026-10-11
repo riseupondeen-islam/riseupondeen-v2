@@ -252,3 +252,82 @@ Not verified here (in addition to §7): the signature fonts (Google Fonts are bl
 | Home | The hero's entrance animation replayed every time Home was shown again (display none → block), which made Home jump — it now plays once. Home sections no longer scroll inside themselves (`.shell` had `overflow-x:hidden`, which forces `overflow-y:auto`; now `clip`). |
 | Guide | Only the highlight's position animates; its size changes in one step (animating size repainted the full-screen shade each frame). |
 | Masjids | New launcher card and full-screen finder (skeleton loading, distance + walking time, Directions, search). The Google Maps button searches "masjids near me". |
+
+## 11. V3.4 — performance, intro, posters and install modal
+
+Measured with the Firebase test double and a simulated round-trip time (`__FAKE_FB_LATENCY_MS__`);
+real-network numbers will differ and should be re-checked on a real phone.
+
+**Official RISE chat (loading regression).**
+*Root cause*: every open awaited `ensureRiseThread` (a transaction: two reads plus a commit) before
+the message listener even started. V3 had also added start-up reads on the Deen Friends page
+(challenge prefetch, the People list of 30 profiles, the public-card write) that competed with the
+chat on the same connection.
+*Fix* (`RiseChatScreen.tsx`):
+- The listener starts at once.
+- The welcome transaction runs only when the first snapshot has no welcome.
+- Rows from this session are kept in memory, keyed by account, so a re-open is instant and another
+  account never sees them. Nothing is persisted.
+- The challenge prefetch and public-card sync wait for idle time (`services/idle.ts`), and are
+  skipped while a chat is open.
+- The People suggestions load when the section nears the screen.
+
+| Open of the RISE chat | Before | After |
+| --- | --- | --- |
+| First open, 150 ms RTT | 326 ms | 174 ms (1 round-trip) |
+| First open, 400 ms RTT | 834 ms | 428 ms |
+| Re-open, 150 ms RTT | 309 ms | 22 ms |
+| Re-open, 400 ms RTT | 823 ms | 15 ms |
+
+The interface frame appears in about 10–25 ms in every case.
+
+**Intro (minarets, ~4 s).**
+*Root cause of the mobile "blink"*: the intro was a React component, so it appeared only after the
+JS bundle loaded, but its 4 s timer counted from the HTML pre-paint script. On a slow phone most of
+the 4 s had passed before it was visible.
+*Fix*: the intro is now static HTML with inline CSS in `index.html`, so it paints with the first
+frame. A small state machine (`playing → leaving → done`, or `skip`) runs one hold timer and one
+safety timer. It leaves after 3.6 s *and* once the app reports ready (`window.__rudIntro.ready()`
+from `homeInteractions.js`), then fades for 0.4 s.
+- Timeline: 0–0.8 s atmosphere; 0.8–1.8 s minarets rise; 1.8–2.8 s logo, name and light sweep;
+  hold; fade at 3.6–4.0 s.
+- Reduced motion: no movement, 1.5 s.
+- Safety: hides after 9 s at most.
+- If the CSS animations do not run, the content is simply shown (the final state is the default
+  style).
+- The React `Preloader` component was removed (no duplicate intro).
+
+**Home stability.**
+- Measured: back/forward, a quick forward-then-back and six rapid route taps keep the exact scroll
+  position on every frame.
+- Layout shift: 0 on desktop; 0.0087 on mobile at load (one small shift of the quick-action row).
+- Now a regression test. Web fonts are blocked in the hermetic tests, so font-swap shifts on a real
+  network are not covered.
+
+**Poster export** (`features/library/posterExport.js`, the single export system for Duas, Hadith,
+Reminders and Qur'an ayahs).
+- Line-by-line layout with no line limits, so nothing is truncated.
+- Paragraphs are kept. Short paragraphs move to the next page whole; no single line is stranded;
+  the reference always stays with the last lines before it.
+- Short content uses larger type, centred on one page.
+- Multi-page posters have "n / N" page numbers and a "continued" header.
+- Arabic is drawn RTL with the Arabic font.
+- Fonts and the logo are awaited, with a 2.5 s limit.
+- Output: one page is a PNG. Several pages are shared as images where Web Share supports files,
+  otherwise saved as one PDF (written in-house, no dependency). Double taps are ignored.
+- Dua posters now also use `translation` when `meaning` is empty.
+
+**PWA.**
+- The Android/iOS install cards are centred modals built on the shared `AppDialog` (backdrop, focus
+  trap, Escape, scroll lock restored on close).
+- All dialogs are centred on phones and in landscape and respect safe areas.
+- The service worker keeps the previous build's asset cache for one release, so a tab still on the
+  old build can finish loading code after an update. Shell cache bumped to `v10`.
+
+**Tests added**:
+- RISE fast open, reopen without a transaction, and rows per account.
+- No listener leaks.
+- Intro: static paint, no blink on a 5 s slow start, once per session, reduced motion.
+- Home: no jump and CLS under 0.1.
+- Posters: short PNG; long English as a multi-page PDF with every word checked; long Arabic complete.
+- Install modal centred in portrait and landscape, with scroll restored.

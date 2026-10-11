@@ -13,6 +13,7 @@
  *     - my Deen circles (V3)              deens_groups           where members array-contains me
  * Friend profiles are read once and cached; they are refreshed when a chat or profile is opened. */
 import { clearChallengeCache } from './challengeCache';
+import { whenIdle } from '../services/idle';
 import { useSyncExternalStore } from 'react';
 import { collection, limit, onAuthStateChanged, onSnapshot, query, where } from '../../../services/firebase/sdk';
 import type { FriendRequest, Friendship, OwnProfile, PublicProfile, RiseThread, StreakRecord } from '../types';
@@ -239,8 +240,10 @@ export async function startPageListeners(): Promise<void> {
     ),
   );
   if (state.profile) {
-    void touchPresence(state.profile);
-    void syncPublicCard(state.profile).catch((error) => logError('public card sync', error));
+    const profile = state.profile;
+    void touchPresence(profile);
+    // The discovery card rarely changes; refresh it when the browser is idle.
+    whenIdle(() => void syncPublicCard(profile).catch((error) => logError('public card sync', error)), 5000);
   }
 }
 

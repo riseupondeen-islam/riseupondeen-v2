@@ -257,6 +257,60 @@ test('RISE: welcome is created once, messages send, channel is separate', async 
   expect(await fakeDocs(page, 'deens_friend_messages/')).toHaveLength(0);
 });
 
+test('RISE opens fast: listener starts at once, reopen needs no setup transaction, rows are per account', async ({ page }) => {
+  await page.addInitScript(() => ((globalThis as unknown as { __FAKE_FB_LATENCY_MS__: number }).__FAKE_FB_LATENCY_MS__ = 400));
+  await openDeenFriends(page);
+  await signIn(page, DF_USERS.aisha);
+  await ui(page).getByRole('tab', { name: /Chats/ }).click();
+  // First open: the welcome is created once and appears within one round-trip of the listener.
+  await page.locator('.df2-chat-row-rise').click();
+  await expect(page.locator('.df2-fullscreen')).toContainText('This first message is automated');
+  const transactions = async () => (await firestoreLog(page)).filter((e) => e.op === 'transaction').length;
+  const afterFirst = await transactions();
+  // Re-open: rows are on screen immediately (in-memory, this account only) and no setup transaction runs.
+  await ui(page).getByRole('button', { name: 'Back to chats' }).click();
+  const ms = await page.evaluate(async () => {
+    const t0 = performance.now();
+    (document.querySelector('.df2-chat-row-rise') as HTMLElement).click();
+    while (!document.querySelector('.df2-fullscreen .df2-msg-bubble')) await new Promise((r) => requestAnimationFrame(r));
+    return performance.now() - t0;
+  });
+  expect(ms).toBeLessThan(300); // from memory: well under one 400 ms network round-trip
+  await page.waitForTimeout(600);
+  expect(await transactions()).toBe(afterFirst);
+  // Another account on the same device never sees the previous member's conversation.
+  await ui(page).getByRole('button', { name: 'Back to chats' }).click();
+  await signOut(page);
+  await signIn(page, DF_USERS.bilal);
+  await ui(page).getByRole('tab', { name: /Chats/ }).click();
+  await page.locator('.df2-chat-row-rise').click();
+  await expect(page.locator('.df2-fullscreen')).toContainText('This first message is automated');
+  const msgs = await fakeDocs(page, `deens_rise_threads/${DF_USERS.bilal.uid}/messages/`);
+  expect(msgs.filter((m) => m.automated)).toHaveLength(1);
+  await expect(page.locator('.df2-msg-text.mine')).toHaveCount(1);
+  await expect(page.locator('.df2-msg-text.mine')).toContainText('the Qur’an audio stops');
+});
+
+test('no listener leaks: opening chats and leaving the page repeatedly keeps the live listener count flat', async ({ page }) => {
+  await openDeenFriends(page);
+  await signIn(page, DF_USERS.aisha);
+  await page.waitForTimeout(2500);
+  const count = () => page.evaluate(() => (globalThis as unknown as { __FAKE_FB__: { listeners: Set<unknown> } }).__FAKE_FB__.listeners.size);
+  const base = await count();
+  for (let i = 0; i < 3; i++) {
+    await ui(page).getByRole('tab', { name: /Chats/ }).click();
+    await page.locator('.df2-chat-row-rise').click();
+    await expect(page.locator('.df2-fullscreen')).toBeVisible();
+    await ui(page).getByRole('button', { name: 'Back to chats' }).click();
+    await page.evaluate(() => (location.hash = '#home'));
+    await page.waitForTimeout(300);
+    await page.evaluate(() => (location.hash = '#deen-friends'));
+    await expect(page.locator('.df2-page')).toBeVisible();
+    await page.waitForTimeout(600);
+  }
+  expect(await count()).toBe(base);
+});
+
 test('Daily Deen Challenges: only published challenges addressed to me; mark today done', async ({ page }, info) => {
   await openDeenFriends(page);
   await signIn(page, DF_USERS.aisha);

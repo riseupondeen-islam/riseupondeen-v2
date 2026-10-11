@@ -11,6 +11,7 @@ import { StreaksTab } from './components/StreaksTab';
 import { GroupChatScreen } from './components/GroupScreens';
 import { completedToday, istMonthId, liveStreak } from './services/progressService';
 import { prefetchChallengeData } from './state/challengeCache';
+import { whenIdle } from './services/idle';
 import { Avatar, Badge, Icon, SkeletonRows, ToastProvider, type IconName } from './components/ui';
 import { goToDeenFriends, leaveConversation, useDeenFriendsRoute, type DeenFriendsTab } from './deenFriendsRoute';
 import { startPageListeners, startSession, useDeenFriends } from './state/deenFriendsStore';
@@ -47,8 +48,13 @@ function DeenFriendsContent() {
   useEffect(() => {
     if (s.session === 'signed-in') {
       void startPageListeners();
-      prefetchChallengeData(istMonthId()); // the Challenges tab then opens instantly
+      // Warm the Challenges tab only when the device is idle and no conversation is open, so this
+      // background reading never competes with what the member opened (e.g. the RISE chat).
+      return whenIdle(() => {
+        if (!/\/(rise|chat|group)/.test(location.hash)) prefetchChallengeData(istMonthId());
+      });
     }
+    return undefined;
   }, [s.session, s.profile?.uid]);
 
   if (s.session === 'loading') {

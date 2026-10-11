@@ -1,5 +1,5 @@
 /* Rise Upon Deen V2 — one coordinated PWA + FCM service worker. */
-const RUD_V2_SHELL_CACHE = 'rud-v2-shell-v9';
+const RUD_V2_SHELL_CACHE = 'rud-v2-shell-v10';
 const RUD_V2_AUDIO_CACHE = 'rud-v2-audio-v1';
 /* React/Vite build: hashed JS/CSS/data files. Filled in by vite.config.ts at build time. */
 const RUD_V2_BUILD_ID = 'dev'; /* build:id */
@@ -32,10 +32,15 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
+    /* V3.4: keep the previous build's files for one more release. A tab that is still open on the
+       old version can then finish loading its remaining code after this update takes over, instead
+       of failing on a file that no longer exists on the server. Older builds are removed. */
+    const assetKeys = keys.filter(key => key.startsWith('rud-v2-assets-') && key !== RUD_V2_ASSET_CACHE);
+    const keepPrevious = assetKeys.slice(-1);
     await Promise.all(
       keys
         .filter(key => (key !== RUD_V2_SHELL_CACHE && (key.startsWith('rud-shell-') || key.startsWith('rud-v2-shell-'))) ||
-                       (key !== RUD_V2_ASSET_CACHE && key.startsWith('rud-v2-assets-')))
+                       (assetKeys.includes(key) && !keepPrevious.includes(key)))
         .map(key => caches.delete(key))
     );
     /* Important: do not delete Rise Upon Deen content/IndexedDB caches here. */

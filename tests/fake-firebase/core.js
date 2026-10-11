@@ -340,8 +340,13 @@ export async function getDocs(q) {
   for (const [p] of rows) assertRead(p);
   return querySnapshot(rows);
 }
+/* Simulated network round trip (ms). 0 by default; performance tests set
+   window.__FAKE_FB_LATENCY_MS__ to measure how many sequential round trips a screen needs. */
+function latency() {
+  return Number(globalThis.__FAKE_FB_LATENCY_MS__) || 0;
+}
 function tick() {
-  return new Promise((r) => setTimeout(r, 0));
+  return new Promise((r) => setTimeout(r, latency()));
 }
 
 export function onSnapshot(target, ...args) {
@@ -357,7 +362,7 @@ export function onSnapshot(target, ...args) {
     target.constraints ? { constraints: normalizeForLog(target.constraints) } : undefined,
   );
   state.listeners.add(listener);
-  setTimeout(() => deliver(listener), 0);
+  setTimeout(() => deliver(listener), latency());
   return () => {
     listener.active = false;
     state.listeners.delete(listener);
@@ -545,6 +550,7 @@ export async function runTransaction(db, fn) {
   const ops = [];
   const tx = {
     async get(ref) {
+      await tick();
       assertRead(ref.path);
       return docSnapshot(ref.path, state.docs.get(ref.path));
     },

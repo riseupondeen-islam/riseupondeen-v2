@@ -6,7 +6,6 @@ import { BroadcastOverlay } from '../features/broadcast/BroadcastOverlay';
 import { MeccaBackgroundLite } from '../components/background/MeccaBackgroundLite';
 import { GlobalMeccaBackground } from '../components/background/GlobalMeccaBackground';
 import { SiteAtmosphere } from '../components/background/SiteAtmosphere';
-import { Preloader } from '../components/layout/Preloader';
 import { HomePage } from '../features/home/HomePage';
 import { SiteFooter } from '../components/layout/SiteFooter';
 import { BackToTopButton } from '../components/controls/BackToTopButton';
@@ -37,7 +36,6 @@ export function AppShell() {
       {'\n'}
       <GlobalMeccaBackground />
       <SiteAtmosphere />
-      <Preloader />
       <HomePage />
       <SiteFooter />
       <BackToTopButton />

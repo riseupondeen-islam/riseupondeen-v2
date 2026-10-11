@@ -395,22 +395,22 @@ html.light-mode .rud-v3 {
   inset: 0;
   z-index: 12600;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  padding: 12px 12px max(12px, env(safe-area-inset-bottom));
+  /* V3.4: always centred (phones too), clear of notches and the home indicator, in any orientation. */
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   background: var(--v3-backdrop);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   animation: rudFadeIn 0.2s ease-out both;
   overscroll-behavior: contain;
 }
-@media (min-width: 640px) {
-  .rud-dialog-backdrop { align-items: center; }
-}
 .rud-dialog {
   position: relative;
   width: min(460px, 100%);
-  max-height: min(86dvh, 760px);
+  max-height: min(calc(100vh - 24px), 760px);
+  max-height: min(calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)), 760px);
+  margin: auto;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -563,24 +563,10 @@ html.light-mode .rud-btn-primary { background: linear-gradient(135deg, #b8913f, 
 .rud-ix-key svg { width: 16px; height: 16px; }
 .rud-ix-note { font-size: 0.78rem; color: var(--v3-muted); }
 .rud-ix-you { margin-top: 10px !important; font-size: 0.76rem; color: var(--v3-gold); }
-.rud-ix-card {
-  position: fixed;
-  left: 50%;
-  bottom: max(14px, calc(env(safe-area-inset-bottom) + 10px));
-  z-index: 12400;
-  width: min(420px, calc(100% - 20px));
-  padding: 16px 16px 14px;
-  border: 1px solid var(--v3-line);
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at 0 0, var(--v3-gold-soft), transparent 42%),
-    var(--v3-surface);
-  box-shadow: var(--v3-shadow);
-  transform: translateX(-50%);
-  animation: rudCardUp 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
+/* V3.4: the install card lives inside the shared centred dialog (no longer pinned to the bottom). */
+.rud-ix-card { padding: 4px 0 6px; }
+.rud-ix-modal .rud-dialog-body { padding-top: 20px; }
 @keyframes rudCardUp { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translate(-50%, 0); } }
-.rud-ix-card .rud-dialog-close { top: 12px; right: 12px; width: 34px; height: 34px; }
 .rud-ix-card-head { display: flex; align-items: center; gap: 14px; padding-right: 40px; }
 .rud-ix-card h2 { font-size: 1.4rem; }
 .rud-ix-card-body { margin-top: 10px; color: var(--v3-muted); font-size: 0.86rem; line-height: 1.55; }
@@ -690,7 +676,7 @@ html.light-mode .rud-btn-primary { background: linear-gradient(135deg, #b8913f, 
 .rud-ix-confirm-app { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 12px; background: var(--v3-surface); color: var(--v3-text); font-weight: 700; font-size: 0.82rem; }
 .rud-ix-confirm-app img { border-radius: 10px; }
 @media (prefers-reduced-motion: reduce) {
-  .rud-dialog-backdrop, .rud-dialog, .rud-ix-card, .rud-ix-walk-body, .rud-ix-check { animation: none !important; }
+  .rud-dialog-backdrop, .rud-dialog, .rud-ix-walk-body, .rud-ix-check { animation: none !important; }
   .rud-ix-target, .phase-confirm .rud-ix-ring circle, .phase-installing .rud-ix-ring circle { animation: none !important; }
 }
 
@@ -1475,81 +1461,7 @@ html.light-mode body .rud-occasion-link.is-primary { color: #fff; background: li
 }
 @media (max-width: 380px) { .rud-occasion-link { flex: 1 1 auto; justify-content: center; } }
 
-/* =========================================================================================
-   Intro (V3.1) — night sky, slow geometric star, the app mark in a gold ring, a gold-ink
-   "Assalamu Alaikum". Same look in light and dark. GPU-friendly: opacity/transform only.
-   ========================================================================================= */
-html body #preloader.rud-intro {
-  background: #06080b;
-  color: #f4ecd8;
-  transition: opacity 0.42s cubic-bezier(0.22, 0.61, 0.36, 1), transform 0.42s cubic-bezier(0.22, 0.61, 0.36, 1), visibility 0s linear 0.42s;
-}
-html body #preloader.rud-intro::before,
-html body #preloader.rud-intro::after { display: none; }
-html body #preloader.rud-intro.hide { opacity: 0; transform: scale(1.03); }
-.rud-intro-sky {
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  background:
-    radial-gradient(60% 45% at 50% 38%, rgba(217, 186, 114, 0.2), transparent 70%),
-    radial-gradient(90% 60% at 50% 110%, rgba(40, 70, 90, 0.35), transparent 70%),
-    linear-gradient(180deg, #05070a 0%, #0a1014 60%, #06080b 100%);
-}
-/* A single mihrab arch frames the greeting — simple, still, Islamic. */
-.rud-intro-arch {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: -1;
-  width: min(380px, 84vw);
-  height: auto;
-  color: rgba(217, 186, 114, 0.32);
-  transform: translate(-50%, -52%);
-  animation: rudIntroFade 1.2s ease-out both;
-}
-@keyframes rudIntroFade { from { opacity: 0; } }
-.rud-intro-inner { display: grid; justify-items: center; gap: 10px; padding: 24px; text-align: center; }
-.rud-intro-mark {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 104px;
-  height: 104px;
-  margin-bottom: 8px;
-  border-radius: 30px;
-  padding: 3px;
-  background: conic-gradient(from 210deg, #f6dc94, #8f6a1c, #f6dc94, #b8862e, #f6dc94);
-  box-shadow: 0 18px 50px rgba(201, 154, 62, 0.28), 0 0 0 8px rgba(217, 186, 114, 0.06);
-  animation: rudIntroRise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-.rud-intro-mark img { width: 100%; height: 100%; object-fit: cover; border-radius: 27px; background: #fefefd; }
-.rud-intro-mark::after { content: ''; position: absolute; inset: -14px; border-radius: 40px; border: 1px solid rgba(217, 186, 114, 0.25); animation: rudIntroHalo 2.4s ease-out infinite; }
-@keyframes rudIntroHalo { from { opacity: 0.9; transform: scale(0.94); } to { opacity: 0; transform: scale(1.18); } }
-.rud-intro-arabic { font-family: 'Noto Naskh Arabic', 'Amiri', serif; font-size: clamp(1.5rem, 5vw, 2rem); line-height: 1.6; color: #e9cf8b !important; animation: rudIntroRise 0.7s 0.12s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-html body #preloader .rud-intro-title {
-  margin: 0;
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: clamp(2.5rem, 9vw, 4.4rem);
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0.01em;
-  background: linear-gradient(180deg, #fff6dc 0%, #e9cf8b 55%, #b8862e 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: rudIntroRise 0.8s 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-.rud-intro-sub { max-width: 340px; color: rgba(244, 236, 216, 0.66); font-size: 0.86rem; line-height: 1.5; animation: rudIntroRise 0.8s 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.rud-intro-rule { width: 64px; height: 1px; margin: 6px 0 2px; background: linear-gradient(90deg, transparent, #d9ba72, transparent); animation: rudIntroRise 0.8s 0.44s both; }
-html body #preloader .rud-intro-brand { margin: 0; color: #d9ba72; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.42em; animation: rudIntroRise 0.8s 0.5s both; }
-.rud-intro-progress { position: relative; width: 120px; height: 2px; margin-top: 14px; overflow: hidden; border-radius: 2px; background: rgba(217, 186, 114, 0.16); }
-.rud-intro-progress::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, #f6dc94, transparent); transform: translateX(-100%); animation: rudIntroLoad 1.2s ease-in-out infinite; }
-@keyframes rudIntroLoad { to { transform: translateX(100%); } }
 @keyframes rudIntroRise { from { opacity: 0; transform: translateY(12px); } }
-@media (prefers-reduced-motion: reduce) {
-  .rud-intro-arch, .rud-intro-mark, .rud-intro-mark::after, .rud-intro-arabic, html body #preloader .rud-intro-title, .rud-intro-sub, .rud-intro-rule, html body #preloader .rud-intro-brand, .rud-intro-progress::after { animation: none; }
-}
 
 /* First-visit name card (V3.2) — continues the intro in the visitor's own theme (dark: night sky,
    light: ivory). Scrollable so the on-screen keyboard can never hide the field or the button. */
@@ -1591,22 +1503,6 @@ html.light-mode body #rudWelcomeIntro #rudVisitorName:focus { border-color: #b89
 html.light-mode body #rudWelcomeIntro #rudWelcomeContinue { color: #fff !important; background: linear-gradient(135deg, #b8913f, #8a6519) !important; }
 .rud-saw { font-family: 'Noto Naskh Arabic', 'Amiri', serif; }
 html body .df2-root .df2-requests-toggle { font-size: 0.84rem; line-height: 1.2; }
-
-/* Intro in light mode (it follows the visitor's theme). */
-html.light-mode body #preloader.rud-intro { background: #fbf8f1; color: #2a2418; }
-html.light-mode .rud-intro-sky {
-  background:
-    radial-gradient(60% 45% at 50% 40%, rgba(201, 160, 78, 0.18), transparent 70%),
-    linear-gradient(180deg, #fffdf8 0%, #f7f1e4 100%);
-}
-html.light-mode .rud-intro-arch { color: rgba(148, 112, 31, 0.32); }
-html.light-mode .rud-intro-arabic { color: #94701f !important; }
-html.light-mode body #preloader .rud-intro-title { background: linear-gradient(180deg, #a07a27 0%, #7c5b14 100%); -webkit-background-clip: text; background-clip: text; }
-html.light-mode .rud-intro-sub { color: rgba(42, 36, 24, 0.66); }
-html.light-mode body #preloader .rud-intro-brand { color: #94701f; }
-html.light-mode .rud-intro-progress { background: rgba(148, 112, 31, 0.14); }
-html.light-mode .rud-intro-progress::after { background: linear-gradient(90deg, transparent, #b8913f, transparent); }
-html.light-mode .rud-intro-mark { box-shadow: 0 18px 40px rgba(148, 112, 31, 0.22), 0 0 0 8px rgba(148, 112, 31, 0.06); }
 
 /* iOS zooms (and shakes) the whole page when a field with text under 16px gets focus. On touch
    screens every text field uses at least 16px, so opening the keyboard never zooms the site. */
