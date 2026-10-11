@@ -192,7 +192,7 @@ async function deenFriendsAdminView() {
   };
   const statusClass = (v) => {
     const s = String(v || '').toLowerCase();
-    if (/suspend|block|ban|deleted|high|critical|report/.test(s)) return 'danger';
+    if (/suspend|block|ban|deleted|deletion|high|critical|report/.test(s)) return 'danger';
     if (/pending|review|restrict|new|open/.test(s)) return 'warn';
     if (/accepted|active|resolved|approved|normal|published|live/.test(s)) return 'ok';
     return 'info';
@@ -706,7 +706,7 @@ async function deenFriendsAdminView() {
         'deen-friends-users.csv',
       );
     users.forEach(async (u) => {
-      const st = await userStatus(u.id);
+      const st = u.deletionRequestedAt ? 'deletion pending' : await userStatus(u.id);
       const el = $(`#rudDfStatus_${u.id}`);
       if (el) el.innerHTML = pill(st);
     });
@@ -1713,51 +1713,96 @@ async function deenFriendsAdminView() {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
 
-  // Free-plan removal: delete the complete Deen Friends data footprint.
-  // The Firebase client SDK cannot delete another user's Auth account. Removing
-  // deens_users/{uid} blocks Deen Friends access because login requires that profile.
+  /* V3.5 — real deletion. The browser cannot delete another person's login account and should not
+     sweep every collection, so the Super Admin queues a request in deens_admin_jobs (only the Super
+     Admin may create one — firestore.rules) and the trusted scheduler (push-scheduler/adminJobs.js,
+     Admin SDK) deletes the member's whole Deen Friends footprint and their login within ~5 minutes.
+     Their access is switched off immediately. Safety records (reports, cases, evidence, restrictions,
+     suspensions, appeals, risk signals, admin notes, connection history) and the audit log are kept. */
+  const DELETION_REMOVES = [
+    'Profile, username and public card',
+    'Friendships, friend requests, blocks and shared streaks',
+    'All messages in their one-to-one chats (both sides) and their circle messages',
+    'Their RISE conversation and notification devices',
+    'Streak, daily activity, leaderboard entries and challenge progress (and challenges they created)',
+    'Their place in circles and monthly-winner announcements',
+    'Their Deen Friends activity logs and pending username requests',
+    'Their login account (email and password)',
+  ];
+  const DELETION_KEEPS = [
+    'Reports, moderation cases, evidence, restrictions, suspensions and appeals',
+    'Risk signals, admin notes, connection history and the admin audit log',
+    'Everything belonging to other members',
+  ];
+
+  /** Shows the deletion confirmation in the drawer. Resolves true only after the username is typed. */
+  function confirmDeletion(uid, profile) {
+    const username = String(profile.username || '').trim();
+    const name = String(profile.displayName || profile.name || username || uid);
+    return new Promise((resolve) => {
+      openDrawer(
+        'Delete Deen Friends member',
+        `<div class="rud-df-admin-delete" role="group" aria-label="Confirm member deletion">
+          <p class="rud-df-admin-note"><b>${escText(name)}</b>${username ? ` · @${escText(username)}` : ''}<br><span class="rud-df-admin-code">${escText(uid)}</span></p>
+          <h4>Permanently removed</h4><ul>${DELETION_REMOVES.map((x) => `<li>${escText(x)}</li>`).join('')}</ul>
+          <h4>Kept</h4><ul>${DELETION_KEEPS.map((x) => `<li>${escText(x)}</li>`).join('')}</ul>
+          <p class="rud-df-admin-muted">Their access stops now. The deletion itself runs on the secure scheduler and finishes within about 5 minutes. This cannot be undone.</p>
+          <div class="rud-df-admin-field"><label for="rudDfDeleteConfirmInput">Type <b>${escText(username || uid)}</b> to confirm</label><input class="rud-df-admin-input" id="rudDfDeleteConfirmInput" autocomplete="off" spellcheck="false"></div>
+          <div class="rud-df-admin-actions" style="justify-content:flex-start">${btn('Delete member permanently', 'rudDfDeleteConfirmGo', 'danger')}${btn('Cancel', 'rudDfDeleteConfirmCancel')}</div>
+        </div>`,
+      );
+      const input = $('#rudDfDeleteConfirmInput');
+      const go = $('#rudDfDeleteConfirmGo');
+      const expected = (username || uid).toLowerCase();
+      go.disabled = true;
+      input.addEventListener('input', () => (go.disabled = input.value.trim().toLowerCase() !== expected));
+      const finish = (value) => {
+        closeDrawer();
+        resolve(value);
+      };
+      go.addEventListener('click', () => !go.disabled && finish(true), { once: true });
+      $('#rudDfDeleteConfirmCancel').addEventListener('click', () => finish(false), { once: true });
+      input.focus();
+    });
+  }
+
   async function deleteDeenUser(uid) {
     uid = String(uid || '').trim();
     if (!uid) throw Error('User UID is required.');
     if (uid === String(me.uid)) throw Error('The Super Admin account cannot be deleted here.');
-    if (
-      !confirm(
-        'Remove this user from Deen Friends? The Firebase Authentication account and historical moderation/chat records will be retained because this build is Spark-only. Deen Friends access will be disabled safely.',
-      )
-    )
-      return false;
+    const profileRef = doc(S.db, 'deens_users', uid);
+    const profileSnap = await getDoc(profileRef);
+    if (!profileSnap.exists()) throw Error('The Deen Friends profile no longer exists.');
+    // One request at a time per member (double taps, two open consoles).
+    const pending = await getDocs(query(collection(S.db, 'deens_admin_jobs'), where('targetUid', '==', uid), limit(10)));
+    if (pending.docs.some((d) => ['queued', 'running'].includes(d.data()?.status)))
+      throw Error('A deletion for this member is already in progress.');
+    if (!(await confirmDeletion(uid, profileSnap.data() || {}))) return false;
     try {
-      const profileRef = doc(S.db, 'deens_users', uid);
-      const profileSnap = await getDoc(profileRef);
-      if (!profileSnap.exists()) throw Error('The Deen Friends profile no longer exists.');
-      await runTransaction(S.db, async (tx) => {
-        const current = await tx.get(profileRef);
-        if (!current.exists()) throw Error('The Deen Friends profile no longer exists.');
-        tx.set(
-          profileRef,
-          {
-            deenFriendsAccessDisabled: true,
-            disabledAt: serverTimestamp(),
-            disabledBy: me.uid,
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true },
-        );
-      });
-      await writeAudit(
-        'USER_DEEN_ACCESS_DISABLED',
-        uid,
-        'Deen Friends access was disabled safely on the Spark-compatible client path; Firebase Authentication and historical records were retained.',
-        { authAccountRetained: true, dataRetained: true },
+      await setDoc(
+        profileRef,
+        { deenFriendsAccessDisabled: true, disabledAt: serverTimestamp(), disabledBy: me.uid, deletionRequestedAt: serverTimestamp(), updatedAt: serverTimestamp() },
+        { merge: true },
       );
+      const jobRef = doc(collection(S.db, 'deens_admin_jobs'));
+      await setDoc(jobRef, {
+        type: 'deleteDeenUser',
+        targetUid: uid,
+        requestedBy: me.uid,
+        requestedByEmail: me.email || '',
+        status: 'queued',
+        createdAt: serverTimestamp(),
+        createdAtMs: Date.now(),
+      });
+      await writeAudit('USER_DELETION_REQUESTED', uid, 'Super Admin requested permanent deletion of a Deen Friends member and login.', { jobId: jobRef.id });
       state.selectedUser = null;
       invalidate('users');
       state.userManagementTab = 'accounts';
       await userManagement();
-      toast('Deen Friends access removed. Firebase Auth and historical records were retained safely.');
+      toast('Deletion queued. Access is off now; the account and data are removed within about 5 minutes.');
       return true;
     } catch (e) {
-      throw Error(e?.message || 'Could not safely remove this Deen Friends user.');
+      throw Error(adminErrorMessage(e) || 'Could not queue the deletion.');
     }
   }
 

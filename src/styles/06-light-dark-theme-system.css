@@ -216,7 +216,8 @@ html.light-mode body #dynamicPage .name-reader-body section,
 html.light-mode body .instagram-profile,
 html.light-mode body .instagram-profile-icon,
 html.light-mode body #dynamicPage .compact-sacred-panel,
-html.light-mode body #dynamicPage .dua-library-card{
+html.light-mode body #dynamicPage .dua-library-card,
+html.light-mode body #dynamicPage .hadith-preview-card{
   background:#ffffff!important;
   background-color:#ffffff!important;
   background-image:none!important;

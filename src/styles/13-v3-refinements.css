@@ -1643,3 +1643,29 @@ html.light-mode .rud-mq-btn.is-primary { color: #fff; background: linear-gradien
 .rud-mq-loc { display: inline-flex; align-items: center; gap: 6px; }
 .rud-mq-loc i { width: 7px; height: 7px; border-radius: 50%; background: var(--mq-gold); box-shadow: 0 0 0 3px rgba(217, 186, 114, 0.2); }
 @media (prefers-reduced-motion: reduce) { .rud-mq-item, .rud-mq-shell, .rud-mq-skel { animation: none; } }
+
+/* Admin › Data & Accounts — Full Admin Data Reset (V3.5). */
+.rud-reset-admin { padding: 4px 0 24px; }
+.rud-reset-card { display: grid; gap: 14px; max-width: 760px; padding: 20px; border: 1px solid rgba(201, 76, 76, 0.28); }
+.rud-reset-card h2 { margin: 2px 0 0; font-size: 1.35rem; }
+.rud-reset-card h3 { margin: 0 0 8px; font-size: 0.82rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--df2-muted); }
+.rud-reset-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.rud-reset-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.rud-reset-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: baseline; padding: 9px 12px; border: 1px solid var(--df2-line); border-radius: 12px; font-size: 0.86rem; }
+.rud-reset-list li b { font-variant-numeric: tabular-nums; }
+.rud-reset-list li small { grid-column: 1 / -1; color: #c94c4c; }
+.rud-reset-list li[data-state='done'] b { color: var(--df2-gold); }
+.rud-reset-list li[data-state='error'] { border-color: rgba(201, 76, 76, 0.45); }
+.rud-reset-list.is-kept li { grid-template-columns: 1fr; color: var(--df2-muted); }
+.rud-reset-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* "Your data on this page" (V3.5) — the same quiet control on My Deen, Qur'an, Saved and Tasbih. */
+.rud-page-data { display: flex; justify-content: center; margin: 22px auto 8px; padding: 0 16px; }
+.rud-page-data-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border: 1px solid var(--v3-line, rgba(255, 255, 255, 0.12)); border-radius: 999px; background: transparent; color: var(--v3-muted, #a7a7ab); font: 600 0.82rem/1 Manrope, system-ui, sans-serif; cursor: pointer; }
+.rud-page-data-btn:hover { color: var(--v3-text, #fff); border-color: var(--v3-gold, #d9ba72); }
+html.light-mode .rud-page-data-btn { border-color: rgba(17, 17, 17, 0.12); color: #5a554a; }
+.rud-page-data-list { margin: 0 0 12px; padding-left: 18px; display: grid; gap: 4px; color: var(--v3-text); }
+.rud-page-data-kept { font-size: 0.82rem; }
+.rud-page-data-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.rud-btn-danger { border-color: transparent; background: #b4463f; color: #fff; }
+.rud-btn-danger:hover { background: #9c3b35; }

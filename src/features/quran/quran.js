@@ -17,6 +17,7 @@ import {
   rudTrackQuranLocalActivity,
 } from '../my-deen/myDeen';
 import { esc, featureShowPage } from '../tools/featurePageShell';
+import { pageDataControlHtml } from '../userData/PageDataControl';
 import appLogoUrl from '../../assets/images/app-logo.png';
 
 let RUD_QURAN_META_KEY,
@@ -1433,7 +1434,8 @@ export function init() {
         rudTrackQuranLocalActivity(`${Number(rudQuranCurrentSurah)}:${Number(rudQuranCurrentAyah)}`);
     }, 30000);
     const html = `<section class="rud-quran-page ${hasExplicit ? 'reading' : ''}"><header class="rud-quran-app-head"><div><span>RISE UPON DEEN · QUR'AN</span><h1>Qur’an</h1><p>Read with presence. Listen with focus.</p></div><button type="button" class="rud-quran-back-home" data-rud-feature-back aria-label="Back to home">← Back</button></header><div class="rud-quran-layout"><aside class="rud-quran-sidebar"><div class="rud-quran-continue" id="rudQuranContinue"></div><div class="rud-quran-library-head"><div><span>SURAHS</span><strong>114 Chapters</strong></div><label class="rud-quran-search"><span aria-hidden="true">⌕</span><input id="rudQuranSurahFilter" type="search" placeholder="Search Surah, cached Ayah, saved" aria-label="Search Qur'an locally"></label></div><div class="rud-quran-bookmarks" id="rudQuranBookmarks"></div><div class="rud-surah-list" id="rudSurahList"><div class="rud-quran-list-skeleton">${Array.from({ length: 7 }, () => '<span></span>').join('')}</div></div></aside><main class="rud-quran-reader" id="rudQuranReader"><div class="rud-quran-reader-welcome"><span aria-hidden="true">۞</span><h2>Select a Surah</h2><p>Choose from the Qur'an library to begin reading.</p></div></main><aside class="rud-quran-side-player" id="rudQuranSidePlayer"></aside></div><p class="rud-quran-source-note">Qur'an text and online recitation: Al Quran Cloud / Islamic Network. English meaning: Saheeh International. Urdu text: Fateh Muhammad Jalandhry. Urdu verse-by-verse audio: Shamshad Ali Khan.</p></section>`;
-    if (!featureShowPage(html, 'Qur’an | Rise Upon Deen')) return;
+    // The reader (an open surah) stays uncluttered; the data control sits on the Qur'an home.
+    if (!featureShowPage(hasExplicit ? html : html + pageDataControlHtml('quran'), 'Qur’an | Rise Upon Deen')) return;
     rudQuranSyncFocusClass();
     try {
       rudGetQuranSurahs();

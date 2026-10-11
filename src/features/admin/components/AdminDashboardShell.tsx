@@ -105,6 +105,11 @@ export function AdminDashboardShell() {
             <span>{'›'}</span>
           </button>
           {'\n'}
+          <button data-admin-view="data-reset">
+            {'Data & Accounts '}
+            <span>{'›'}</span>
+          </button>
+          {'\n'}
         </nav>
         <div className="admin-sidebar-bottom">
           <button className="premium-btn small" id="adminLogoutBtn">

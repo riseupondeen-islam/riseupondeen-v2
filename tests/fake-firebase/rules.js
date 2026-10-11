@@ -546,6 +546,36 @@ export function createRules(state) {
       return true;
     const seg = path.split('/');
     try {
+      /* V3.5 admin jobs (model of firestore.rules): Super Admin creates in one exact shape; no edits. */
+      if (seg[0] === 'deens_admin_jobs' && seg.length === 2) {
+        if (op === 'read') return isSuper();
+        if (op !== 'create') return false;
+        const d = after || {};
+        return (
+          isSuper() &&
+          Object.keys(d).every((k) => ['type', 'targetUid', 'requestedBy', 'requestedByEmail', 'status', 'createdAt', 'createdAtMs'].includes(k)) &&
+          d.type === 'deleteDeenUser' &&
+          isStr(d.targetUid, 128) &&
+          d.targetUid.length > 0 &&
+          d.targetUid !== uid() &&
+          d.requestedBy === uid() &&
+          d.requestedByEmail === auth().email &&
+          d.status === 'queued' &&
+          recent(d.createdAt) &&
+          isInt(d.createdAtMs)
+        );
+      }
+      /* Logs & analytics (the Full Admin Data Reset scope): only the Super Admin may delete. */
+      if (seg.length === 2 && ['deens_activity_logs', 'deens_analytics', 'deens_risk_signals', 'deens_private_chat_access_logs', 'visitor_sessions'].includes(seg[0])) {
+        if (op === 'delete') return isSuper();
+        if (op === 'read') return isSuper() || isTrust() || (seg[0] === 'visitor_sessions' && !!role());
+        return true; // creation/updates by the app are not part of this model
+      }
+      /* The admin audit log is never edited or removed by anyone but the Super Admin override. */
+      if (seg.length === 2 && seg[0] === 'deens_admin_audit_logs') {
+        if (op === 'update' || op === 'delete') return isSuper();
+        return true;
+      }
       if (seg.length === 2) {
         const [coll, id] = seg;
         const table = {

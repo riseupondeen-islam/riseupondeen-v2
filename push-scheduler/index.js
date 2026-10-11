@@ -1,8 +1,10 @@
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
+const { getAuth } = require('firebase-admin/auth');
 const { processDeenFriendsEvents } = require('./deenFriends');
 const { runMaintenance } = require('./maintenance');
+const { processAdminJobs } = require('./adminJobs');
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '{}');
 if (!serviceAccount.project_id || !serviceAccount.client_email || !serviceAccount.private_key) {
@@ -169,5 +171,8 @@ async function processPrayerNotifications(){
   // V3 maintenance (RISE chat 24h retention, friend suggestions) is also independent of the rest.
   let maintenance;
   try{maintenance=await runMaintenance(db);}catch(e){console.warn('Maintenance failed',e?.message||e);maintenance={error:String(e?.message||e)};}
-  console.log(JSON.stringify({ok:true,at:new Date().toISOString(),jobs,prayers,deenFriends,maintenance}));
+  // V3.5 trusted admin jobs (Super Admin–requested member deletion), independent of the rest.
+  let adminJobs;
+  try{adminJobs=await processAdminJobs(db,getAuth());}catch(e){console.warn('Admin jobs failed',e?.message||e);adminJobs={error:String(e?.message||e)};}
+  console.log(JSON.stringify({ok:true,at:new Date().toISOString(),jobs,prayers,deenFriends,maintenance,adminJobs}));
 })().catch(error=>{console.error(error);process.exit(1);});

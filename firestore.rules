@@ -1502,6 +1502,40 @@ service cloud.firestore {
        No update/delete.
        ========================================================= */
 
+    /* =========================================================
+       ADMIN JOBS (V3.5)
+
+       Requests for work only the trusted scheduler (Admin SDK)
+       may do — today only deleting a Deen Friends member and
+       their login account. Only the Super Admin can queue one,
+       in exactly this shape; nobody can edit or delete a job
+       from a browser (the scheduler re-checks the requester).
+       ========================================================= */
+
+    match /deens_admin_jobs/{jobId} {
+      allow read: if isSuperAdmin();
+
+      allow create:
+        if
+          isSuperAdmin() &&
+          request.resource.data.keys().hasOnly([
+            'type', 'targetUid', 'requestedBy', 'requestedByEmail',
+            'status', 'createdAt', 'createdAtMs'
+          ]) &&
+          request.resource.data.type == 'deleteDeenUser' &&
+          isString(request.resource.data.targetUid, 128) &&
+          request.resource.data.targetUid.size() > 0 &&
+          request.resource.data.targetUid != request.auth.uid &&
+          request.resource.data.requestedBy == request.auth.uid &&
+          request.resource.data.requestedByEmail == request.auth.token.email &&
+          request.resource.data.status == 'queued' &&
+          request.resource.data.createdAt == request.time &&
+          request.resource.data.createdAtMs is int;
+
+      allow update, delete: if false;
+    }
+
+
     match /deens_admin_audit_logs/{auditId} {
       // Explicit Deen Friends Super Admin override.
       allow read, create, update, delete: if isSuperAdmin();

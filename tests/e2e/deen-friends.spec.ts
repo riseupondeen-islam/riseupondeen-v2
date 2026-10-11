@@ -241,8 +241,18 @@ test('RISE: welcome is created once, messages send, channel is separate', async 
   await expect(page.locator('.df2-fullscreen')).toContainText('This first message is automated');
   await expect(page.locator('.df2-automated-label').first()).toHaveText('Automated message');
   await ui(page).getByLabel('Message to RISE').fill('Assalamu alaikum, how do I reset my streak reminder?');
+  // Watch every DOM change while sending: the message must never be shown twice (local + server copy).
+  await page.evaluate(() => {
+    const w = window as unknown as { __maxMine: number };
+    w.__maxMine = 0;
+    new MutationObserver(() => {
+      w.__maxMine = Math.max(w.__maxMine, document.querySelectorAll('.df2-fullscreen .df2-msg-text.mine').length);
+    }).observe(document.body, { subtree: true, childList: true, characterData: true });
+  });
   await ui(page).getByRole('button', { name: 'Send message' }).click();
   await expect(page.locator('.df2-msg-text.mine')).toContainText('reset my streak reminder');
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => (window as unknown as { __maxMine: number }).__maxMine)).toBe(1);
   await page.screenshot({ path: `${SHOTS}/${info.project.name}-08-rise.png` });
   // Close and reopen: still exactly one welcome.
   await ui(page).getByRole('button', { name: 'Back to chats' }).click();

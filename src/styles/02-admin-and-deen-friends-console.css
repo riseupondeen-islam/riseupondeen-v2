@@ -2252,3 +2252,9 @@ html.light-mode body .rud-quran-mini-actions .primary{background:#24211c!importa
 #rudMaintenanceApp .rud-maintenance-page{position:relative;z-index:1}
 #rudMaintenanceApp .rud-maintenance-card{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);background:linear-gradient(145deg,rgba(10,16,22,.72),rgba(6,10,14,.6))}
 html.light-mode body #rudMaintenanceApp .rud-maintenance-card{background:rgba(255,255,255,.82)!important}
+
+/* V3.5 member deletion confirmation (drawer). */
+.rud-df-admin-delete{display:grid;gap:10px}
+.rud-df-admin-delete h4{margin:6px 0 0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--df-a-gold)}
+.rud-df-admin-delete ul{margin:0;padding-left:18px;display:grid;gap:4px;font-size:13px;line-height:1.45}
+.rud-df-admin-delete .rud-df-admin-btn:disabled{opacity:.45;cursor:not-allowed}

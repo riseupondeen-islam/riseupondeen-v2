@@ -1,4 +1,4 @@
-/* Draws a built avatar from its configuration. Shared SVG parts, no images, no faces.
+/* Draws a built avatar from its configuration. Shared SVG parts, no images, no faces (V3.5 figures redrawn).
    Figures are abstract silhouettes: the head is a plain, featureless shape.
    V3.1: premium rendering — soft gradient backdrops with a top glow, shaded clothing with fold
    highlights, a metallic accent frame with an inner hairline and a gentle gloss. Still pure SVG,
@@ -138,89 +138,151 @@ interface Paint {
   beard: string;
   cloth: string;
   clothHi: string;
+  clothEdge: string;
   accent: string;
+  accentDeep: string;
+  wrap: string;
   head: string;
   line: string;
+  fine: boolean; // false for tiny avatars: fold lines and embroidery are skipped
 }
 
-/** A simple beard silhouette — makes brothers' figures read clearly as men (still no facial features). */
-function Beard({ cy = 35, fill }: { cy?: number; fill: string }) {
+/* V3.5 figures — one consistent bust for every style: a faceless head with a warm skin tone (the same
+   on light and dark backgrounds; it used to turn grey-green on dark ones), a neck, and shoulders.
+   Brothers wear a thobe with a collar and placket; sisters' coverings frame the face and drape over
+   the shoulders. No facial features are ever drawn. */
+const HEAD = { cx: 36, cy: 31, rx: 9.2, ry: 11 };
+
+function Head({ p }: { p: Paint }) {
   return (
-    <path
-      d={`M26.4 ${cy + 1}c.6 7.6 4.6 12.4 9.6 12.4s9-4.8 9.6-12.4c-1.6 3.4-4.8 5.3-9.6 5.3s-8-1.9-9.6-5.3Z`}
-      fill={fill}
-    />
+    <>
+      <path d="M32.4 38h7.2v10.5h-7.2Z" fill={p.head} />
+      <ellipse cx="36" cy="44.8" rx="5" ry="2" fill="#000" opacity=".14" />
+      <ellipse cx={HEAD.cx} cy={HEAD.cy} rx={HEAD.rx} ry={HEAD.ry} fill={p.head} />
+    </>
   );
 }
+
+/** A neat beard along the jaw line (the cheeks and face above stay clear). */
+function Beard({ fill }: { fill: string }) {
+  return <path d="M26.9 32.6c.4 7.6 4.2 12.6 9.1 12.6s8.7-5 9.1-12.6c-2.1 4-5.2 5.9-9.1 5.9s-7-1.9-9.1-5.9Z" fill={fill} />;
+}
+
+/** The thobe: shoulders, round collar, placket with two buttons. */
+function Thobe({ p }: { p: Paint }) {
+  return (
+    <>
+      <path d="M8 72v-5.6C8 55.6 18 49.2 30 47.8l6 4.4 6-4.4c12 1.4 22 7.8 22 18.6V72Z" fill={p.cloth} stroke={p.clothEdge} strokeWidth=".6" />
+      <path d="M30 47.8c1.4 2.9 3.5 4.4 6 4.4s4.6-1.5 6-4.4" fill="none" stroke={p.clothHi} strokeWidth="1.3" strokeLinecap="round" />
+      <path d="M36 52.4V68" stroke={p.clothEdge} strokeWidth=".8" />
+      <circle cx="36" cy="56.2" r=".95" fill={p.accent} />
+      <circle cx="36" cy="60.6" r=".95" fill={p.accent} />
+      {p.fine ? (
+        <>
+          <path d="M14 63c2.4-5.6 7-9.2 13-11" fill="none" stroke={p.clothHi} strokeWidth="1.3" strokeLinecap="round" opacity=".5" />
+          <path d="M58 63c-2.4-5.6-7-9.2-13-11" fill="none" stroke={p.clothEdge} strokeWidth="1" strokeLinecap="round" opacity=".35" />
+        </>
+      ) : null}
+    </>
+  );
+}
+
+/** Sisters' covering: outer shape (drape over the shoulders) with the face opening drawn on top. */
+function Covering({ p, d }: { p: Paint; d: string }) {
+  return <path d={d} fill={p.cloth} stroke={p.clothEdge} strokeWidth=".6" />;
+}
+const HIJAB = 'M36 15c-10.2 0-15.5 8-15.5 17 0 5.2 1.7 9.5 4.5 12.5C16 47 9.5 54 8 64v8h56v-8c-1.5-10-8-17-17-19.5 2.8-3 4.5-7.3 4.5-12.5 0-9-5.3-17-15.5-17Z';
+const KHIMAR = 'M36 14.5c-11 0-16.5 8.5-16.5 18 0 5 1.5 9.3 4 12.5C15 49.5 9 57 7 66l-1 6h60l-1-6c-2-9-8-16.5-16.5-21 2.5-3.2 4-7.5 4-12.5 0-9.5-5.5-18-16.5-18Z';
 
 function Figure({ kind, p }: { kind: AvatarConfig['figure']; p: Paint }) {
   if (kind === 'none') return null;
-  const shoulders = (
-    <>
-      <path d="M12 72v-6c0-11.5 10-18 24-18s24 6.5 24 18v6Z" fill={p.cloth} />
-      <path d="M16 60c3-6 9-9.6 15-10.6" fill="none" stroke={p.clothHi} strokeWidth="1.6" strokeLinecap="round" opacity=".6" />
-    </>
-  );
-  if (kind === 'hijab')
-    return (
-      <g>
-        <path d="M36 13c-10.5 0-16.5 8.8-16.5 18.5 0 5 1.6 9.2 4 12.2-7.2 3-13.5 9.2-15.5 20.3v8h56v-8c-2-11.1-8.3-17.3-15.5-20.3 2.4-3 4-7.2 4-12.2C52.5 21.8 46.5 13 36 13Z" fill={p.cloth} />
-        <path d="M24 22c3-5 7-7.6 12-7.6" fill="none" stroke={p.clothHi} strokeWidth="1.8" strokeLinecap="round" opacity=".55" />
-        <ellipse cx="36" cy="33" rx="8.2" ry="10" fill={p.head} />
-        <path d="M23 44.5c4 4 8.3 6 13 6s9-2 13-6" fill="none" stroke={p.accent} strokeWidth="1.5" opacity=".85" />
-        <path d="M14 62c4-5 9-8 14-9.4" fill="none" stroke={p.clothHi} strokeWidth="1.4" strokeLinecap="round" opacity=".45" />
-      </g>
-    );
-  if (kind === 'niqab')
-    return (
-      <g>
-        <path d="M36 12c-11 0-17 9-17 19 0 5.5 1.8 10 4.5 13-7.5 3-14 9.5-16 20v8h57v-8c-2-10.5-8.5-17-16-20 2.7-3 4.5-7.5 4.5-13 0-10-6-19-17-19Z" fill={p.cloth} />
-        <path d="M27.5 29.5h17a2.4 2.4 0 0 1 0 4.8h-17a2.4 2.4 0 0 1 0-4.8Z" fill={p.head} />
-        <path d="M24 21c3-5 7-7.4 12-7.4" fill="none" stroke={p.clothHi} strokeWidth="1.8" strokeLinecap="round" opacity=".5" />
-        <path d="M30 38.5c2 .8 4 1.2 6 1.2s4-.4 6-1.2" fill="none" stroke={p.line} strokeWidth=".8" opacity=".5" />
-        <path d="M22.5 46c4 3.6 8.4 5.4 13.5 5.4s9.5-1.8 13.5-5.4" fill="none" stroke={p.accent} strokeWidth="1.4" opacity=".8" />
-      </g>
-    );
   if (kind === 'kufi')
     return (
       <g>
-        {shoulders}
-        <path d="M31 49l5 9 5-9" fill="none" stroke={p.accent} strokeWidth="1.4" opacity=".85" />
-        <ellipse cx="36" cy="34" rx="10" ry="11.5" fill={p.head} />
-        <Beard cy={34} fill={p.beard} />
-        <path d="M26 30.5c0-6.5 4.5-10.5 10-10.5s10 4 10 10.5Z" fill={p.accent} />
-        <path d="M27 27.5h18M28 24.5h16" stroke={p.line} strokeWidth="0.7" opacity=".35" />
+        <Thobe p={p} />
+        <Head p={p} />
+        <Beard fill={p.beard} />
+        <path d="M26.6 27.6c0-6.8 4.2-10.4 9.4-10.4s9.4 3.6 9.4 10.4Z" fill={p.wrap} stroke="#b9b1a2" strokeWidth=".5" />
+        <path d="M26.5 26c3.5-1.2 15.5-1.2 19 0l.1 2.6c-3.6-1-15.6-1-19.2 0Z" fill={p.accentDeep} />
+        {p.fine
+          ? Array.from({ length: 7 }, (_, i) => <circle key={i} cx={28 + i * 2.67} cy={27.25} r=".42" fill={p.accent} />)
+          : null}
+        {p.fine ? <path d="M31 20c1.4-1.2 3.1-1.8 5-1.8" fill="none" stroke="#fff" strokeOpacity=".45" strokeWidth=".9" strokeLinecap="round" /> : null}
       </g>
     );
   if (kind === 'ghutra')
     return (
       <g>
-        {shoulders}
-        <path d="M24 31c0-8 5.2-13.5 12-13.5S48 23 48 31v18c-3 2.5-7 3.5-12 3.5s-9-1-12-3.5Z" fill={p.clothHi} />
-        <ellipse cx="36" cy="35" rx="8.6" ry="10.5" fill={p.head} />
-        <Beard cy={35} fill={p.beard} />
-        <path d="M24.6 25.8c3-3 7-4.6 11.4-4.6s8.4 1.6 11.4 4.6" fill="none" stroke={p.accent} strokeWidth="2.4" strokeLinecap="round" />
-        <path d="M24.6 28.6c3-2.6 7-4 11.4-4s8.4 1.4 11.4 4" fill="none" stroke={p.accent} strokeWidth="1.2" strokeLinecap="round" opacity=".7" />
+        <Thobe p={p} />
+        <Head p={p} />
+        <Beard fill={p.beard} />
+        <path
+          d="M36 16.5c-8.5 0-13 6-13 14L22 52c-2 3-5 5.5-8.5 7.5L20 61c5-3 7.5-7 8.5-12V33c0-6.5 3-9.8 7.5-9.8s7.5 3.3 7.5 9.8v16c1 5 3.5 9 8.5 12l6.5-1.5c-3.5-2-6.5-4.5-8.5-7.5L49 30.5c0-8-4.5-14-13-14Z"
+          fill={p.wrap}
+          stroke="#b9b1a2"
+          strokeWidth=".5"
+        />
+        {p.fine ? <path d="M28.5 33v16M43.5 33v16" stroke={p.accent} strokeWidth=".7" opacity=".7" /> : null}
+        {/* Agal: two black cords resting on the ghutra (front half only, so they sit on the cloth). */}
+        <path d="M25.6 22.6c2.4 2.4 6.2 3.4 10.4 3.4s8-1 10.4-3.4" fill="none" stroke="#1b1b20" strokeWidth="1.9" strokeLinecap="round" />
+        <path d="M25 25.4c2.6 2.2 6.4 3.2 11 3.2s8.4-1 11-3.2" fill="none" stroke="#1b1b20" strokeWidth="1.3" strokeLinecap="round" />
+        <path d="M25.6 22.6c2.4-2.2 6.2-3.2 10.4-3.2s8 1 10.4 3.2" fill="none" stroke="#1b1b20" strokeWidth="1.2" opacity=".55" />
       </g>
     );
   if (kind === 'turban')
     return (
       <g>
-        {shoulders}
-        <ellipse cx="36" cy="35" rx="10" ry="11.5" fill={p.head} />
-        <Beard cy={35} fill={p.beard} />
-        <path d="M24.5 31c0-8 5-13 11.5-13s11.5 5 11.5 13c-3-2-7-3-11.5-3s-8.5 1-11.5 3Z" fill={p.accent} />
-        <path d="M26 25.5c4-2 13-2.5 20 1M25 29c5-2.5 15-2.5 22 .5" fill="none" stroke={p.line} strokeWidth="0.9" opacity=".35" />
+        <path d="M44.4 27.4c2 4.4 2.8 9.2 2.4 14.4l3.4-.6c.4-5.6-.8-10.6-3.6-15.2Z" fill={p.wrap} stroke="#b9b1a2" strokeWidth=".4" />
+        <Thobe p={p} />
+        <Head p={p} />
+        <Beard fill={p.beard} />
+        <path d="M25.4 29.4c0-8.6 4.6-13.4 10.6-13.4s10.6 4.8 10.6 13.4c-3-2-6.6-2.9-10.6-2.9s-7.6.9-10.6 2.9Z" fill={p.wrap} stroke="#b9b1a2" strokeWidth=".5" />
+        <path d="M26 27.7c5.4-2.8 14.6-2.8 20.2.2l-.2 1.5c-5.6-2.8-14.4-2.8-19.8-.2Z" fill={p.accent} />
+        {p.fine ? (
+          <path d="M26.4 24.6c4.4-2.6 13-3.2 19.4.6M28.4 20.4c3.6-1.8 9.8-2 14.6.4" fill="none" stroke="#b9b1a2" strokeWidth=".75" />
+        ) : null}
       </g>
     );
-  // Khimar: a long, loose head covering draping over the shoulders (sisters).
+  if (kind === 'hijab')
+    return (
+      <g>
+        <Covering p={p} d={HIJAB} />
+        <ellipse cx="36" cy="32" rx="8" ry="10" fill={p.head} />
+        <path d="M27.6 28.4c.9-4.6 4.2-7 8.4-7s7.5 2.4 8.4 7" fill="none" stroke={p.accent} strokeWidth="1" />
+        {p.fine ? (
+          <>
+            <path d="M27 45c3 3 6 4.2 9 4.2s6-1.2 9-4.2" fill="none" stroke={p.clothHi} strokeWidth="1" opacity=".55" />
+            <path d="M14 62c3-6.6 8-10.6 14-12.4M58 62c-3-6.6-8-10.6-14-12.4" fill="none" stroke={p.clothHi} strokeWidth="1.2" strokeLinecap="round" opacity=".4" />
+            <path d="M24.5 22.5c2.6-4.4 6.6-6.6 11.5-6.6" fill="none" stroke="#fff" strokeOpacity=".35" strokeWidth="1.2" strokeLinecap="round" />
+          </>
+        ) : null}
+        <circle cx="45.2" cy="41.4" r="1.25" fill={p.accent} />
+      </g>
+    );
+  if (kind === 'niqab')
+    return (
+      <g>
+        <Covering p={p} d={HIJAB} />
+        <path d="M28 29.4c3-1.3 13-1.3 16 0 .6 1.2.4 2.4-.4 3.2-3 .9-12.2.9-15.2 0-.8-.8-1-2-.4-3.2Z" fill={p.head} />
+        <path d="M27.6 27.6c.9-4.2 4.2-6.4 8.4-6.4s7.5 2.2 8.4 6.4" fill="none" stroke={p.accent} strokeWidth="1" />
+        {p.fine ? (
+          <>
+            <path d="M28.6 37.6c2.6 1 12.2 1 14.8 0M29.6 41.6c2.4.8 10.4.8 12.8 0" fill="none" stroke={p.clothHi} strokeWidth=".8" opacity=".45" />
+            <path d="M14 62c3-6.6 8-10.6 14-12.4M58 62c-3-6.6-8-10.6-14-12.4" fill="none" stroke={p.clothHi} strokeWidth="1.2" strokeLinecap="round" opacity=".4" />
+          </>
+        ) : null}
+      </g>
+    );
+  // Khimar: a long covering that drapes over the shoulders like a cape (sisters).
   return (
     <g>
-      <path d="M36 12.5c-11.5 0-18 9.5-18 20 0 4 .8 7.6 2.3 10.6C12.5 47.5 8 55 7 64v8h58v-8c-1-9-5.5-16.5-13.3-20.9 1.5-3 2.3-6.6 2.3-10.6 0-10.5-6.5-20-18-20Z" fill={p.cloth} />
-      <path d="M22 21.5c3.2-5.4 8-8.2 14-8.2" fill="none" stroke={p.clothHi} strokeWidth="1.8" strokeLinecap="round" opacity=".5" />
-      <ellipse cx="36" cy="33" rx="8" ry="9.8" fill={p.head} />
-      <path d="M20 47c4.6 5 10 7.6 16 7.6S47.4 52 52 47" fill="none" stroke={p.accent} strokeWidth="1.4" opacity=".8" />
-      <path d="M12 66c3-6 8-10 14-12M60 66c-3-6-8-10-14-12" fill="none" stroke={p.clothHi} strokeWidth="1.3" strokeLinecap="round" opacity=".4" />
+      <Covering p={p} d={KHIMAR} />
+      <ellipse cx="36" cy="32.4" rx="8" ry="10" fill={p.head} />
+      <path d="M27.6 28.8c.9-4.6 4.2-7 8.4-7s7.5 2.4 8.4 7" fill="none" stroke={p.accent} strokeWidth="1" />
+      <path d="M12 71c6.4-8 14-12.2 24-12.2S53.6 63 60 71" fill="none" stroke={p.accent} strokeWidth="1" opacity=".75" />
+      {p.fine ? (
+        <path d="M26 46.4c3.2 3.2 6.4 4.6 10 4.6s6.8-1.4 10-4.6M18 60c2.6-4.4 6-7.4 10-9M54 60c-2.6-4.4-6-7.4-10-9" fill="none" stroke={p.clothHi} strokeWidth="1" opacity=".45" />
+      ) : null}
     </g>
   );
 }
@@ -242,15 +304,19 @@ export function AvatarArt({ config, name = '', size = 44 }: { config: AvatarConf
         .toUpperCase()
     : '';
   const motifOnly = config.figure === 'none';
+  const small = size < 40; // tiny avatars skip the fine detail layers
   const paint: Paint = {
     beard: `url(#bd-${id})`,
     cloth: `url(#cl-${id})`,
-    clothHi: shade(outfit, 0.32),
+    clothHi: shade(outfit, 0.38),
+    clothEdge: shade(outfit, -0.4),
     accent: `url(#ac-${id})`,
+    accentDeep: shade(accent, -0.25),
+    wrap: `url(#wr-${id})`,
     head: `url(#hd-${id})`,
     line: dark ? '#000' : '#2a2014',
+    fine: !small,
   };
-  const small = size < 40; // tiny avatars skip the fine detail layers
   return (
     <svg viewBox="0 0 72 72" width={size} height={size} role="presentation" aria-hidden="true">
       <defs>
@@ -275,13 +341,18 @@ export function AvatarArt({ config, name = '', size = 44 }: { config: AvatarConf
           <stop offset="1" stopColor={shade(accent, -0.3)} />
         </linearGradient>
         <linearGradient id={`bd-${id}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#3a2f26" />
-          <stop offset="1" stopColor="#1f1913" />
+          <stop offset="0" stopColor="#4a3a2c" />
+          <stop offset="1" stopColor="#241b14" />
         </linearGradient>
-        <radialGradient id={`hd-${id}`} cx="0.42" cy="0.35" r="0.7">
-          <stop offset="0" stopColor={dark ? '#556660' : '#E9DDC6'} />
-          <stop offset="1" stopColor={dark ? '#34433E' : '#CDBB9C'} />
+        <radialGradient id={`hd-${id}`} cx="0.4" cy="0.32" r="0.75">
+          <stop offset="0" stopColor="#F2D9BE" />
+          <stop offset="1" stopColor="#CFA683" />
         </radialGradient>
+        {/* Head wraps (kufi, ghutra, imamah): ivory-white cloth; the accent colour is used for bands and trim. */}
+        <linearGradient id={`wr-${id}`} x1="0.1" y1="0" x2="0.7" y2="1">
+          <stop offset="0" stopColor="#FBF8F2" />
+          <stop offset="1" stopColor="#D9D2C4" />
+        </linearGradient>
       </defs>
       <g clipPath={`url(#av-${id})`}>
         <rect width="72" height="72" fill={`url(#bg-${id})`} />

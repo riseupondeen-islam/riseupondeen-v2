@@ -9,6 +9,7 @@ import { orderNamesForDisplay } from '../names/nameOrder';
 import { S } from '../../runtime/store';
 import { showPage } from '../../app/routing/surfaces';
 import { rudExportRisePoster } from './posterExport';
+import { pageDataControlHtml } from '../userData/PageDataControl';
 
 import { combinedPublicContent, findPublicItem, openSearch } from '../ask-rise/askRise';
 import { card, mediaBlock } from '../home/homeContent';
@@ -452,7 +453,7 @@ function renderSaved() {
         .join('')}</div></section>`
     : '';
   showPage(
-    `${routeHero('Your Collection', 'Saved for Later', 'Return to the reminders that spoke to your heart.')}<section class="section" style="padding-top:20px"><div class="shell">${quran}<div class="live-grid rud-saved-grid">${items.length ? items.map((x) => card(x)).join('') : marks.length ? '' : `<div class="empty-live">You have not saved any content yet.</div>`}</div></div></section>`,
+    `${routeHero('Your Collection', 'Saved for Later', 'Return to the reminders that spoke to your heart.')}<section class="section" style="padding-top:20px"><div class="shell">${quran}<div class="live-grid rud-saved-grid">${items.length ? items.map((x) => card(x)).join('') : marks.length ? '' : `<div class="empty-live">You have not saved any content yet.</div>`}</div>${pageDataControlHtml('saved')}</div></section>`,
     'Saved | Rise Upon Deen',
   );
 }

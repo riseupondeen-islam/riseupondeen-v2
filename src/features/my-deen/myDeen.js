@@ -23,6 +23,7 @@ import {
 import { rudQuranBookmarks, rudQuranLast, rudQuranSurahs } from '../quran/quran';
 import { PUBLIC_CACHE_KEY, PUBLIC_SHARED_CACHE, readPublicCache } from '../../services/content/publicContentCache';
 import { esc, favs, label, route, toast } from '../../utils/ui';
+import { pageDataControlHtml } from '../userData/PageDataControl';
 
 let RUD_DEEN_HISTORY_KEY,
   RUD_ADHKAR_PROGRESS_KEY,
@@ -1106,7 +1107,7 @@ function rudRenderMyDeen(preserveScroll = false) {
     <section class="rud-deen-section"><div class="rud-deen-section-head"><div><h2>Saved Collection</h2><p>${collectionCount} item${collectionCount === 1 ? '' : 's'} saved on this device, including Qur'an bookmarks.</p></div><a class="premium-btn small" href="#saved">View all</a></div><div class="rud-collection-preview">${savedHtml}</div></section>
     <section class="rud-deen-section"><div class="rud-deen-section-head"><div><h2>Settings & Offline</h2><p>Open details only when you need them.</p></div></div><div class="rud-deen-utility-grid"><article class="rud-utility-card"><span class="rud-deen-label">Reminder Settings</span><h3>${notifyEnabled ? 'Reminders enabled' : 'Reminder preferences'}</h3><p>Manage notification categories and delivery choices.</p><button class="premium-btn" id="rudOpenReminderSettings" type="button">Manage reminders</button></article><article class="rud-utility-card"><span class="rud-deen-label">Reading & Accessibility</span><h3>Reading controls</h3><p>Font size, spacing, Urdu, motion, contrast, Focus Mode and Data Saver.</p><button class="premium-btn" id="rudOpenReadingSettings" type="button">Reading settings</button></article><article class="rud-utility-card"><span class="rud-deen-label">Offline Rise</span><h3>${offlineCount ? `${offlineCount} selected offline` : cached.items.length ? 'Core cache ready' : 'Preparing cache'}</h3><p>Choose lightweight content or a Qur'an Surah to make it explicitly available offline. Audio is never downloaded automatically.</p></article>${rudBackupStorageCardHtml()}</div><div class="rud-reminder-settings-mount" id="rudReminderSettingsMount"></div><div class="rud-reminder-settings-mount" id="rudReadingSettingsMount"></div></section>
     <div class="rud-private-note">Private by default. Qur'an position, Adhkar, prayer tracking, Khatam planning, consistency and reading preferences remain local. Cloud storage is used only where an existing feature explicitly needs it, such as push delivery.</div></section>`;
-  showPage(html, 'My Deen | Rise Upon Deen');
+  showPage(html.replace(/<\/section>\s*$/, `${pageDataControlHtml('my-deen')}</section>`), 'My Deen | Rise Upon Deen');
   rudBindMyDeen();
   if (preservedScrollY !== null)
     requestAnimationFrame(() =>

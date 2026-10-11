@@ -1,5 +1,5 @@
 /* The official conversation with the RiseUponDeen team. Users write normal text here. */
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import type { RiseMessage } from '../types';
 import { classifyError, friendlyMessage, logError } from '../services/errors';
 import { formatClock, formatDayLabel, localDay } from '../services/format';
@@ -98,12 +98,15 @@ export function RiseChatScreen({ onBack }: { onBack: () => void }) {
     return () => document.removeEventListener('visibilitychange', mark);
   }, [thread?.unreadByUser, thread?.lastMessageAtMs]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Server copies replace local "sending" bubbles as soon as they arrive.
+  // Server copies replace local "sending" bubbles as soon as they arrive. The render filters them out
+  // in the same frame (V3.5: previously the copy and the bubble were both shown for one render), and
+  // this effect then drops them from state.
+  const serverIds = useMemo(() => new Set((rows || []).map((r) => r.id)), [rows]);
+  const pendingOutgoing = outgoing.filter((o) => !serverIds.has(o.id));
   useEffect(() => {
     if (!rows) return;
-    const ids = new Set(rows.map((r) => r.id));
-    setOutgoing((list) => list.filter((o) => !ids.has(o.id)));
-  }, [rows]);
+    setOutgoing((list) => (list.some((o) => serverIds.has(o.id)) ? list.filter((o) => !serverIds.has(o.id)) : list));
+  }, [rows, serverIds]);
 
   useLayoutEffect(() => {
     const el = listRef.current;
@@ -218,7 +221,7 @@ export function RiseChatScreen({ onBack }: { onBack: () => void }) {
             </article>,
           ];
         })}
-        {outgoing.map((o) => (
+        {pendingOutgoing.map((o) => (
           <article
             key={o.id}
             className={`df2-msg df2-msg-bubble df2-msg-text mine${o.state === 'failed' ? ' failed' : ''}`}

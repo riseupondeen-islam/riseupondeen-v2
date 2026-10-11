@@ -7,7 +7,8 @@
  *
  * This restores the overlay with the existing styles and the page's existing location flow:
  *  - location: the coordinates the Prayer page already resolved, else one geolocation request;
- *  - masjids: the free OpenStreetMap Overpass API (no key, no billing), nearest first;
+ *  - masjids: the free OpenStreetMap Overpass API (no key, no billing), nearest first — hedged across
+ *    mirrors with time limits and a short in-memory cache (see below);
  *  - directions: opens the device's maps app for the chosen masjid in a new tab/window;
  *  - denied / unavailable location or no network: clear options, the page keeps working. */
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -32,7 +33,23 @@ type Status =
   | { kind: 'results'; lat: number; lng: number; masjids: Masjid[]; radiusKm: number }
   | { kind: 'error'; lat: number; lng: number };
 
-const OVERPASS_ENDPOINTS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+/* Free OpenStreetMap Overpass mirrors (no key, no billing). V3.5 reliability: the public servers are
+ * often overloaded, and a slow one used to keep the spinner going for 20–60 s before the next was
+ * tried. Now the next mirror starts if the current one has not answered within HEDGE_MS (or at once
+ * if it fails), the first good answer wins and the others are cancelled, and the whole search gives
+ * up after TOTAL_MS with a "Try again" state. */
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+];
+const HEDGE_MS = 2500;
+const TOTAL_MS = 12000;
+/* Results are reused for 15 minutes for the same ~1 km area — in memory only, so the visitor's
+ * location is never written to the device. */
+const CACHE_MS = 15 * 60 * 1000;
+const resultCache = new Map<string, { at: number; masjids: Masjid[]; radiusKm: number }>();
+const cacheKey = (lat: number, lng: number) => `${lat.toFixed(2)},${lng.toFixed(2)}`;
 
 function distanceKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
   const rad = Math.PI / 180;
@@ -51,45 +68,86 @@ interface OverpassElement {
   tags?: Record<string, string>;
 }
 
+/** One mirror. A 200 answer whose `remark` reports a server-side timeout or error is a failure —
+ *  previously it looked like "no masjids nearby". */
+async function queryMirror(endpoint: string, q: string, signal: AbortSignal): Promise<OverpassElement[]> {
+  const response = await fetch(endpoint, { method: 'POST', body: new URLSearchParams({ data: q }), signal });
+  if (!response.ok) throw new Error(`Overpass ${response.status}`);
+  const json = (await response.json()) as { elements?: OverpassElement[]; remark?: string };
+  if (json.remark && /error|time(d)? ?out|timeout|rate limit|too many/i.test(json.remark)) throw new Error('Overpass: incomplete answer');
+  if (!Array.isArray(json.elements)) throw new Error('Overpass: malformed answer');
+  return json.elements;
+}
+
+/** Hedged request across the mirrors (see HEDGE_MS / TOTAL_MS). Rejects with AbortError when the
+ *  caller cancels; every in-flight request is cancelled once a result is settled. */
+function hedgedQuery(q: string, signal: AbortSignal): Promise<OverpassElement[]> {
+  return new Promise((resolve, reject) => {
+    const controllers: AbortController[] = [];
+    let next = 0;
+    let failed = 0;
+    let done = false;
+    let hedgeTimer = 0;
+    let lastError: unknown = null;
+    const finish = (settle: () => void) => {
+      if (done) return;
+      done = true;
+      clearTimeout(hedgeTimer);
+      clearTimeout(totalTimer);
+      signal.removeEventListener('abort', onAbort);
+      controllers.forEach((c) => c.abort());
+      settle();
+    };
+    const launch = () => {
+      if (done || next >= OVERPASS_ENDPOINTS.length) return;
+      clearTimeout(hedgeTimer);
+      const controller = new AbortController();
+      controllers.push(controller);
+      const endpoint = OVERPASS_ENDPOINTS[next++];
+      queryMirror(endpoint, q, controller.signal).then(
+        (elements) => finish(() => resolve(elements)),
+        (error) => {
+          if (done) return;
+          lastError = error;
+          failed++;
+          if (failed >= OVERPASS_ENDPOINTS.length) finish(() => reject(lastError));
+          else launch(); // a failed mirror hands over at once
+        },
+      );
+      if (next < OVERPASS_ENDPOINTS.length) hedgeTimer = window.setTimeout(launch, HEDGE_MS);
+    };
+    const onAbort = () => finish(() => reject(new DOMException('Cancelled', 'AbortError')));
+    const totalTimer = window.setTimeout(() => finish(() => reject(lastError || new Error('Overpass: no answer in time'))), TOTAL_MS);
+    if (signal.aborted) return onAbort();
+    signal.addEventListener('abort', onAbort, { once: true });
+    launch();
+  });
+}
+
 async function searchOverpass(lat: number, lng: number, radiusM: number, signal: AbortSignal): Promise<Masjid[]> {
   const around = `(around:${radiusM},${lat.toFixed(5)},${lng.toFixed(5)})`;
-  const q = `[out:json][timeout:20];(nwr["amenity"="place_of_worship"]["religion"="muslim"]${around};);out center 60;`;
-  let lastError: unknown = null;
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        body: new URLSearchParams({ data: q }),
-        signal,
-      });
-      if (!response.ok) throw new Error(`Overpass ${response.status}`);
-      const json = (await response.json()) as { elements?: OverpassElement[] };
-      return (json.elements || [])
-        .map((el) => {
-          const pLat = el.lat ?? el.center?.lat;
-          const pLng = el.lon ?? el.center?.lon;
-          if (typeof pLat !== 'number' || typeof pLng !== 'number') return null;
-          const tags = el.tags || {};
-          const address = [tags['addr:housenumber'], tags['addr:street'], tags['addr:city'] || tags['addr:suburb']]
-            .filter(Boolean)
-            .join(' ');
-          return {
-            id: `${el.type}/${el.id}`,
-            name: tags['name:en'] || tags.name || 'Masjid',
-            lat: pLat,
-            lng: pLng,
-            distanceKm: distanceKm(lat, lng, pLat, pLng),
-            address,
-          };
-        })
-        .filter((m): m is Masjid => !!m)
-        .sort((a, b) => a.distanceKm - b.distanceKm);
-    } catch (error) {
-      if ((error as { name?: string }).name === 'AbortError') throw error;
-      lastError = error;
-    }
-  }
-  throw lastError || new Error('Overpass unavailable');
+  const q = `[out:json][timeout:10];(nwr["amenity"="place_of_worship"]["religion"="muslim"]${around};);out center 60;`;
+  const elements = await hedgedQuery(q, signal);
+  return elements
+    .map((el) => {
+      const pLat = el.lat ?? el.center?.lat;
+      const pLng = el.lon ?? el.center?.lon;
+      if (typeof pLat !== 'number' || typeof pLng !== 'number') return null;
+      const tags = el.tags || {};
+      const address = [tags['addr:housenumber'], tags['addr:street'], tags['addr:city'] || tags['addr:suburb']]
+        .filter(Boolean)
+        .join(' ');
+      return {
+        id: `${el.type}/${el.id}`,
+        name: tags['name:en'] || tags.name || 'Masjid',
+        lat: pLat,
+        lng: pLng,
+        distanceKm: distanceKm(lat, lng, pLat, pLng),
+        address,
+      };
+    })
+    .filter((m): m is Masjid => !!m)
+    .sort((a, b) => a.distanceKm - b.distanceKm);
 }
 
 function directionsUrl(lat: number, lng: number, name: string): string {
@@ -145,6 +203,12 @@ function NearbyMasjidsOverlay({ onClose }: { onClose: () => void }) {
   const [attempt, setAttempt] = useState(0);
 
   const search = useCallback(async (lat: number, lng: number, signal: AbortSignal) => {
+    const key = cacheKey(lat, lng);
+    const hit = resultCache.get(key);
+    if (hit && Date.now() - hit.at < CACHE_MS) {
+      setStatus({ kind: 'results', lat, lng, masjids: hit.masjids, radiusKm: hit.radiusKm });
+      return;
+    }
     setStatus({ kind: 'searching', lat, lng });
     try {
       let radiusKm = 3;
@@ -153,6 +217,8 @@ function NearbyMasjidsOverlay({ onClose }: { onClose: () => void }) {
         radiusKm = 10;
         masjids = await searchOverpass(lat, lng, radiusKm * 1000, signal);
       }
+      if (signal.aborted) return;
+      resultCache.set(key, { at: Date.now(), masjids, radiusKm });
       setStatus({ kind: 'results', lat, lng, masjids, radiusKm });
     } catch (error) {
       if ((error as { name?: string }).name !== 'AbortError') setStatus({ kind: 'error', lat, lng });
@@ -180,7 +246,7 @@ function NearbyMasjidsOverlay({ onClose }: { onClose: () => void }) {
         if (err.code === err.PERMISSION_DENIED) setStatus({ kind: 'denied' });
         else setStatus({ kind: 'no-location', message: 'Your location could not be found right now.' });
       },
-      { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 },
+      { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 },
     );
     return () => controller.abort();
   }, [search, attempt]);

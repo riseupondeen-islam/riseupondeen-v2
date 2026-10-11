@@ -41,6 +41,7 @@ import * as zakatRoute from '../features/zakat/zakatRoute';
 import * as sadaqahRoute from '../features/sadaqah/sadaqahRoute';
 import * as guidesRoute from '../features/hajj-umrah/guidesRoute';
 import * as featureRoutes from '../features/tools/featureRoutes';
+import { initPageDataControl } from '../features/userData/PageDataControl';
 
 type Controller = { init: () => void };
 
@@ -83,6 +84,7 @@ const CONTROLLERS: ReadonlyArray<readonly [string, Controller]> = [
   ['features/sadaqah/sadaqahRoute', sadaqahRoute],
   ['features/hajj-umrah/guidesRoute', guidesRoute],
   ['features/tools/featureRoutes', featureRoutes],
+  ['features/userData/PageDataControl', { init: initPageDataControl }],
 ];
 
 let started = false;

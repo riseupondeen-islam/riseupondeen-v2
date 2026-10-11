@@ -6,6 +6,7 @@ import { DailyChallengesAdmin } from './DailyChallengesAdmin';
 import { RiseInboxAdmin } from './RiseInboxAdmin';
 import { GuideAdmin } from './GuideAdmin';
 import { WinnerAdmin } from './WinnerAdmin';
+import { DataResetAdmin } from './DataResetAdmin';
 
 let root: Root | null = null;
 
@@ -15,7 +16,7 @@ export function unmountReactAdminView(): void {
   root = null;
 }
 
-export type ReactAdminView = 'daily-challenges' | 'rise-inbox' | 'app-guide' | 'monthly-winner';
+export type ReactAdminView = 'daily-challenges' | 'rise-inbox' | 'app-guide' | 'monthly-winner' | 'data-reset';
 
 export function renderReactAdminView(view: ReactAdminView): void {
   const main = document.getElementById('adminMain');
@@ -33,6 +34,8 @@ export function renderReactAdminView(view: ReactAdminView): void {
       <GuideAdmin />
     ) : view === 'monthly-winner' ? (
       <WinnerAdmin />
+    ) : view === 'data-reset' ? (
+      <DataResetAdmin />
     ) : (
       <RiseInboxAdmin />
     ),

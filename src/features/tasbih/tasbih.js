@@ -7,6 +7,7 @@
  */
 import { stopCompass, stopPrayerClock } from '../prayer/prayerQibla';
 import { esc, featureShowPage } from '../tools/featurePageShell';
+import { pageDataControlHtml } from '../userData/PageDataControl';
 
 let TASBIH_SELECTED_KEY, RUD_TASBIH_COUNT_KEY, RUD_TASBIH_ZIKR_KEY, RUD_DF_TASBIH_CTX_KEY;
 
@@ -225,7 +226,8 @@ export function init() {
           <div class="rud-zikr-list" id="rudZikrList"></div>
         </section>
       </div>
-    </main>
+      ${chCtx ? '' : pageDataControlHtml('tasbih')}
+     </main>
   `,
       'Tasbih | Rise Upon Deen',
     );

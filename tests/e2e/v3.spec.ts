@@ -543,6 +543,14 @@ test('avatar builder and public profile preview (same card others see, privacy r
   await expect(preview.locator('.df2-public-card')).toContainText('@aisha');
   await expect(preview).not.toContainText(DF_USERS.aisha.email);
   await expect(preview.locator('.df2-public-card .df2-avatar-built')).toHaveCount(1);
+  // Signature: the original script font first; if it cannot load (Google Fonts are blocked in these
+  // tests, like an offline app), an elegant installed script face — never the bare generic cursive.
+  const sig = preview.locator('.df2-public-card .df2-signature');
+  await expect(sig).toHaveClass(/is-ready/, { timeout: 7000 });
+  const family = await sig.evaluate((e) => getComputedStyle(e).fontFamily);
+  expect(family.startsWith('"Great Vibes"')).toBe(true);
+  expect(family).toContain('Snell Roundhand');
+  expect(family).toContain('Segoe Script');
 });
 
 test.describe('admin console (desktop layout)', () => {
@@ -815,7 +823,7 @@ test('first visit: 4-second intro in the visitor theme, then the name card; ente
   expect(await page.evaluate(() => localStorage.getItem('rud_visitor_name'))).toBe('Ameen');
 });
 
-test('intro: static markup paints before any script, plays ~4 s once per launch, never blinks on a slow start', async ({ page, request }) => {
+test('intro: static markup paints before any script, plays ~4 s on every launch, never blinks on a slow start', async ({ page, request }) => {
   // 1) It is in the HTML itself, so it shows with the first frame (no wait for the JS bundle).
   const html = await (await request.get('/')).text();
   expect(html).toContain('id="preloader"');
@@ -834,11 +842,24 @@ test('intro: static markup paints before any script, plays ~4 s once per launch,
   const leftAt = await page.evaluate(() => performance.now());
   expect(leftAt - visibleAt).toBeGreaterThan(4800); // a full intro that waits for the app, not a blink
   await expect(page.locator('#preloader')).toHaveClass(/hide/);
-  // 3) Played once: a second load in the same session skips it with no flash.
+  // 3) Every launch plays it: a second load (same tab, same session) shows the full intro again.
   await page.unroute(/\/assets\/index-[^/]+\.js$/);
-  await page.reload();
-  expect(await page.evaluate(() => [document.documentElement.dataset.intro, (window as unknown as { __rudIntro: { skipped: boolean } }).__rudIntro.skipped])).toEqual(['skip', true]);
-  expect(await page.locator('#preloader').evaluate((e) => getComputedStyle(e).display)).toBe('none');
+  await page.reload({ waitUntil: 'commit' });
+  await expect(page.locator('#preloader')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.dataset.intro)).toBe('play');
+  const again = await page.evaluate(async () => {
+    const t0 = performance.now();
+    const w = window as unknown as { __rudIntro?: { state: string } };
+    while (!w.__rudIntro || w.__rudIntro.state === 'playing') await new Promise((r) => setTimeout(r, 20));
+    return performance.now() - t0;
+  });
+  expect(again).toBeGreaterThan(3000);
+  // 4) In-app navigation never replays it.
+  await page.evaluate(() => (location.hash = '#duas'));
+  await page.waitForTimeout(300);
+  await page.evaluate(() => (location.hash = '#home'));
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => [(window as unknown as { __rudIntro: { state: string } }).__rudIntro.state, document.getElementById('preloader')!.classList.contains('hide')])).toEqual(['done', true]);
 });
 
 test('intro: normal start leaves at about 4 s; reduced motion is short and still', async ({ browser }) => {
@@ -930,6 +951,146 @@ test('install guide is a centred modal in portrait and landscape; page scroll is
     await page.keyboard.press('Escape');
     await expect(page.locator('.rud-dialog')).toHaveCount(0);
     expect(await page.evaluate(() => [document.body.style.position, Math.round(scrollY)])).toEqual(['', y]);
+    await context.close();
+  }
+});
+
+test('intro: an installed Home Screen app plays it on every launch (no 12-hour skip)', async ({ browser }) => {
+  const iosUA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+  const context = await browser.newContext({ userAgent: iosUA, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await context.addInitScript(() => Object.defineProperty(navigator, 'standalone', { get: () => true }));
+  for (let launch = 1; launch <= 2; launch++) {
+    const page = await context.newPage(); // each launch is a fresh page load in the same installed app
+    await prepare(page, { returningVisitor: false });
+    await page.addInitScript(() => localStorage.setItem('rud_visitor_name', 'Tester'));
+    await page.goto('/#home', { waitUntil: 'commit' });
+    await expect(page.locator('#preloader')).toBeVisible();
+    const held = await page.evaluate(async () => {
+      const t0 = performance.now();
+      const w = window as unknown as { __rudIntro?: { state: string } };
+      while (!w.__rudIntro || w.__rudIntro.state === 'playing') await new Promise((r) => setTimeout(r, 20));
+      return performance.now() - t0;
+    });
+    expect(held, `launch ${launch}`).toBeGreaterThan(3000);
+    await page.close();
+  }
+  await context.close();
+});
+
+test('Prophetic Guidance cards: opaque in dark, white with readable labels and no heavy shadow in light', async ({ browser }) => {
+  for (const theme of ['dark', 'light'] as const) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await prepare(page, { theme });
+    await goto(page, '#hadith');
+    const card = page.locator('.hadith-preview-card').first();
+    await expect(card).toBeVisible();
+    const s = await card.evaluate((el) => {
+      const c = getComputedStyle(el);
+      const open = getComputedStyle(el.querySelector('.compact-guidance-open')!);
+      return { bg: c.backgroundColor, shadow: c.boxShadow, open: open.color };
+    });
+    if (theme === 'dark') expect(s.bg).toBe('rgb(15, 17, 20)'); // fully opaque: the Kaaba scene never shows through
+    else {
+      expect(s).toMatchObject({ bg: 'rgb(255, 255, 255)', shadow: 'none' });
+      expect(s.open).toBe('rgb(61, 58, 51)'); // "Read Hadith" readable on white
+    }
+    await context.close();
+  }
+});
+
+test('Duas, Hadith and Names: opening and closing a card swaps in one frame and returns to the exact spot', async ({ page }, info) => {
+  await prepare(page);
+  await page.addInitScript(() => {
+    const seed = (window as unknown as { __FAKE_FB_SEED__: { collections: { content: Record<string, unknown> } } }).__FAKE_FB_SEED__;
+    const ts = { __ts: 1767225600000 };
+    for (let i = 0; i < 8; i++) {
+      seed.collections.content[`s-dua-${i}`] = { type: 'dua', title: `TEST Stable Dua ${i}`, arabic: 'اختبار', meaning: 'TEST meaning', reference: 'TEST', published: true, category: 'General', createdAt: ts, updatedAt: ts };
+      seed.collections.content[`s-hadith-${i}`] = { type: 'hadith', title: `TEST Stable Hadith ${i}`, translation: 'TEST', source: 'TEST', reference: 'TEST', published: true, category: 'General', createdAt: ts, updatedAt: ts };
+      seed.collections.content[`s-name-${i}`] = { type: 'name', number: 20 + i, title: `TEST-Stable-${i}`, name: `TEST Stable ${i}`, arabic: 'الاسم', meaning: 'TEST', published: true, category: 'General', createdAt: ts, updatedAt: ts };
+    }
+  });
+  for (const [route, link] of [['#duas', '.dua-library-link'], ['#hadith', '.compact-guidance-link'], ['#names', '.name-library-link']] as const) {
+    await goto(page, route);
+    await page.locator(link).nth(6).scrollIntoViewIfNeeded();
+    await page.mouse.wheel(0, 80);
+    await page.waitForTimeout(300);
+    const run = (what: 'open' | 'close') =>
+      page.evaluate(async ([what, link]) => {
+        const states = new Set<string>();
+        const rec = () => states.add(`${Math.round(scrollY)}|${(document.querySelector('#dynamicPage > *') as HTMLElement | null)?.className.split(' ')[0]}`);
+        const el = (what === 'open' ? document.querySelectorAll(link)[6] : document.querySelector('#dynamicPage .rud-detail-close')) as HTMLElement;
+        rec();
+        el.click();
+        const end = performance.now() + 700;
+        while (performance.now() < end) {
+          await new Promise((r) => requestAnimationFrame(r));
+          rec();
+        }
+        return [...states];
+      }, [what, link] as const);
+    const y0 = await page.evaluate(() => Math.round(scrollY));
+    const opened = await run('open');
+    expect(opened, `${route} open`).toHaveLength(2); // list at its position → detail at the top, nothing in between
+    expect(opened[1]).toMatch(/^0\|/);
+    const closed = await run('close');
+    expect(closed, `${route} close`).toHaveLength(2); // detail → list exactly where the reader left it
+    expect(closed[1]).toBe(`${y0}|route-hero`);
+  }
+  // The Names dialog on Home: the page behind it never moves while it opens or closes.
+  await goto(page, '#home');
+  const card = page.locator('#namesGrid .name-card').nth(1);
+  await card.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  const top0 = (await card.boundingBox())!.y;
+  await card.click();
+  await expect(page.locator('#nameModal')).toBeVisible();
+  expect((await card.boundingBox())!.y).toBeCloseTo(top0, 0);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(400);
+  expect((await card.boundingBox())!.y).toBeCloseTo(top0, 0);
+  // Tap feedback never lifts a card on touch screens; desktop keeps its hover lift.
+  await goto(page, '#duas');
+  const dua = page.locator('.dua-library-card').first();
+  await dua.hover().catch(() => undefined);
+  await page.waitForTimeout(450); // the lift transition
+  const lift = await dua.evaluate((e) => getComputedStyle(e).transform);
+  expect(lift).toBe(info.project.name === 'mobile' ? 'none' : 'matrix(1, 0, 0, 1, 0, -5)');
+});
+
+test('avatars: every brothers’/sisters’ style renders a faceless bust in both themes; a previously saved avatar still renders', async ({ browser }) => {
+  for (const theme of ['light', 'dark'] as const) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const errors = trackPageErrors(page);
+    await prepare(page, { theme });
+    // Bilal keeps a V3.2-era saved avatar; a second, tampered value must fall back safely.
+    await page.addInitScript(() => {
+      const seed = (window as unknown as { __FAKE_FB_SEED__: { collections: Record<string, Record<string, Record<string, unknown>>> } }).__FAKE_FB_SEED__;
+      seed.collections.deens_users.fakeuser102.avatarConfig = { v: 1, shape: 'octagon', background: 'sand', pattern: 'girih', figure: 'turban', outfit: 'navy', accent: 'ivory', motif: 'none', initials: false };
+    });
+    await goto(page, '#deen-friends');
+    await signIn(page, DF_USERS.aisha);
+    await page.locator('.df2-me-chip').click();
+    await ui(page).getByRole('button', { name: 'Avatar', exact: true }).click();
+    const sheet = ui(page).locator('.df2-sheet');
+    for (const name of ['Kufi', 'Ghutra', 'Imamah', 'Hijab', 'Niqab', 'Khimar']) {
+      await sheet.getByRole('radio', { name, exact: true }).click();
+      const art = sheet.locator('.df2-av-stage-art svg');
+      // A head (skin-tone ellipse) is drawn; no eyes/mouth or any other facial feature exist in the art.
+      expect(await art.locator('ellipse, path[fill^="url(#hd-"]').count(), `${theme} ${name}`).toBeGreaterThan(0);
+      expect(await art.locator('[class*="eye"],[class*="mouth"]').count()).toBe(0);
+      const beard = await art.locator('path[fill^="url(#bd-"]').count();
+      expect(beard > 0, `${name} beard`).toBe(['Kufi', 'Ghutra', 'Imamah'].includes(name));
+    }
+    // Small sizes (chips, lists) render the same figure without the fine detail layers.
+    expect(await sheet.locator('.df2-av-preview-small svg').count()).toBe(2);
+    for (let i = 0; i < 3 && (await sheet.count()); i++) await sheet.last().getByRole('button', { name: /^Close/ }).first().click();
+    await expect(sheet).toHaveCount(0);
+    // Bilal's V3.2-era saved avatar still renders (Imamah: a figure with a beard) in the People list.
+    const bilal = ui(page).locator('.df2-people .df2-person-open').filter({ hasText: 'Bilal' }).first();
+    await expect(bilal.locator('svg path[fill^="url(#bd-"]')).toHaveCount(1);
+    expect(errors).toEqual([]);
     await context.close();
   }
 });

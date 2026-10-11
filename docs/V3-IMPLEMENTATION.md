@@ -331,3 +331,88 @@ Reminders and Qur'an ayahs).
 - Home: no jump and CLS under 0.1.
 - Posters: short PNG; long English as a multi-page PDF with every word checked; long Arabic complete.
 - Install modal centred in portrait and landscape, with scroll restored.
+
+## 12. V3.5 — eight scoped fixes
+
+Each item says what was tested, and what needs a real device or the live Firebase project.
+
+1. **Intro on every launch.**
+   - *Cause:* deliberate skip rules: a per-tab session flag, and a 12-hour window in the installed
+     app.
+   - *Fix:* both removed (`index.html`). Every full page load plays the ~4 s minaret intro: a new
+     tab, a reload, or a Home Screen launch. In-app navigation, re-renders and returning from the
+     background never reload the page, so they never replay it.
+   - The single state machine and timers are unchanged. Reduced motion keeps the short still
+     version (1.5 s).
+   - Automated tests skip the intro via `window.__RUD_TEST_SKIP_INTRO`, which only the test
+     harness sets.
+2. **Prophetic Guidance cards.**
+   - *Cause, light mode:* Hadith cards were missing from the light-theme library-card rule. They
+     kept the heavy dark-theme drop shadow and nearly invisible grey labels.
+   - *Cause, dark mode:* the card surface was a 1–3 % "glass", so the fixed Kaaba scene showed
+     through the text.
+   - *Fix:* scoped to `.hadith-preview-card` in the authoritative rules (`06`, `10`). Other pages
+     are unchanged.
+3. **Nearby Masjids.**
+   - *Causes:* no request time limit, mirrors tried strictly one after another, a server-side
+     timeout ("remark") shown as "no masjids", and no reuse.
+   - *Fix:*
+     - Requests are hedged across 3 free Overpass mirrors: the next starts after 2.5 s or at once on
+       failure, the first good answer wins, and the others are cancelled.
+     - The whole search gives up after 12 s and offers Try again.
+     - A server-side timeout is now treated as an error.
+     - Results are cached for 15 minutes in memory only, so the location is never stored.
+4. **Card jumping (Duas, Hadith, Names).**
+   - In Chromium (mobile and desktop, including 6× CPU slowdown), opening and closing is a
+     single-frame swap with an exact scroll return and no layout shift; a regression test guards
+     it.
+   - Fixed: the 4–5 px hover lift could fire on touch screens that report hover, and could stay
+     stuck. It now applies to a real mouse or trackpad only, and replaces two `hover: none` guards.
+   - *Not verifiable here:* the jumping as seen on the owner's device (likely Safari/WebKit) needs
+     a real-device check.
+5. **Signature font.**
+   - Git shows the signature fonts never changed since V3.2: Great Vibes, Allura, Pinyon Script and
+     Mrs Saint Delafield.
+   - *Likely cause:* when the Google font did not load (offline or slow), the browser fell back to
+     generic `cursive` (Comic Sans on Windows).
+   - *Fix:* the fallback is now elegant installed script faces, and the wait is 5 s.
+   - *Not done:* bundling the font files. They could not be downloaded in this environment.
+6. **Admin data controls.**
+   - **Full Admin Data Reset**: Admin › Data & Accounts.
+     - Scope chosen by the owner: logs and analytics only. That is `deens_activity_logs`,
+       `deens_analytics`, `deens_risk_signals`, `deens_private_chat_access_logs` and
+       `visitor_sessions`.
+     - Super Admin only, enforced by the existing rules.
+     - Requires typing "RESET LOGS". It runs page by page, failures can be retried, and every run is
+       audited.
+   - **Member deletion**: the existing "Delete Deen Friends user" control.
+     - The owner chose everything including the login account.
+     - The console queues `deens_admin_jobs/{id}`; the rules let only the Super Admin create one,
+       and nobody can edit or delete one. Access is switched off at once.
+     - The scheduler (`push-scheduler/adminJobs.js`, Admin SDK) re-checks the requester, then
+       deletes the footprint and the login. It is idempotent, retries up to 3 times, and is
+       audited.
+     - Kept: safety records (reports, cases, evidence, restrictions, suspensions, appeals, risk
+       signals, admin notes, connection history) and the audit log.
+   - **"Your data on this page"**: one shared control on My Deen, Qur'an, Saved and Tasbih.
+     - It clears only that page's local keys, after a second confirmation, and offers a download
+       first.
+     - Not offered on Deen Friends (server data) or Prayer (its location also drives prayer
+       notifications).
+7. **Duplicates removed:**
+   - the intro's session and 12-hour skip logic and its storage writes;
+   - two `hover: none` card guards;
+   - the sequential Overpass loop;
+   - the disable-only "delete" path.
+8. **Avatars.**
+   - The six figures were redrawn with one consistent bust (head, neck, shoulders) and a warm skin
+     tone on every background (it was grey-green on dark ones).
+   - Brothers: thobe with collar and placket, jaw-line beard, kufi with embroidered band, ghutra
+     with agal, imamah with tail.
+   - Sisters: hijab with face frame and pin, niqab with a soft eye opening, long khimar.
+   - Faceless as before. Stored configs, IDs and rules are unchanged.
+
+**Deploy (V3.5)**
+- Deploy `firestore.rules` (new `deens_admin_jobs` block). Test it in the emulator first.
+- Commit `push-scheduler/` (new `adminJobs.js`; it uses `firebase-admin/auth`, already a dependency).
+- `npm run build`, then `firebase deploy --only hosting`.

@@ -102,6 +102,71 @@ test('Nearby Masjids opens the in-app finder (nearest first, directions), not a 
   await expect(page.locator('#rudRiseMapOverlay')).toHaveCount(0);
 });
 
+async function openMasjids(page: import('@playwright/test').Page, context: import('@playwright/test').BrowserContext) {
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ latitude: 12.9716, longitude: 77.5946 });
+  await prepare(page);
+}
+const ok = (route: import('@playwright/test').Route) =>
+  route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(OVERPASS) });
+
+test('Nearby Masjids: a stalled server hands over to the next mirror quickly (no endless spinner)', async ({ page, context }) => {
+  await openMasjids(page, context);
+  const hits: string[] = [];
+  await page.route(/overpass/, (route) => {
+    const host = new URL(route.request().url()).hostname;
+    hits.push(host);
+    if (host === 'overpass-api.de') return; // never answers
+    return ok(route);
+  });
+  await goto(page, '#prayer');
+  const t0 = Date.now();
+  await page.locator('#rudNearbyMasjidBtn').click();
+  await expect(page.locator('#rudRiseMapOverlay .rud-masjid-item strong').first()).toHaveText('Masjid Al-Noor', { timeout: 8000 });
+  expect(Date.now() - t0).toBeLessThan(6000);
+  expect(hits).toEqual(['overpass-api.de', 'overpass.kumi.systems']); // one request per mirror, no duplicates
+});
+
+test('Nearby Masjids: a server-side timeout is an error with Try again, never a false "none nearby"', async ({ page, context }) => {
+  await openMasjids(page, context);
+  let healthy = false;
+  await page.route(/overpass/, (route) =>
+    healthy
+      ? ok(route)
+      : route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ elements: [], remark: 'runtime error: Query timed out in "query" at line 1 after 10 seconds.' }) }),
+  );
+  await goto(page, '#prayer');
+  await page.locator('#rudNearbyMasjidBtn').click();
+  const overlay = page.locator('#rudRiseMapOverlay');
+  await expect(overlay).toContainText('Masjid search is unavailable');
+  await expect(overlay).not.toContainText('No masjids listed nearby');
+  healthy = true;
+  await overlay.getByRole('button', { name: 'Try again' }).click();
+  await expect(overlay.locator('.rud-masjid-item')).toHaveCount(3);
+});
+
+test('Nearby Masjids: every mirror down → clear error within the time limit; results are reused on reopen', async ({ page, context }) => {
+  await openMasjids(page, context);
+  let mode: 'down' | 'up' = 'down';
+  let requests = 0;
+  await page.route(/overpass/, (route) => {
+    requests++;
+    return mode === 'down' ? route.abort('failed') : ok(route);
+  });
+  await goto(page, '#prayer');
+  await page.locator('#rudNearbyMasjidBtn').click();
+  const overlay = page.locator('#rudRiseMapOverlay');
+  await expect(overlay).toContainText('Masjid search is unavailable', { timeout: 13000 });
+  mode = 'up';
+  await overlay.getByRole('button', { name: 'Try again' }).click();
+  await expect(overlay.locator('.rud-masjid-item')).toHaveCount(3);
+  await overlay.getByRole('button', { name: 'Close nearby masjids' }).click();
+  const before = requests;
+  await page.locator('#rudNearbyMasjidBtn').click();
+  await expect(page.locator('#rudRiseMapOverlay .rud-masjid-item')).toHaveCount(3);
+  expect(requests).toBe(before); // same area within 15 minutes: no new network request
+});
+
 test('Nearby Masjids explains what to do when location is denied', async ({ page }) => {
   await prepare(page);
   await page.addInitScript(() => {

@@ -6,7 +6,7 @@ export interface PrepareOptions {
   theme?: 'light' | 'dark';
   /** Seed the offline content cache (what a returning visitor has). */
   cachedContent?: boolean;
-  /** Skip the once-per-session intro and the first-visit name prompt. */
+  /** Skip the launch intro and the first-visit name prompt. */
   returningVisitor?: boolean;
 }
 
@@ -25,6 +25,8 @@ export async function prepare(
   await page.addInitScript(
     ([seed, snap, t, returning]) => {
       (window as unknown as { __FAKE_FB_SEED__: unknown }).__FAKE_FB_SEED__ = seed;
+      // The intro plays on every launch; tests of other features skip it (set before any page script).
+      if (returning) (window as unknown as { __RUD_TEST_SKIP_INTRO: boolean }).__RUD_TEST_SKIP_INTRO = true;
       try {
         if (sessionStorage.getItem('__e2e_seeded')) return;
         sessionStorage.setItem('__e2e_seeded', '1');
@@ -32,7 +34,6 @@ export async function prepare(
         if (returning) {
           localStorage.setItem('rud_visitor_name', 'Tester');
           localStorage.setItem('rud_visitor_id', 'v_e2e_test');
-          sessionStorage.setItem('rud_intro_seen_session_v1', '1');
           // V3: returning visitors have already seen the first-run App Guide offer (page guides off in tests).
           sessionStorage.setItem('rud_install_card_session', '1'); // the automatic install guide has its own test
           localStorage.setItem('rud_onboarding_v1', JSON.stringify({ firstRunDone: true, firstRunVersion: 1, pageToursOff: true }));
