@@ -1,8 +1,10 @@
 /* Admin Dashboard data. Every number comes from the existing Firestore collections through the
  * signed-in administrator's normal, rule-checked reads — nothing is estimated or invented.
  *
- * Reads are bounded (each query has a limit) and the result is kept in memory for a few minutes,
- * so moving between sections does not re-read the same data. When a limit is reached the card says
+ * Reads are bounded (each query has a limit) and the result is kept for 15 minutes in memory and in
+ * this tab's sessionStorage (cleared on sign-out), so moving between sections or reloading the console
+ * does not re-read the same data; Refresh always re-reads. Every read counts against the project's
+ * free daily Firestore quota, which the website and the scheduler share. When a limit is reached the card says
  * so ("based on the latest N…") instead of presenting a partial count as a total.
  *
  * Days are grouped in India Standard Time (Asia/Kolkata), the day boundary Deen Friends already uses
@@ -15,9 +17,11 @@ import { friendlyMessage } from '../../deen-friends/services/errors';
 export const INSIGHT_TZ = 'Asia/Kolkata';
 const IST_OFFSET_MS = 19800000;
 const DAY = 86400000;
-const CACHE_MS = 3 * 60 * 1000;
+const CACHE_MS = 15 * 60 * 1000;
+const CACHE_KEY = 'rud_admin_insights_v1';
+const CHALLENGE_ROWS = 14;
 
-export const LIMITS = { sessions: 1500, users: 2000, activity: 6000, threads: 300, challenges: 60, participants: 500, reports: 500 };
+export const LIMITS = { sessions: 800, users: 2000, activity: 3000, threads: 200, challenges: 60, participants: 250, reports: 200 };
 
 export interface Section<T> {
   ok: boolean;
@@ -40,7 +44,16 @@ export interface Insights {
   reports: Section<{ open: number; total: number }>;
 }
 
-let cache: { at: number; value: Insights } | null = null;
+let cache: { at: number; value: Insights } | null = readStoredCache();
+
+function readStoredCache(): { at: number; value: Insights } | null {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
+    return saved && Number(saved.at) && saved.value ? saved : null;
+  } catch {
+    return null;
+  }
+}
 let inflight: Promise<Insights> | null = null;
 
 /** YYYY-MM-DD in IST. */
@@ -141,7 +154,7 @@ async function load(): Promise<Insights> {
       .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as Record<string, unknown> & { id: string })
       .filter((c) => String(c.status) !== 'draft' && String(c.endDate || '') >= days[0])
       .sort((a, b) => String(b.startDate || '').localeCompare(String(a.startDate || '')))
-      .slice(0, 14);
+      .slice(0, CHALLENGE_ROWS);
     const completionsByDay = zeros();
     const rows = await Promise.all(
       list.map(async (c) => {
@@ -165,7 +178,7 @@ async function load(): Promise<Insights> {
         };
       }),
     );
-    return { data: { rows, completionsByDay } };
+    return { data: { rows, completionsByDay }, capped: rows.some((r) => r.participants >= LIMITS.participants) };
   });
 
   const rise = safe({ open: 0, resolved: 0, unread: 0, activeByDay: zeros(), total: 0 }, async () => {
@@ -197,11 +210,15 @@ async function load(): Promise<Insights> {
 
 /** Loads (or returns the recent cached) dashboard data. `force` re-reads; concurrent calls share one load. */
 export function loadInsights(force = false): Promise<Insights> {
+  if (!cache) cache = readStoredCache();
   if (!force && cache && Date.now() - cache.at < CACHE_MS) return Promise.resolve(cache.value);
   if (inflight) return inflight;
   inflight = load()
     .then((value) => {
       cache = { at: Date.now(), value };
+      try {
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+      } catch {}
       return value;
     })
     .finally(() => {
@@ -212,6 +229,9 @@ export function loadInsights(force = false): Promise<Insights> {
 
 export function clearInsightsCache(): void {
   cache = null;
+  try {
+    sessionStorage.removeItem(CACHE_KEY);
+  } catch {}
 }
 
 /** Content library counts from the console's live content list (no extra reads). */

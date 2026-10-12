@@ -205,7 +205,7 @@ export function AdminOverview() {
             </Card>
             <Card
               title="Daily challenge check-ins"
-              subtitle="Completed days recorded by members"
+              subtitle={`Completed days recorded by members${c?.capped ? ` · first ${LIMITS.participants} participants per challenge` : ''}`}
               actions={
                 <button className="rad-link-btn" onClick={() => go('daily-challenges')} type="button">
                   Challenges →

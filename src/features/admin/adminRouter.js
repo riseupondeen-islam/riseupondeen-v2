@@ -16,6 +16,7 @@ import { S } from '../../runtime/store';
 import { rudIsAdminRoute } from '../../app/routing/routeState';
 import { cacheAdminContent, readAdminCache } from './adminPersistence';
 import { renderAdminFatal, renderAdminView, suspendAdminView } from './adminViews';
+import { clearInsightsCache } from './services/adminInsights';
 import { RUD_ANALYTICS_COLLECTION } from '../analytics/visitorAnalytics';
 import { rudHideBroadcast, rudStopBroadcastListener } from '../broadcast/broadcast';
 import { stopMaintenanceLive } from '../maintenance/maintenance';
@@ -207,6 +208,7 @@ function clearAdminWorkspace() {
     S.adminAnalyticsUnsub?.();
   } catch {}
   S.adminAnalyticsUnsub = null;
+  clearInsightsCache(); // dashboard figures kept for this tab must not outlive the session
   const main = $('#adminMain');
   if (main) main.innerHTML = '';
   const email = $('#adminUserEmail');

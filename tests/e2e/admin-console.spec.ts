@@ -102,6 +102,22 @@ test.describe('admin console · desktop', () => {
     expect((await firestoreLog(page)).some((e) => e.op === 'auth.signOut')).toBe(true);
   });
 
+  test('dashboard reads once per 15 minutes (not on every visit) and its cache is cleared on sign-out', async ({ page }) => {
+    await adminSession(page);
+    const sessionReads = async () => (await firestoreLog(page)).filter((e) => e.op === 'getDocs' && e.path === 'visitor_sessions').length;
+    await expect.poll(sessionReads).toBe(1);
+    await expect.poll(() => page.evaluate(() => !!sessionStorage.getItem('rud_admin_insights_v1'))).toBe(true);
+    await nav(page, 'duas');
+    await nav(page, 'dashboard');
+    await expect(page.locator('#adminMain .rad-react-view[data-view="dashboard"]')).toBeVisible();
+    expect(await sessionReads()).toBe(1); // served from the cache
+    await page.getByRole('button', { name: 'Refresh' }).first().click();
+    await expect.poll(sessionReads).toBe(2); // Refresh always re-reads
+    await page.locator('#adminLogoutBtn').click();
+    await expect(page.locator('#adminApp')).toHaveAttribute('data-auth', 'signed-out');
+    expect(await page.evaluate(() => sessionStorage.getItem('rud_admin_insights_v1'))).toBeNull();
+  });
+
   test('layout: fixed sidebar, only the content area scrolls, no page or horizontal scroll', async ({ page }) => {
     await adminSession(page);
     await nav(page, 'daily-challenges');

@@ -26,7 +26,7 @@ re-open the console after sign-out. Firestore rules remain the authority for all
 ## New capabilities
 
 * **Dashboard** — website visitors, Deen Friends members and activity, challenge check-ins, RISE inbox,
-  content library and reports, from bounded reads of existing collections (cached 3 minutes, Refresh
+  content library and reports, from bounded reads of existing collections (cached 15 minutes for the browser tab and cleared on sign-out, Refresh
   re-reads). Cards say when a read limit was reached and show an error instead of zeros when a read fails.
   Charts are dependency-free SVG (no chart library or paid API was added).
 * **Tables** — every table has *Columns* (hide/show, mandatory identifying/action columns, Select all,

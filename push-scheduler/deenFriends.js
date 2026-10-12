@@ -62,7 +62,14 @@ async function sendToUser(db, messaging, uid, category, eventId, payload) {
     .collection('devices')
     .where('active', '==', true)
     .get();
-  const targets = devices.docs.filter((d) => d.get('fcmToken') && (d.get('categories') || {})[category] !== false);
+  return sendToDevices(db, messaging, uid, devices.docs, category, eventId, payload);
+}
+
+/** Sends to device documents that were already read (active ones only). */
+async function sendToDevices(db, messaging, uid, deviceDocs, category, eventId, payload) {
+  const targets = deviceDocs.filter(
+    (d) => d.get('active') === true && d.get('fcmToken') && (d.get('categories') || {})[category] !== false,
+  );
   if (!targets.length) return 0;
   if (!(await claim(db, eventId))) return 0;
   let sent = 0;
@@ -192,32 +199,39 @@ async function processDeenFriendsEvents(db, messaging) {
   }
 
   // 6. Newly published Daily Deen Challenges -> assigned users (or everyone with challenges on).
+  // For "everyone", all registered devices are read once per run and reused for every recipient
+  // (before, each recipient's devices were read a second time: twice the reads for the same result).
   const challenges = await range('updatedAtMs')(db.collection('deens_daily_challenges')).limit(50).get();
+  let devicesByUid = null;
+  const allDevices = async () => {
+    if (!devicesByUid) {
+      devicesByUid = new Map();
+      const devices = await db.collectionGroup('devices').limit(2000).get();
+      for (const d of devices.docs) {
+        const owner = d.ref.parent.parent;
+        if (!owner || owner.parent.id !== 'deens_push_devices' || d.get('active') !== true) continue;
+        const uid = d.get('uid') || owner.id;
+        devicesByUid.set(uid, [...(devicesByUid.get(uid) || []), d]);
+      }
+    }
+    return devicesByUid;
+  };
   for (const doc of challenges.docs) {
     const c = doc.data();
     if (c.status !== 'published') continue;
-    let recipients = Array.isArray(c.assignedUids) ? c.assignedUids : [];
+    const payload = {
+      title: 'New Daily Deen Challenge',
+      body: String(c.title || 'A new challenge from RISE').slice(0, 120),
+      route: '#deen-friends/challenges',
+    };
     if (c.audience === 'all') {
-      const devices = await db.collectionGroup('devices').limit(2000).get();
-      recipients = [
-        ...new Set(
-          devices.docs
-            .filter(
-              (d) =>
-                d.ref.parent.parent &&
-                d.ref.parent.parent.parent.id === 'deens_push_devices' &&
-                d.get('active') === true,
-            )
-            .map((d) => d.get('uid')),
-        ),
-      ];
+      for (const [uid, docs] of await allDevices()) {
+        sent += await sendToDevices(db, messaging, uid, docs, 'challenges', `daily:${doc.id}:${uid}`, payload);
+      }
+      continue;
     }
-    for (const uid of recipients) {
-      sent += await sendToUser(db, messaging, uid, 'challenges', `daily:${doc.id}:${uid}`, {
-        title: 'New Daily Deen Challenge',
-        body: String(c.title || 'A new challenge from RISE').slice(0, 120),
-        route: '#deen-friends/challenges',
-      });
+    for (const uid of Array.isArray(c.assignedUids) ? c.assignedUids : []) {
+      sent += await sendToUser(db, messaging, uid, 'challenges', `daily:${doc.id}:${uid}`, payload);
     }
   }
 

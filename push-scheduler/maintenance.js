@@ -6,6 +6,7 @@
  *      - BOTH the user (userSeenAtMs) and the RISE team (riseSeenAtMs) have seen the conversation
  *        after the message was written;
  *      - it is not the one-time automated welcome.
+ *    (Checked every 30 minutes, not on every scheduler run.)
  *    The first run that observes eligibility stamps `purgeAt = now + 24h` on the message — so the
  *    24-hour period starts when the read conditions are met, not when the message was sent. A later
  *    run deletes stamped messages whose purgeAt has passed (and a Firestore TTL policy on
@@ -15,7 +16,7 @@
  *    records only which conversation was purged, when and how many messages.
  *
  * 2. Friend suggestions (Section 9)
- *    At most once an hour, for up to 15 recently active members whose suggestions are older than a
+ *    At most once every 6 hours, for up to 15 recently active members whose suggestions are older than a
  *    day: friends-of-friends ranked by mutual friends, excluding the member, existing friends,
  *    pending requests either way, blocks either way, and anyone deleted, disabled or not
  *    discoverable. Writes deens_suggestions/{uid} (≤ 20 entries: name, username, avatar only).
@@ -27,6 +28,11 @@ const DAY_MS = 86400000;
 const RETENTION_MS = DAY_MS;
 const PAGE = 400;
 const MAX_WINDOW_MS = 7 * DAY_MS;
+/* Free-tier Firestore budget: the scheduler runs every ~5 minutes, but neither job needs that.
+   Retention deletes 24 hours after eligibility, so checking every 30 minutes changes nothing a user
+   sees; suggestions are refreshed at most once a day per member, so checking every 6 hours is enough. */
+const RETENTION_EVERY_MS = 30 * 60000;
+const SUGGESTIONS_EVERY_MS = 6 * 60 * 60000;
 
 const ts = (ms) => (Timestamp && typeof Timestamp.fromMillis === 'function' ? Timestamp.fromMillis(ms) : new Date(ms));
 const millisOf = (v) => (v && typeof v.toMillis === 'function' ? v.toMillis() : v instanceof Date ? v.getTime() : Number(v) || 0);
@@ -212,14 +218,19 @@ async function runMaintenance(db, now = Date.now()) {
   const until = now - 3000;
   let since = state.exists ? Number(state.get('sinceMs')) || 0 : 0;
   if (!since || until - since > MAX_WINDOW_MS) since = until - MAX_WINDOW_MS;
-  const retention = await processRiseRetention(db, since, until, now);
+  let retention = { skipped: true };
+  const lastRetention = state.exists ? Number(state.get('retentionAtMs')) || 0 : 0;
+  if (now - lastRetention >= RETENTION_EVERY_MS) {
+    retention = await processRiseRetention(db, since, until, now);
+    // The window only advances when it was processed, so skipped runs lose no conversation changes.
+    await stateRef.set({ sinceMs: until, retentionAtMs: now, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  }
   let suggestions = { skipped: true };
   const lastSuggest = state.exists ? Number(state.get('suggestionsAtMs')) || 0 : 0;
-  if (now - lastSuggest >= 60 * 60000) {
+  if (now - lastSuggest >= SUGGESTIONS_EVERY_MS) {
     suggestions = await processSuggestions(db, now);
     await stateRef.set({ suggestionsAtMs: now }, { merge: true });
   }
-  await stateRef.set({ sinceMs: until, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   return { retention, suggestions };
 }
 
