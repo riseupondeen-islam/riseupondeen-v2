@@ -44,6 +44,40 @@ test('play, playlist advance, pause/resume, rapid switching — one audio elemen
   await expect.poll(() => audioState(page)).toMatchObject({ count: 1, file: '001007.mp3' });
 });
 
+test('the next Ayah is buffered while the current one plays, and lock-screen metadata is set', async ({ page }) => {
+  await prepare(page);
+  const requested: string[] = [];
+  await page.route(/everyayah\.com\/data\/.*\.mp3$/, (route) => {
+    requested.push(route.request().url().split('/').pop() || '');
+    return route.fulfill({ status: 200, contentType: 'audio/wav', body: TONE });
+  });
+  await goto(page, '#quran/1/3');
+  await expect(page.locator('#rudAyahList > *')).toHaveCount(7);
+  // Hold Ayah 3 (pause as soon as it starts) so the only way Ayah 4 can be requested is the preload.
+  await page.evaluate(() => {
+    document.addEventListener(
+      'playing',
+      (e) => (e.target as HTMLAudioElement).pause(),
+      { capture: true, once: true },
+    );
+  });
+  await tap(page, '[data-quran-play-from-here]');
+  await expect.poll(() => requested.includes('001004.mp3'), { timeout: 5000 }).toBe(true);
+  expect(await audioState(page)).toMatchObject({ count: 1, file: '001003.mp3', paused: true });
+  const session = await page.evaluate(() => ({
+    title: navigator.mediaSession?.metadata?.title || '',
+    state: navigator.mediaSession?.playbackState || '',
+  }));
+  expect(session.title).toContain('Ayah 3');
+  expect(session.state).toBe('paused');
+  // Continuing advances to Ayah 4 on the same single element, and the lock-screen title follows.
+  // (Reuse of the buffered file cannot be asserted here: request interception disables the browser
+  // cache. It was measured separately against an un-intercepted local CDN.)
+  await tap(page, '#rudQuranPlayerOverlay [data-quran-player-action="toggle"]');
+  await expect.poll(() => audioState(page), { timeout: 5000 }).toMatchObject({ count: 1, file: '001004.mp3' });
+  await expect.poll(() => page.evaluate(() => navigator.mediaSession?.metadata?.title || '')).toContain('Ayah 4');
+});
+
 test('a failed recitation shows the retry state instead of failing silently', async ({ page }) => {
   await prepare(page);
   await page.route(/everyayah\.com\/data\/.*\.mp3$/, (route) => route.abort());

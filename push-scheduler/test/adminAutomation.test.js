@@ -39,7 +39,7 @@ function makeDb(initial = {}) {
     return {
       where: (f, op, v) => query(prefix, [...filters, [f, op, v]], max, order, after),
       limit: (n) => query(prefix, filters, n, order, after),
-      orderBy: (f) => query(prefix, filters, max, f, after),
+      orderBy: (f, dir) => query(prefix, filters, max, { f, desc: dir === 'desc' }, after),
       startAfter: (v) => query(prefix, filters, max, order, v),
       get: async () => {
         let paths = [...store.keys()].filter((p) => p.startsWith(prefix + '/') && depthOf(p) === depthOf(prefix) + 1);
@@ -52,9 +52,11 @@ function makeDb(initial = {}) {
           }),
         );
         if (order) {
-          paths = paths.filter((p) => (store.get(p) || {})[order] !== undefined);
-          paths.sort((a, b) => String(store.get(a)[order]).localeCompare(String(store.get(b)[order])));
-          if (after !== null) paths = paths.filter((p) => String(store.get(p)[order]) > String(after));
+          const f = order.f;
+          const cmp = (x, y) => (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y)));
+          paths = paths.filter((p) => (store.get(p) || {})[f] !== undefined);
+          paths.sort((a, b) => cmp(store.get(a)[f], store.get(b)[f]) * (order.desc ? -1 : 1));
+          if (after !== null) paths = paths.filter((p) => String(store.get(p)[f]) > String(after));
         }
         paths = paths.slice(0, max);
         return { docs: paths.map(snap), empty: !paths.length, size: paths.length };
@@ -130,6 +132,7 @@ const auth = {
     status: 'active',
     createdBy: 'admin1',
     updatedBy: 'admin1',
+    updatedAtMs: now - 3600000,
     ...extra,
   });
   const db = makeDb({
@@ -156,8 +159,15 @@ const auth = {
   assert.equal(db.store.get('deens_daily_challenges/sched_yday_20261011').status, 'published', 'yesterday kept for late zones');
   assert.equal(db.store.get('deens_daily_challenges/manual1').status, 'published', 'manual challenges are never touched');
 
-  // A retry / overlapping run never publishes a second copy.
-  const second = await runChallengeSchedule(db, { now: now + 60000, serverTimestamp: TS });
+  // Later runs the same day, with nothing edited, do no work and write nothing (Firestore quota).
+  const writesBefore = db.writes.length;
+  const idle = await runChallengeSchedule(db, { now: now + 60000, serverTimestamp: TS });
+  assert.equal(idle.skipped, 'up to date');
+  assert.equal(db.writes.length, writesBefore, 'an idle run writes nothing');
+
+  // An admin edit makes the next run re-check; it never publishes a second copy.
+  await db.collection('deens_challenge_schedule').doc('day01').set({ updatedAtMs: now + 90 * 60000 }, { merge: true });
+  const second = await runChallengeSchedule(db, { now: now + 100 * 60000, serverTimestamp: TS });
   assert.equal(second.published, 0);
   assert.equal(second.alreadyPublished, 2);
   const copies = [...db.store.keys()].filter((k) => k.startsWith('deens_daily_challenges/sched_day01_'));

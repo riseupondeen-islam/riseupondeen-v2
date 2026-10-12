@@ -61,6 +61,10 @@ let RUD_QURAN_META_KEY,
   rudQuranActivityTimer,
   RUD_QURAN_AYAH_OFFSETS,
   rudQuranSearchTimer;
+/* Detached, never-played element that buffers the next recitation file while the current one plays
+   (the playing element stays the single #rudQuranAudio). rudQuranMediaKey: last lock-screen metadata. */
+let rudQuranPreloader = null,
+  rudQuranMediaKey = '';
 
 function rudQuranLocalGet(key, fallback) {
   try {
@@ -321,8 +325,13 @@ function rudQuranReleaseAudioSource() {
     audio.pause();
     audio.removeAttribute('src');
     audio.currentTime = 0;
+    if (rudQuranPreloader?.getAttribute('src')) {
+      rudQuranPreloader.removeAttribute('src');
+      rudQuranPreloader.load(); // stop buffering a file that will not be played
+    }
   } catch {}
   rudQuranPlaybackState = null;
+  rudQuranMediaKey = '';
 }
 function rudStopQuranAudio({ clearSession = true } = {}) {
   rudQuranPersistPlayback(true);
@@ -458,6 +467,7 @@ function rudQuranSyncPlayerUi() {
     .querySelectorAll('[data-quran-ui="ayah"]')
     .forEach((el) => (el.textContent = max ? `Ayah ${rudQuranCurrentAyah} of ${max}` : `Ayah ${rudQuranCurrentAyah}`));
   document.querySelectorAll('[data-quran-ui="playicon"]').forEach((el) => (el.textContent = playing ? 'Ⅱ' : '▶'));
+  rudQuranSyncMediaSession(playing);
   document
     .querySelectorAll('[data-quran-ui="currenttime"]')
     .forEach((el) => (el.textContent = rudQuranFormatTime(audio?.currentTime)));
@@ -788,6 +798,7 @@ function rudQuranEnsureAudioEngine() {
       rudQuranPausedByUser = false;
       rudQuranSyncPlayerUi();
       rudQuranScheduleSleepIfNeeded();
+      rudQuranPreloadNext();
     });
     audio.addEventListener('waiting', rudQuranSyncPlayerUi);
     audio.addEventListener('loadedmetadata', rudQuranSyncPlayerUi);
@@ -803,9 +814,96 @@ function rudQuranEnsureAudioEngine() {
     audio.addEventListener('durationchange', rudQuranSyncPlayerUi);
     audio.addEventListener('ended', rudQuranHandleEnded);
     audio.addEventListener('error', rudQuranHandleMediaError);
+    rudQuranBindMediaSession();
   }
   rudQuranAudio = audio;
   return audio;
+}
+/* The source the 'ended' handler will play next, mirroring rudQuranHandleEnded. Empty when the next
+   step replays the current file (already buffered), waits for a delay, or stops. */
+function rudQuranNextSource() {
+  if (!rudQuranData || rudQuranSleepMode === 'ayah') return '';
+  const max = rudQuranData.arabic.ayahs.length,
+    current = rudQuranCurrentAyah;
+  if (rudQuranMemSession.active && rudQuranPlaybackMode === 'arabic') {
+    const p = rudQuranMemSettings(),
+      start = Math.max(1, Math.min(max, Number(p.startAyah) || 1)),
+      end = Math.max(start, Math.min(max, Number(p.endAyah) || start)),
+      target = p.repeat === 'continuous' ? Infinity : Math.max(1, Number(p.repeat) || 3);
+    if (rudQuranMemSession.current === current && rudQuranMemSession.repeats + 1 < target) return '';
+    const next = current + 1 > end ? (p.repeat === 'continuous' ? start : 0) : current + 1;
+    return next ? rudQuranAudioForAyah(next) : '';
+  }
+  if (rudQuranPlaybackMode === 'arabic-urdu' && rudQuranPlaybackPhase === 'arabic') return rudQuranUrduAudioForAyah(current);
+  if (rudQuranRepeatIteration + 1 < rudQuranRepeatTarget()) return '';
+  if (!rudQuranFullPlay || current >= max) return '';
+  return rudQuranPlaybackMode === 'urdu' ? rudQuranUrduAudioForAyah(current + 1) : rudQuranAudioForAyah(current + 1);
+}
+/* Buffer the next Ayah while this one plays, so 'ended' can start it without a network wait. Without
+   this, every Ayah began with a fresh download; the silence also let mobile browsers treat a
+   backgrounded page as no longer playing and suspend it. Skipped when Data Saver is on. */
+function rudQuranPreloadNext() {
+  try {
+    if (rudQuranDataSaverEnabled()) return;
+    const src = rudQuranNextSource();
+    if (!src || src === rudQuranAudio?.src) return;
+    if (!rudQuranPreloader) {
+      rudQuranPreloader = new Audio();
+      rudQuranPreloader.preload = 'auto';
+      rudQuranPreloader.muted = true;
+    }
+    if (rudQuranPreloader.src !== src) {
+      rudQuranPreloader.src = src;
+      rudQuranPreloader.load();
+    }
+  } catch {}
+}
+/* Lock-screen / notification controls (Media Session API, where supported). Handlers are bound once
+   with the audio element and reuse the player's own actions. */
+function rudQuranBindMediaSession() {
+  const ms = typeof navigator !== 'undefined' ? navigator.mediaSession : null;
+  if (!ms) return;
+  const on = (action, handler) => {
+    try {
+      ms.setActionHandler(action, handler);
+    } catch {}
+  };
+  on('play', () => {
+    if (!rudQuranAudio || rudQuranAudio.paused || rudQuranAudio.ended) rudQuranTogglePlayback();
+  });
+  on('pause', () => {
+    if (rudQuranAudio && !rudQuranAudio.paused) rudQuranTogglePlayback();
+  });
+  on('previoustrack', () => rudQuranSkipAyah(rudQuranCurrentAyah - 1));
+  on('nexttrack', () => rudQuranSkipAyah(rudQuranCurrentAyah + 1));
+  on('seekto', (details) => {
+    const a = rudQuranAudio;
+    if (a && Number.isFinite(details?.seekTime) && Number.isFinite(a.duration)) a.currentTime = Math.min(a.duration, Math.max(0, details.seekTime));
+  });
+}
+function rudQuranSyncMediaSession(playing) {
+  const ms = typeof navigator !== 'undefined' ? navigator.mediaSession : null;
+  if (!ms) return;
+  try {
+    const audio = rudQuranAudio;
+    ms.playbackState = playing ? 'playing' : audio?.getAttribute('src') ? 'paused' : 'none';
+    if (!audio?.getAttribute('src') || typeof MediaMetadata === 'undefined') return;
+    const meta = rudQuranNowMeta(),
+      urdu = rudQuranPlaybackPhase === 'urdu',
+      key = `${rudQuranCurrentSurah}:${rudQuranCurrentAyah}:${urdu}:${rudQuranReciter()}`;
+    if (key === rudQuranMediaKey) return;
+    rudQuranMediaKey = key;
+    const reciter = RUD_QURAN_RECITERS.find((r) => r.id === rudQuranReciter())?.name || "Qur'an recitation";
+    ms.metadata = new MediaMetadata({
+      title: `${meta.name} · Ayah ${rudQuranCurrentAyah}`,
+      artist: urdu ? 'Urdu translation' : reciter,
+      album: "Qur'an · Rise Upon Deen",
+      artwork: [
+        { src: new URL('/icon-192.png', location.origin).href, sizes: '192x192', type: 'image/png' },
+        { src: new URL('/icon-512.png', location.origin).href, sizes: '512x512', type: 'image/png' },
+      ],
+    });
+  } catch {}
 }
 function rudQuranMediaErrorMessage(audio) {
   if (!navigator.onLine) return 'Audio requires an internet connection.';
@@ -895,7 +993,6 @@ function rudQuranPlaySource(
   rudQuranFullPlay = !!playlist;
   rudQuranPausedByUser = false;
   rudQuranPlaybackState = { src, mode, phase, playlist: !!playlist, ayah: Number(ayah), surah: rudQuranCurrentSurah };
-  rudQuranSetActiveAyah(ayah, true, { preserveTime: false });
   const status = document.getElementById('rudQuranPlayerStatus');
   if (status && status.dataset.kind === 'error') {
     status.hidden = true;
@@ -905,10 +1002,14 @@ function rudQuranPlaySource(
   /* iOS-safe rule: keep exactly one native media element and never call
      load(), remove it, or create a replacement during normal playback.
      Re-assigning src is only done for a new source or after a failed load
-     (an errored element does not retry by itself, so Retry must reload it). */
+     (an errored element does not retry by itself, so Retry must reload it).
+     The source is set and started before the reader UI updates (scrolling, saving the position),
+     so that work never delays the next Ayah. */
   if (audio.src !== src || audio.error) audio.src = src;
   else if (audio.ended) audio.currentTime = 0;
-  if (!rudQuranStartNative(audio, commandToken)) return false;
+  const started = rudQuranStartNative(audio, commandToken);
+  rudQuranSetActiveAyah(ayah, true, { preserveTime: false });
+  if (!started) return false;
   rudQuranSyncPlayerUi();
   return true;
 }

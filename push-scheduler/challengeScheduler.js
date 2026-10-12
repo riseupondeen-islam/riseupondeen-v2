@@ -104,17 +104,39 @@ async function readSettings(db) {
   const snap = await db.collection(SETTINGS_PATH[0]).doc(SETTINGS_PATH[1]).get();
   const data = snap.exists ? snap.data() || {} : {};
   const timeZone = validTimeZone(data.timeZone) ? String(data.timeZone) : DEFAULT_TIME_ZONE;
-  return { enabled: data.enabled !== false, timeZone };
+  return {
+    enabled: data.enabled !== false,
+    timeZone,
+    lastRunDate: String(data.lastRunDate || ''),
+    lastRunAtMs: Number(data.lastRunAtMs) || 0,
+    changedAtMs: Number(data.updatedAtMs) || 0,
+  };
+}
+
+/* Admin edits are stamped with the editor's clock; allow for a slow device clock. */
+const CHANGE_MARGIN_MS = 10 * 60 * 1000;
+
+/** True when today's work was already done and nothing in the schedule or settings changed since. */
+async function upToDate(db, settings, today) {
+  if (settings.lastRunDate !== today || !settings.lastRunAtMs) return false;
+  const latest = await db.collection(SCHEDULE).orderBy('updatedAtMs', 'desc').limit(1).get();
+  const changedAtMs = Math.max(settings.changedAtMs, Number(latest.docs[0]?.get('updatedAtMs')) || 0);
+  return changedAtMs < settings.lastRunAtMs - CHANGE_MARGIN_MS;
 }
 
 /**
  * Publishes today's scheduled challenges and archives finished ones.
  * `serverTimestamp` is FieldValue.serverTimestamp (injected so the module is testable offline).
+ *
+ * The scheduler runs every ~5 minutes, but this work is needed once per day plus after an admin edit.
+ * Other runs cost two document reads and write nothing (reading every entry and every published
+ * challenge on each run used a large share of the free daily Firestore read quota).
  */
 async function runChallengeSchedule(db, { now = Date.now(), serverTimestamp } = {}) {
   const ts = serverTimestamp || require('firebase-admin/firestore').FieldValue.serverTimestamp;
   const settings = await readSettings(db);
   const today = zoneDate(now, settings.timeZone);
+  if (await upToDate(db, settings, today)) return { today, timeZone: settings.timeZone, skipped: 'up to date' };
   const result = { today, timeZone: settings.timeZone, published: 0, alreadyPublished: 0, archived: 0, failed: 0 };
   const settingsRef = db.collection(SETTINGS_PATH[0]).doc(SETTINGS_PATH[1]);
 

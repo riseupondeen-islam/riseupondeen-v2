@@ -1,5 +1,5 @@
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
-const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
 const { getAuth } = require('firebase-admin/auth');
 const { processDeenFriendsEvents } = require('./deenFriends');
@@ -22,6 +22,18 @@ const DELIVERY_COLLECTION = 'push_prayer_deliveries';
 const PRAYER_KEYS = ['fajr','dhuhr','asr','maghrib','isha'];
 const PRAYER_LABELS = {fajr:'Fajr',dhuhr:'Dhuhr',asr:'Asr',maghrib:'Maghrib',isha:'Isha'};
 const ALADHAN_BASE = 'https://api.aladhan.com/v1/timings';
+/* Free-tier Firestore budget (the cause of "8 RESOURCE_EXHAUSTED: Quota exceeded"): the scheduler runs
+   ~288 times a day, so it must not read every subscription on every run. Each prayer subscriber now
+   carries the time of its next prayer (prayerNextCheckMs, written only by this scheduler), and a run
+   reads only subscribers that are due plus subscriptions the visitor changed since the last run. */
+const PRAYER_STATE_DOC = 'push_scheduler_state/prayer';
+const PRAYER_NEXT_FIELD = 'prayerNextCheckMs';
+const PRAYER_RETRY_MS = 30 * 60 * 1000;
+const PRAYER_SYNC_OVERLAP_MS = 2 * 60 * 1000;
+const PRAYER_PAGE = 500;
+/* A queued job that cannot be delivered is retried for about an hour, then marked failed. Before, it
+   stayed queued forever and re-read every subscription on every run. */
+const MAX_JOB_ATTEMPTS = 12;
 
 function cleanTime(value){
   const m=String(value||'').match(/^(\d{1,2}):(\d{2})$/); if(!m)return '';
@@ -39,6 +51,19 @@ function localNow(timeZone){
 function apiDate(date){const m=String(date).match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:'';}
 function validPrayers(prayers){return PRAYER_KEYS.every(k=>!!cleanTime(prayers?.timings?.[k]));}
 function minuteDistance(h,m,t){const [th,tm]=t.split(':').map(Number);return h*60+m-(th*60+tm);}
+/** UTC milliseconds of a wall-clock date + "HH:MM" in an IANA time zone. */
+function zonedMs(date,time,timeZone){
+  const [y,mo,d]=date.split('-').map(Number),[h,mi]=time.split(':').map(Number),want=Date.UTC(y,mo-1,d,h,mi);
+  let guess=want;
+  for(let i=0;i<2;i++){const p=zoneParts(new Date(guess),timeZone);guess+=want-Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day),Number(p.hour),Number(p.minute));}
+  return guess;
+}
+function nextDay(date){const [y,m,d]=date.split('-').map(Number);return new Date(Date.UTC(y,m-1,d+1)).toISOString().slice(0,10);}
+/** When this subscriber next needs attention: its next prayer today, else just after local midnight. */
+function nextPrayerCheckMs(prayers,today){
+  const upcoming=PRAYER_KEYS.map(k=>cleanTime(prayers.timings[k])).filter(t=>t&&minuteDistance(today.hour,today.minute,t)<0).sort();
+  return upcoming.length?zonedMs(today.date,upcoming[0],today.timeZone):zonedMs(nextDay(today.date),'00:01',today.timeZone);
+}
 
 async function fetchPrayerTimes({date,lat,lng,method,school}){
   const latitude=Number(lat),longitude=Number(lng);
@@ -86,6 +111,20 @@ async function sendPrayer(doc,record,key,date){
   }catch(error){if(invalidToken(error?.code))await disableToken(doc.ref);else await db.collection(DELIVERY_COLLECTION).doc(`${String(record.visitorId||doc.id)}_${date}_${key}`.replace(/[^a-zA-Z0-9_-]/g,'_')).delete().catch(()=>{});throw error;}
 }
 
+let activeSubscriptionDocs=null;
+/** All active subscriptions, read at most once per run and shared by every broadcast job. */
+async function activeSubscriptions(){
+  if(!activeSubscriptionDocs)activeSubscriptionDocs=(await db.collection(PUSH_COLLECTION).where('active','==',true).get()).docs;
+  return activeSubscriptionDocs;
+}
+/** A single-recipient job reads only that visitor's subscription (the document id is the visitor id). */
+async function jobRecipients(job){
+  if(job.audience!=='single')return activeSubscriptions();
+  const id=String(job.targetVisitorId||'').trim();
+  if(!id||id.includes('/'))return [];
+  const snap=await db.collection(PUSH_COLLECTION).doc(id).get();
+  return snap.exists&&snap.get('active')===true?[snap]:[];
+}
 async function sendGenericJob(jobRef,job){
   const now=Date.now();
   if(job.status!=='queued')return {skipped:true};
@@ -98,9 +137,9 @@ async function sendGenericJob(jobRef,job){
   const message=String(job.message||'').slice(0,280);
   const route=String(job.route||'#home').startsWith('#')?String(job.route||'#home'):'#home';
   const forceTest=job.forceTest===true;
-  let snap=await db.collection(PUSH_COLLECTION).where('active','==',true).get();
+  const recipients=await jobRecipients(job);
   let sent=0,eligible=0;
-  for(const doc of snap.docs){
+  for(const doc of recipients){
     const r=doc.data()||{};
     if(!r.fcmToken)continue;
     if(job.audience==='single'&&String(r.visitorId||doc.id)!==String(job.targetVisitorId||''))continue;
@@ -126,14 +165,17 @@ async function sendGenericJob(jobRef,job){
     await jobRef.set({status:'sent',sent,eligible,processedAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp(),lastError:null},{merge:true});
     return {sent,eligible};
   }
+  const attempts=(Number(job.attempts)||0)+1,giveUp=attempts>=MAX_JOB_ATTEMPTS;
+  const reason=eligible===0?'No active matching FCM subscription was available':'FCM delivery failed for all matching subscriptions';
   await jobRef.set({
-    status:'queued',
+    status:giveUp?'failed':'queued',
     eligible,
+    attempts,
     attemptedAt:FieldValue.serverTimestamp(),
     updatedAt:FieldValue.serverTimestamp(),
-    lastError:eligible===0?'No active matching FCM subscription was available yet.':'FCM delivery failed for all matching subscriptions; retrying on the next run.'
+    lastError:giveUp?`${reason} after ${attempts} attempts; not retried.`:`${reason}; retrying on the next run.`
   },{merge:true});
-  return {sent:0,eligible,retry:true};
+  return {sent:0,eligible,retry:!giveUp};
 }
 async function processJobs(){
   const snap=await db.collection(JOB_COLLECTION).where('status','==','queued').limit(100).get();
@@ -142,26 +184,65 @@ async function processJobs(){
   return {jobs:processed,sent};
 }
 
-async function processPrayerNotifications(){
-  const snap=await db.collection(PUSH_COLLECTION).where('active','==',true).get();
-  if(snap.empty)return {subscribers:0,sent:0};
-  const cache=new Map();let sent=0,subscribers=0;
-  for(const doc of snap.docs){
-    const record=doc.data()||{},schedule=record.schedule||{},categories=schedule.categories||{};
-    if(categories.prayer!==true||!record.fcmToken||!schedule.timeZone)continue;
-    subscribers++;
-    try{
-      const today=localNow(String(schedule.timeZone));
-      const prayers=await ensureTodaySchedule(doc.ref,record,today,cache);if(!prayers||prayers.date!==today.date)continue;
+/** Sends any prayer due now to one subscriber and records when it next needs attention. */
+async function processPrayerSubscriber(doc,cache){
+  const record=doc.data()||{},schedule=record.schedule||{},categories=schedule.categories||{};
+  const stored=record[PRAYER_NEXT_FIELD];
+  const stopChecking=async()=>{if(stored!==undefined)await doc.ref.update({[PRAYER_NEXT_FIELD]:FieldValue.delete()});};
+  if(record.active!==true||categories.prayer!==true||!record.fcmToken||!schedule.timeZone){
+    // Not a prayer subscriber (any more): stop checking until the visitor changes their settings.
+    await stopChecking();
+    return {subscriber:false,sent:0};
+  }
+  const lat=schedule.lat??schedule.prayers?.lat,lng=schedule.lng??schedule.prayers?.lng;
+  const hasPlace=lat!=null&&lng!=null&&Number.isFinite(Number(lat))&&Number.isFinite(Number(lng));
+  let sent=0,next=Date.now()+PRAYER_RETRY_MS;
+  try{
+    const today=localNow(String(schedule.timeZone));
+    const prayers=await ensureTodaySchedule(doc.ref,record,today,cache);
+    if(prayers&&prayers.date===today.date){
       for(const key of PRAYER_KEYS){const t=cleanTime(prayers.timings[key]);if(!t)continue;const delta=minuteDistance(today.hour,today.minute,t);
-        // GitHub's free scheduler has a minimum 5-minute cadence. A 10-minute catch-up
-        // window prevents a normal scheduled-run delay from losing a prayer alert.
+        // GitHub's free scheduler has a minimum 5-minute cadence and is sometimes late; a 30-minute
+        // catch-up window prevents a delayed run from losing a prayer alert.
         if(delta<0||delta>30)continue;
         try{if(await sendPrayer(doc,record,key,today.date))sent++;}catch(e){console.warn(`Prayer send failed ${doc.id}/${key}`,e?.message||e);}
       }
-    }catch(e){console.warn(`Subscriber ${doc.id} failed`,e?.message||e);}
+      next=nextPrayerCheckMs(prayers,today);
+    }else if(!hasPlace){
+      // No location to calculate tomorrow's times: wait for the visitor's app to send one.
+      await stopChecking();
+      return {subscriber:true,sent};
+    }
+  }catch(e){console.warn(`Subscriber ${doc.id} failed`,e?.message||e);}
+  if(Number(stored)!==next)await doc.ref.set({[PRAYER_NEXT_FIELD]:next},{merge:true});
+  return {subscriber:true,sent};
+}
+
+async function processPrayerNotifications(){
+  const now=Date.now(),stateRef=db.doc(PRAYER_STATE_DOC),state=await stateRef.get();
+  const syncedAt=state.exists?Number(state.get('syncedAtMs'))||0:0;
+  const docs=new Map();
+  let syncedTo=now,fullScan=false;
+  if(!syncedAt){
+    // First run with this scheduler version: one full pass gives every subscriber its next check time.
+    const all=await db.collection(PUSH_COLLECTION).where('active','==',true).get();
+    all.docs.forEach(d=>docs.set(d.id,d));
+    fullScan=true;
+  }else{
+    // Subscriptions the visitor created or changed (new token, place, time zone, categories, opt-out).
+    const changed=await db.collection(PUSH_COLLECTION).where('updatedAt','>',Timestamp.fromMillis(syncedAt-PRAYER_SYNC_OVERLAP_MS)).orderBy('updatedAt').limit(PRAYER_PAGE).get();
+    changed.docs.forEach(d=>docs.set(d.id,d));
+    if(changed.size===PRAYER_PAGE){const last=changed.docs[changed.size-1].get('updatedAt');syncedTo=(last&&typeof last.toMillis==='function'?last.toMillis():now)+PRAYER_SYNC_OVERLAP_MS;}
   }
-  return {subscribers,sent};
+  const due=await db.collection(PUSH_COLLECTION).where(PRAYER_NEXT_FIELD,'<=',now).limit(PRAYER_PAGE).get();
+  due.docs.forEach(d=>docs.set(d.id,d));
+  const cache=new Map();let sent=0,subscribers=0;
+  for(const doc of docs.values()){
+    try{const r=await processPrayerSubscriber(doc,cache);if(r.subscriber)subscribers++;sent+=r.sent;}
+    catch(e){console.warn(`Subscriber ${doc.id} failed`,e?.message||e);}
+  }
+  await stateRef.set({syncedAtMs:Math.min(syncedTo,now),updatedAt:FieldValue.serverTimestamp()},{merge:true});
+  return {checked:docs.size,subscribers,sent,fullScan};
 }
 
 (async()=>{
