@@ -5,6 +5,8 @@ const { getAuth } = require('firebase-admin/auth');
 const { processDeenFriendsEvents } = require('./deenFriends');
 const { runMaintenance } = require('./maintenance');
 const { processAdminJobs } = require('./adminJobs');
+const { runChallengeSchedule } = require('./challengeScheduler');
+const { processRiseBroadcasts } = require('./riseBroadcasts');
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '{}');
 if (!serviceAccount.project_id || !serviceAccount.client_email || !serviceAccount.private_key) {
@@ -174,5 +176,11 @@ async function processPrayerNotifications(){
   // V3.5 trusted admin jobs (Super Admin–requested member deletion), independent of the rest.
   let adminJobs;
   try{adminJobs=await processAdminJobs(db,getAuth());}catch(e){console.warn('Admin jobs failed',e?.message||e);adminJobs={error:String(e?.message||e)};}
-  console.log(JSON.stringify({ok:true,at:new Date().toISOString(),jobs,prayers,deenFriends,maintenance,adminJobs}));
+  // Admin Console automation: today's scheduled Daily Deen Challenges, then queued RISE outreach.
+  // Each is independent of everything above; a failure is logged and retried on the next run.
+  let challengeSchedule;
+  try{challengeSchedule=await runChallengeSchedule(db);}catch(e){console.warn('Challenge schedule failed',e?.message||e);challengeSchedule={error:String(e?.message||e)};}
+  let riseOutreach;
+  try{riseOutreach=await processRiseBroadcasts(db,getAuth());}catch(e){console.warn('RISE outreach failed',e?.message||e);riseOutreach={error:String(e?.message||e)};}
+  console.log(JSON.stringify({ok:true,at:new Date().toISOString(),jobs,prayers,deenFriends,maintenance,adminJobs,challengeSchedule,riseOutreach}));
 })().catch(error=>{console.error(error);process.exit(1);});

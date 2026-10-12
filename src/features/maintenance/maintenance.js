@@ -52,7 +52,15 @@ function maintenanceUserAllowed(cfg) {
 function syncMaintenanceConfig(cfg) {
   if (rudIsAdminRoute()) return;
   if (maintenanceIsActive(cfg) && !maintenanceUserAllowed(cfg)) showMaintenance(cfg);
-  else hideMaintenance();
+  else if (window.RUD_MAINTENANCE_ACTIVE) {
+    /* Maintenance ended, or this visitor was just granted Maintenance Access: the page that was
+       hidden behind the maintenance screen must be rendered again. hideMaintenance() alone left
+       non-home routes blank until the visitor navigated or reloaded. */
+    hideMaintenance();
+    try {
+      handleRoute();
+    } catch {}
+  } else hideMaintenance();
 }
 function stopMaintenanceLive() {
   try {
@@ -250,6 +258,7 @@ export function init() {
 
 export {
   MAINTENANCE_DOC_ID,
+  maintenanceUserAllowed,
   formatMaintenanceRemaining,
   hideMaintenance,
   maintenanceConfigFrom,

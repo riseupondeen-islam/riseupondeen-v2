@@ -62,7 +62,10 @@ test('admin: create and publish a Daily Deen Challenge, track progress', async (
   await page.locator('#adminLoginBtn').click();
   await page.locator('[data-admin-view="daily-challenges"]').click();
   const view = page.locator('.df2-admin');
-  await expect(view.locator('.df2-admin-row')).toHaveCount(3);
+  // The console opens on Schedule & automation; the existing challenges are under "Published & drafts".
+  await view.getByRole('tab', { name: 'Published & drafts' }).click();
+  const rows = view.locator('.rad-datatable tbody tr');
+  await expect(rows).toHaveCount(3);
   await view.getByRole('button', { name: '+ New challenge' }).click();
   await view.getByLabel('Title').fill('Admin test: 100 Istighfar daily');
   await view.getByLabel('Completion').selectOption('tasbih');
@@ -74,7 +77,8 @@ test('admin: create and publish a Daily Deen Challenge, track progress', async (
   await expect(view.locator('.df2-form-error')).toContainText('@nobody_here');
   await view.getByLabel('Usernames').fill('@aisha');
   await view.getByRole('button', { name: 'Save & publish' }).click();
-  await expect(view.locator('.df2-admin-row')).toHaveCount(4);
+  await view.getByRole('tab', { name: 'Published & drafts' }).click();
+  await expect(rows).toHaveCount(4);
   const created = await page.evaluate(() =>
     [
       ...(
@@ -99,14 +103,8 @@ test('admin: create and publish a Daily Deen Challenge, track progress', async (
     target: 100,
     requiredDays: 5,
   });
-  await view
-    .locator('.df2-admin-row')
-    .filter({ hasText: 'TEST Daily: draft' })
-    .getByRole('button', { name: 'Publish' })
-    .click();
-  await expect(
-    view.locator('.df2-admin-row').filter({ hasText: 'TEST Daily: draft' }).locator('.df2-status'),
-  ).toHaveText('published');
+  await rows.filter({ hasText: 'TEST Daily: draft' }).getByRole('button', { name: 'Publish', exact: true }).click();
+  await expect(rows.filter({ hasText: 'TEST Daily: draft' }).locator('.df2-status')).toHaveText('published');
 });
 
 test('admin: RISE inbox shows conversations and replies are sent as RISE', async ({ page }) => {

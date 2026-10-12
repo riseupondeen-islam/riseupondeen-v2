@@ -47,8 +47,7 @@ html.light-mode body{
   background:transparent!important;
   color:var(--rud-light-text)!important;
 }
-html.light-mode #dynamicPage,
-html.light-mode #adminApp{
+html.light-mode #dynamicPage{
   background:var(--rud-light-bg)!important;
   color:var(--rud-light-text)!important;
 }
@@ -76,17 +75,7 @@ html.rud-theme-switching *,html.rud-theme-switching *::before,html.rud-theme-swi
 
 
 /* Top-level page surfaces: color-only translation, no geometry changes. */
-html.light-mode body main > section,
-html.light-mode #dynamicPage > section,
-html.light-mode #adminApp > section,
-html.light-mode body :is(
-  .section,.intro-section,.today-section,.knowledge-section,.reflection,
-  .quran-reflection-section,.editorial-section,.guidance-section,.dua-live-section,
-  .topics-section,.brand-message,.social-section,.minimal-reflection-section,
-  .minimal-featured-section,.names-minimal-section,.minimal-latest-section,
-  .spotlight-section,.minimal-closing,.route-hero,.reader,.rud-feature-page,
-  .rud-prayer-page,.rud-tasbih-page
-){
+html.light-mode body main > section,html.light-mode #dynamicPage > section,html.light-mode body :is(.section,.intro-section,.today-section,.knowledge-section,.reflection,.quran-reflection-section,.editorial-section,.guidance-section,.dua-live-section,.topics-section,.brand-message,.social-section,.minimal-reflection-section,.minimal-featured-section,.names-minimal-section,.minimal-latest-section,.spotlight-section,.minimal-closing,.route-hero,.reader,.rud-feature-page,.rud-prayer-page,.rud-tasbih-page){
   background:transparent!important;
   color:var(--rud-light-text)!important;
   box-shadow:none!important;
@@ -106,19 +95,7 @@ html.light-mode body .section-watermark{
 }
 
 /* Typography. */
-html.light-mode body :is(
-  h1,h2,.display,.section-title,.route-hero h1,.reader-head h1,
-  .admin-head h1,.admin-login-card h1,.all-names-head h2,
-  .rud-feature-head h1,.rud-tool-head h1,.rud-zikr-selector-head h2,
-  .name-reader h1,.detail-reader h1,.heart-reader h1,.dua-reader-v2-head h1,
-  .compact-reader-head h1
-),
-html.light-mode body #reminder .minimal-section-head .section-title,
-html.light-mode body #spotlight .guidance-ribbon-head .section-title,
-html.light-mode body #names.names-minimal-section .minimal-section-head .section-title,
-html.light-mode body .final-visual-reflection .reflection-content h2,
-html.light-mode body #dynamicPage .names-route-hero-shell h1,
-html.light-mode body #searchOverlay #heartSearchTitle{
+html.light-mode body :is(h1,h2,.display,.section-title,.route-hero h1,.reader-head h1,.all-names-head h2,.rud-feature-head h1,.rud-tool-head h1,.rud-zikr-selector-head h2,.name-reader h1,.detail-reader h1,.heart-reader h1,.dua-reader-v2-head h1,.compact-reader-head h1),html.light-mode body #reminder .minimal-section-head .section-title,html.light-mode body #spotlight .guidance-ribbon-head .section-title,html.light-mode body #names.names-minimal-section .minimal-section-head .section-title,html.light-mode body .final-visual-reflection .reflection-content h2,html.light-mode body #dynamicPage .names-route-hero-shell h1,html.light-mode body #searchOverlay #heartSearchTitle{
   color:var(--rud-light-gold-soft)!important;
   -webkit-text-fill-color:var(--rud-light-gold-soft)!important;
   text-shadow:none!important;
@@ -144,36 +121,11 @@ html.light-mode body .instagram-profile-action{
   -webkit-text-fill-color:var(--rud-light-gold-soft)!important;
   text-shadow:none!important;
 }
-html.light-mode body :is(
-  p,.section-copy,.hero-support,.hero-tagline,.reminder-text,.meaning,
-  .knowledge-card p,.timeline-item p,.reflection-content p,.brand-message p,
-  .footer-statement,.reader-desc,.reader-body,.textual-card p,.live-card p,
-  .today-card p,.guidance-card p,.topic-card p,.social-card p,.dua-meaning,
-  .modal-copy,.modal-meaning,.admin-head p,.admin-login-card>p,
-  .detail-info-copy,.detail-reminder-copy,.name-library-link p,.name-reader-body section p,
-  .heart-search-top p,.heart-search-empty span,.rud-status,.rud-feature-copy,
-  .rud-dhikr-copy,.rud-tasbih-page .rud-device-zikr
-),
-html.light-mode body #reminder .heart-reflection :is(.heart-preview-copy,.heart-inline-full,.heart-inline-reference strong),
-html.light-mode body #spotlight .guidance-ribbon-copy span,
-html.light-mode body #names.names-minimal-section #namesGrid .name-card p,
-html.light-mode body #dynamicPage .names-route-grid .name-library-link p,
-html.light-mode body #dynamicPage .name-reader-meaning,
-html.light-mode body #dynamicPage .name-reader-body section p,
-html.light-mode body #dynamicPage .rud-tasbih-primary :is(.rud-tasbih-ar,.rud-tasbih-trans,.rud-tasbih-meaning,.rud-tasbih-reference),
-html.light-mode body #searchOverlay :is(.mood-result-card p,.mood-result-meta,.mood-result-type,.search-context,.heart-search-empty span),
-html.light-mode body #nameModal :is(.modal-meaning,.modal-copy),
-html.light-mode body :is(.instagram-heart-quote,.instagram-profile-text small,.instagram-eyebrow,.instagram-copyright){
+html.light-mode body :is(p,.section-copy,.hero-support,.hero-tagline,.reminder-text,.meaning,.knowledge-card p,.timeline-item p,.reflection-content p,.brand-message p,.footer-statement,.reader-desc,.reader-body,.textual-card p,.live-card p,.today-card p,.guidance-card p,.topic-card p,.social-card p,.dua-meaning,.modal-copy,.modal-meaning,.detail-info-copy,.detail-reminder-copy,.name-library-link p,.name-reader-body section p,.heart-search-top p,.heart-search-empty span,.rud-status,.rud-feature-copy,.rud-dhikr-copy,.rud-tasbih-page .rud-device-zikr),html.light-mode body #reminder .heart-reflection :is(.heart-preview-copy,.heart-inline-full,.heart-inline-reference strong),html.light-mode body #spotlight .guidance-ribbon-copy span,html.light-mode body #names.names-minimal-section #namesGrid .name-card p,html.light-mode body #dynamicPage .names-route-grid .name-library-link p,html.light-mode body #dynamicPage .name-reader-meaning,html.light-mode body #dynamicPage .name-reader-body section p,html.light-mode body #dynamicPage .rud-tasbih-primary :is(.rud-tasbih-ar,.rud-tasbih-trans,.rud-tasbih-meaning,.rud-tasbih-reference),html.light-mode body #searchOverlay :is(.mood-result-card p,.mood-result-meta,.mood-result-type,.search-context,.heart-search-empty span),html.light-mode body #nameModal :is(.modal-meaning,.modal-copy),html.light-mode body :is(.instagram-heart-quote,.instagram-profile-text small,.instagram-eyebrow,.instagram-copyright){
   color:var(--rud-light-text-2)!important;
   text-shadow:none!important;
 }
-html.light-mode body :is(
-  small,label,.eyebrow,.verse-ref,.live-type,.live-meta,.reader-meta,.dua-ref,
-  .modal-label,.timeline-time,.knowledge-card .num,.popular-card .editorial-no,
-  .name-card .index,.admin-panel small,.stat small,.field label,.detail-info-label,
-  .detail-category,.detail-sacred-label,.detail-source-kicker,.name-library-kicker,
-  .name-reader-label,.rud-card-kicker,.rud-next-prayer small,.rud-prayer-row small
-){
+html.light-mode body :is(small,label,.eyebrow,.verse-ref,.live-type,.live-meta,.reader-meta,.dua-ref,.modal-label,.timeline-time,.knowledge-card .num,.popular-card .editorial-no,.name-card .index,.field label,.detail-info-label,.detail-category,.detail-sacred-label,.detail-source-kicker,.name-library-kicker,.name-reader-label,.rud-card-kicker,.rud-next-prayer small,.rud-prayer-row small){
   color:var(--rud-light-muted)!important;
   text-shadow:none!important;
 }
@@ -183,11 +135,7 @@ html.light-mode body :is(.eyebrow,.hero-kicker,.rud-card-kicker,.detail-type-chi
 html.light-mode body .eyebrow::before{
   background:linear-gradient(90deg,transparent,rgba(0,0,0,.32))!important;
 }
-html.light-mode body [lang="ar"],
-html.light-mode body :is(.arabic,.arabic-name,.name-arabic,.dua-arabic,.modal-arabic,.arabic-big,.arabic-snippet,.compact-arabic,.detail-arabic-text,.dua-sacred-arabic,.hadith-arabic,.heart-inline-arabic,.name-library-arabic,.name-reader-arabic,.rud-zikr-arabic,.spotlight-arabic,.rud-tasbih-ar),
-html.light-mode body #names.names-minimal-section #namesGrid .name-card .name-arabic,
-html.light-mode body #dynamicPage .names-route-grid .name-library-arabic,
-html.light-mode body #dynamicPage .name-reader-arabic{
+html.light-mode body [lang="ar"],html.light-mode body :is(.arabic,.arabic-name,.name-arabic,.dua-arabic,.modal-arabic,.arabic-snippet,.compact-arabic,.detail-arabic-text,.dua-sacred-arabic,.hadith-arabic,.heart-inline-arabic,.name-library-arabic,.name-reader-arabic,.rud-zikr-arabic,.spotlight-arabic,.rud-tasbih-ar),html.light-mode body #names.names-minimal-section #namesGrid .name-card .name-arabic,html.light-mode body #dynamicPage .names-route-grid .name-library-arabic,html.light-mode body #dynamicPage .name-reader-arabic{
   color:#111111!important;
   -webkit-text-fill-color:#111111!important;
   background-image:none!important;
@@ -196,28 +144,7 @@ html.light-mode body #dynamicPage .name-reader-arabic{
 }
 
 /* Public cards and panels. */
-html.light-mode body article:not(.has-image),
-html.light-mode body :is(
-  .glass,.reminder-panel,.name-card,.knowledge-card,.popular-card,.dua-card,
-  .live-card:not(.has-image),.rud-saved-grid .live-card,.rud-saved-grid .compact-guidance-card,.today-card,.quran-reflection-card,.editorial-story:not(.has-image),
-  .guidance-card,.topic-card,.social-card,.textual-card,.dua-arch,.heart-reflection,
-  .dua-spotlight,.hadith-spotlight,.spotlight-card,.name-library-card,.name-reader-body section,
-  .detail-arabic-card,.detail-reminder-card,.detail-info-block,.detail-transliteration,
-  .detail-meaning,.detail-when,.detail-reflection,.detail-source-card,.compact-info-card,
-  .heart-reader-card,.reference-card,.search-result,.heart-search-empty,.empty-live,
-  .skeleton-live,.rud-feature-card,.rud-dhikr-card,.rud-tasbih-counter,.rud-prayer-row,
-  .rud-next-prayer,.rud-status,.rud-zikr-selector-panel,.rud-tasbih-primary
-),
-html.light-mode body #spotlight .guidance-ribbon-item,
-html.light-mode body #names.names-minimal-section #namesGrid.minimal-names-grid > .name-card,
-html.light-mode body #dynamicPage .names-route-grid .name-library-card,
-html.light-mode body #dynamicPage .name-reader,
-html.light-mode body #dynamicPage .name-reader-body section,
-html.light-mode body .instagram-profile,
-html.light-mode body .instagram-profile-icon,
-html.light-mode body #dynamicPage .compact-sacred-panel,
-html.light-mode body #dynamicPage .dua-library-card,
-html.light-mode body #dynamicPage .hadith-preview-card{
+html.light-mode body article:not(.has-image),html.light-mode body :is(.glass,.reminder-panel,.name-card,.knowledge-card,.popular-card,.dua-card,.live-card:not(.has-image),.rud-saved-grid .live-card,.rud-saved-grid .compact-guidance-card,.today-card,.quran-reflection-card,.editorial-story:not(.has-image),.guidance-card,.topic-card,.social-card,.textual-card,.dua-arch,.heart-reflection,.dua-spotlight,.hadith-spotlight,.spotlight-card,.name-library-card,.name-reader-body section,.detail-arabic-card,.detail-reminder-card,.detail-info-block,.detail-transliteration,.detail-meaning,.detail-when,.detail-reflection,.detail-source-card,.compact-info-card,.heart-reader-card,.reference-card,.search-result,.heart-search-empty,.empty-live,.skeleton-live,.rud-feature-card,.rud-dhikr-card,.rud-tasbih-counter,.rud-prayer-row,.rud-next-prayer,.rud-status,.rud-zikr-selector-panel,.rud-tasbih-primary),html.light-mode body #spotlight .guidance-ribbon-item,html.light-mode body #names.names-minimal-section #namesGrid.minimal-names-grid > .name-card,html.light-mode body #dynamicPage .names-route-grid .name-library-card,html.light-mode body #dynamicPage .name-reader,html.light-mode body #dynamicPage .name-reader-body section,html.light-mode body .instagram-profile,html.light-mode body .instagram-profile-icon,html.light-mode body #dynamicPage .compact-sacred-panel,html.light-mode body #dynamicPage .dua-library-card,html.light-mode body #dynamicPage .hadith-preview-card{
   background:#ffffff!important;
   background-color:#ffffff!important;
   background-image:none!important;
@@ -255,31 +182,19 @@ html.light-mode body :is(.has-image,.featured-live.has-image,.editorial-story.ha
 }
 
 /* Buttons / controls — dimensions and movement remain inherited unchanged. */
-html.light-mode body :is(
-  .premium-btn:not(.primary),.icon-btn,.mini-action,.filter-chip,.modal-close,
-  .all-names-close,.all-names-floating-close,.back-top,.compact-reader-back,
-  .dua-reader-back,.heart-reader-back,.detail-back-link,.route-close-btn,
-  .names-route-close,.rud-detail-close,#rudLibraryClose,.rud-mini-btn,.rud-device-reset,.rud-compact-btn
-){
+html.light-mode body :is(.premium-btn:not(.primary),.icon-btn,.filter-chip,.modal-close,.all-names-close,.all-names-floating-close,.back-top,.compact-reader-back,.dua-reader-back,.heart-reader-back,.detail-back-link,.route-close-btn,.names-route-close,.rud-detail-close,#rudLibraryClose,.rud-mini-btn,.rud-device-reset,.rud-compact-btn){
   background:#ffffff!important;
   color:#222!important;
   border-color:#d2d2d2!important;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.92)!important;
 }
-html.light-mode body :is(.premium-btn.primary,#adminApp .premium-btn.primary),
-html.light-mode body #dynamicPage .premium-btn.primary,
-html.light-mode body #dynamicPage [data-download],
-html.light-mode body #spotlight .guidance-ribbon-link,
-html.light-mode body #names #viewAllNamesBtn,
-html.light-mode body #rudWelcomeContinue,
-html.light-mode body #rudBroadcastDismiss{
+html.light-mode body :is(.premium-btn.primary),html.light-mode body #dynamicPage .premium-btn.primary,html.light-mode body #dynamicPage [data-download],html.light-mode body #spotlight .guidance-ribbon-link,html.light-mode body #names #viewAllNamesBtn,html.light-mode body #rudWelcomeContinue,html.light-mode body #rudBroadcastDismiss{
   background:#ffffff!important;
   background-image:none!important;
   color:#111111!important;
   border-color:#cfcfcf!important;
 }
-html.light-mode body :is(.premium-btn,.icon-btn,.mini-action,.filter-chip):hover,
-html.light-mode body .filter-chip.active{
+html.light-mode body :is(.premium-btn,.icon-btn,.filter-chip):hover,html.light-mode body .filter-chip.active{
   color:#111111!important;
   border-color:#c8c8c8!important;
   background:#f7f7f7!important;
@@ -533,10 +448,7 @@ html.light-mode body #dynamicPage .rud-prayer-page #rudQiblaDegrees{
 html.light-mode body #dynamicPage{
   background:#fff!important;
 }
-html.light-mode body #dynamicPage :is(
-  .detail-reader,.name-reader,.heart-reader,.dua-reader-v2,.compact-reader,
-  .detail-content-shell,.name-reader-body,.reader-body
-){
+html.light-mode body #dynamicPage :is(.detail-reader,.name-reader,.heart-reader,.dua-reader-v2,.compact-reader,.detail-content-shell,.name-reader-body,.reader-body){
   background:#ffffff!important;
   background-image:none!important;
   color:#171717!important;
@@ -545,12 +457,7 @@ html.light-mode body #dynamicPage :is(
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important;
 }
-html.light-mode body #dynamicPage :is(
-  .detail-arabic-card,.detail-reminder-card,.detail-info-block,.detail-transliteration,
-  .detail-meaning,.detail-when,.detail-reflection,.detail-source-card,.name-reader-body section,
-  .heart-reader-card,.compact-info-card,.dua-reader-actions,.detail-actions,
-  .dua-sacred-frame,.dua-reader-section,.dua-reader-source,.dua-reader-reflection,.dua-reader-context
-){
+html.light-mode body #dynamicPage :is(.detail-arabic-card,.detail-reminder-card,.detail-info-block,.detail-transliteration,.detail-meaning,.detail-when,.detail-reflection,.detail-source-card,.name-reader-body section,.heart-reader-card,.compact-info-card,.dua-reader-actions,.detail-actions,.dua-sacred-frame,.dua-reader-section,.dua-reader-source,.dua-reader-reflection,.dua-reader-context){
   background:#fff!important;
   background-image:none!important;
   color:#171717!important;
@@ -559,12 +466,7 @@ html.light-mode body #dynamicPage :is(
   backdrop-filter:none!important;
   -webkit-backdrop-filter:none!important;
 }
-html.light-mode body #dynamicPage :is(
-  .detail-info-copy,.detail-reminder-copy,.detail-transliteration p,.detail-meaning .detail-info-copy,
-  .detail-when .detail-info-copy,.detail-reflection .detail-info-copy,.name-reader-body section p,
-  .heart-reader-card p,.compact-info-card p,.dua-reader-v2-body p,.dua-reader-source strong,
-  .compact-sacred-panel p,.compact-translation,.dua-library-copy p,.dua-library-open
-){
+html.light-mode body #dynamicPage :is(.detail-info-copy,.detail-reminder-copy,.detail-transliteration p,.detail-meaning .detail-info-copy,.detail-when .detail-info-copy,.detail-reflection .detail-info-copy,.name-reader-body section p,.heart-reader-card p,.compact-info-card p,.dua-reader-v2-body p,.dua-reader-source strong,.compact-sacred-panel p,.compact-translation,.dua-library-copy p,.dua-library-open){
   color:#222222!important;
   text-shadow:none!important;
 }
@@ -645,10 +547,7 @@ html.light-mode body #dynamicPage .rud-prayer-page .rud-kaaba-marker{
 }
 
 /* Tasbih: same device/layout, translated to light materials only. */
-html.light-mode body #dynamicPage .rud-tasbih-page :is(
-  .rud-feature-card,.rud-dhikr-card,.rud-tasbih-counter,.rud-tasbih-primary,
-  .rud-tasbih-device,.rud-digital-tasbih,.rud-count-stage
-){
+html.light-mode body #dynamicPage .rud-tasbih-page :is(.rud-feature-card,.rud-dhikr-card,.rud-tasbih-counter,.rud-tasbih-primary,.rud-tasbih-device,.rud-digital-tasbih,.rud-count-stage){
   background:#ffffff!important;
   background-image:none!important;
   color:#171717!important;
@@ -742,118 +641,6 @@ html.light-mode body #rudMaintenanceApp :is(p,span,small,strong,.rud-maintenance
 }
 
 /* Admin Console: visual theme only; no admin behavior selectors are touched. */
-html.light-mode body #adminApp{
-  --hx-bg:#ffffff;
-  --hx-bg2:#ffffff;
-  --hx-panel:#ffffff;
-  --hx-panel-strong:#ffffff;
-  --hx-line:rgba(17,17,17,.14);
-  --hx-line-strong:rgba(17,17,17,.24);
-  --hx-green:#222222;
-  --hx-green-soft:#333333;
-  --hx-cyan:#444444;
-  --hx-text:#111111;
-  --hx-muted:#555555;
-  --hx-shadow:0 26px 80px rgba(0,0,0,.08);
-  background:#ffffff!important;
-  color:#171717!important;
-  background-size:auto!important;
-}
-html.light-mode body #adminApp::before{
-  background:none!important;
-  opacity:.18!important;
-}
-html.light-mode body #adminApp :is(.admin-login,.admin-shell,.admin-workspace,.admin-main){
-  background:transparent!important;
-  color:#171717!important;
-}
-html.light-mode body #adminApp :is(
-  .admin-login-card,.admin-sidebar,.admin-topbar,.stat,.admin-panel,
-  .analytics-breakdown,.analytics-row,.analytics-stat,.table-wrap,.broadcast-preview,
-  .admin-upload-box,.admin-upload-drop,.bulk-upload-drop,.bulk-help,.bulk-stat,.bulk-preview-wrap,
-  .bulk-import-progress,.admin-inline-upload,.admin-inline-upload-field,.admin-persist-note,
-  .admin-upload-type-strip button,.bulk-delete-toolbar,.bulk-delete-confirm-card,
-  .rud-maintenance-admin-preview,.rud-admin-view-all
-){
-  background:#ffffff!important;
-  color:#171717!important;
-  border-color:var(--hx-line)!important;
-  box-shadow:none!important;
-}
-html.light-mode body #adminApp .admin-login-card::after{
-  border-color:#e3e3e3!important;
-  box-shadow:0 0 0 22px rgba(0,0,0,.015),0 0 0 45px rgba(0,0,0,.008)!important;
-}
-html.light-mode body #adminApp :is(.input,.select,.textarea){
-  background:#fff!important;
-  color:#171717!important;
-  border-color:var(--hx-line)!important;
-}
-html.light-mode body #adminApp :is(.premium-btn:not(.primary),.mini-action,.analytics-delete-btn){
-  background:#fff!important;
-  color:#222!important;
-  border-color:#d0d0d0!important;
-}
-html.light-mode body #adminApp .premium-btn.primary{
-  background:#ffffff!important;
-  color:#111111!important;
-  border-color:#cfcfcf!important;
-}
-html.light-mode body #adminApp .admin-nav button{
-  color:#55585c!important;
-  background:transparent!important;
-}
-html.light-mode body #adminApp .admin-nav button:hover,
-html.light-mode body #adminApp .admin-nav button.active{
-  color:#111111!important;
-  background:#f7f7f7!important;
-  border-color:#d8d8d8!important;
-  box-shadow:none!important;
-}
-html.light-mode body #adminApp .admin-nav button.active::before{
-  background:#111111!important;
-  box-shadow:none!important;
-}
-html.light-mode body #adminApp :is(.admin-head h1,.admin-login-card h1){
-  color:#111111!important;
-  -webkit-text-fill-color:#111111!important;
-  text-shadow:none!important;
-}
-html.light-mode body #adminApp :is(.admin-head p,.admin-login-card>p,.field label,.stat small,.analytics-row small,.analytics-stat,.analytics-note p,.analytics-presence-text,.analytics-visitor-name,.broadcast-preview small,.broadcast-preview p,.bulk-help,.bulk-import-progress span,.admin-inline-upload-field strong,.admin-inline-upload-field small,.admin-persist-note,.rud-maintenance-admin-preview small,.rud-maintenance-admin-preview strong,.rud-maintenance-admin-preview span,#adminUserEmail){
-  color:#111111!important;
-}
-html.light-mode body #adminApp :is(th,td){
-  border-color:#e7e1d6!important;
-}
-html.light-mode body #adminApp th{
-  background:#ffffff!important;
-  color:#111111!important;
-}
-html.light-mode body #adminApp td{
-  background:#fff!important;
-  color:#2b2b2b!important;
-}
-html.light-mode body #adminApp tbody tr:hover td{
-  background:#f7f7f7!important;
-}
-html.light-mode body #adminApp .switch span{
-  background:#eeeeee!important;
-  border-color:#d3d3d3!important;
-}
-html.light-mode body #adminApp .switch span::before{
-  background:#777!important;
-}
-html.light-mode body #adminApp .switch input:checked+span::before{
-  background:#111111!important;
-}
-html.light-mode body #adminApp .config-note{
-  background:#ffffff!important;
-  color:#222222!important;
-  border-color:#d8d8d8!important;
-}
-html.light-mode body #adminApp *::-webkit-scrollbar-track{
-  background:#f2f2f2!important;
-}
 
 /* Fixed topbar theme toggle. It is absolute, so existing items do not move. */
 .rud-theme-toggle{
@@ -935,26 +722,15 @@ html.light-mode body.route-view #dynamicPage{
 #dynamicPage .rud-feature-head{
   isolation:isolate;
 }
-#dynamicPage .live-card,
-#dynamicPage .compact-guidance-card,
-#dynamicPage .dua-library-card,
-#dynamicPage .name-library-card,
-#dynamicPage .rud-tool-surface,
-#dynamicPage .rud-zakat-note,
-#dynamicPage .rud-sadaqah-section,
-#adminApp .admin-panel{
+#dynamicPage .live-card,#dynamicPage .compact-guidance-card,#dynamicPage .dua-library-card,#dynamicPage .name-library-card,#dynamicPage .rud-tool-surface,#dynamicPage .rud-zakat-note,#dynamicPage .rud-sadaqah-section{
   border-color:var(--rud-v2-stroke)!important;
   border-radius:var(--rud-v2-radius)!important;
   box-shadow:var(--rud-v2-shadow)!important;
 }
-#dynamicPage .rud-tool-surface,
-#dynamicPage .rud-zakat-note,
-#adminApp .admin-panel{
+#dynamicPage .rud-tool-surface,#dynamicPage .rud-zakat-note{
   background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.014)),var(--rud-v2-panel)!important;
 }
-html.light-mode #dynamicPage .rud-tool-surface,
-html.light-mode #dynamicPage .rud-zakat-note,
-html.light-mode #adminApp .admin-panel{
+html.light-mode #dynamicPage .rud-tool-surface,html.light-mode #dynamicPage .rud-zakat-note{
   background:var(--rud-v2-panel)!important;
 }
 #dynamicPage .premium-btn,
@@ -1128,18 +904,6 @@ html.light-mode .rud-v2-switch i::after{background:#7b7b7b}
 html.light-mode .rud-v2-switch input:checked+i::after{background:#9b7432}
 
 /* Admin notification composer */
-#adminApp .rud-push-admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-#adminApp .rud-push-admin-grid .wide{grid-column:1/-1}
-#adminApp .rud-push-preview{margin:18px 0 0;padding:18px;border:1px solid rgba(216,187,121,.15);border-radius:18px;background:rgba(216,187,121,.045)}
-#adminApp .rud-push-preview small{color:#a88c51;font-weight:800;letter-spacing:.12em}
-#adminApp .rud-push-preview h3{margin:7px 0 5px}
-#adminApp .rud-push-preview p{margin:0;color:var(--muted);white-space:pre-wrap}
-#adminApp .rud-push-config-state{margin-top:14px;padding:12px 14px;border-radius:14px;border:1px solid var(--rud-v2-stroke);color:var(--muted);font-size:.8rem;line-height:1.55}
-
-@media(max-width:760px){
-  #adminApp .rud-push-admin-grid{grid-template-columns:1fr}
-  #adminApp .rud-push-admin-grid .wide{grid-column:auto}
-}
 @media(prefers-reduced-motion:reduce){
   .rud-v2-switch i,.rud-v2-switch i::after{transition:none!important}
 }

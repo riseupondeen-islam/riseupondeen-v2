@@ -22,6 +22,7 @@ import {
   hideMaintenance,
   maintenanceConfigFrom,
   maintenanceIsActive,
+  maintenanceUserAllowed,
   showMaintenance,
   startMaintenanceLive,
 } from '../../features/maintenance/maintenance';
@@ -106,7 +107,7 @@ function handleRoute() {
   if (window.RUD_MAINTENANCE_ACTIVE) {
     syncPublicNav('');
     const cfg = maintenanceConfigFrom(S.publicContent);
-    if (maintenanceIsActive(cfg)) return showMaintenance(cfg);
+    if (maintenanceIsActive(cfg) && !maintenanceUserAllowed(cfg)) return showMaintenance(cfg);
     hideMaintenance();
   }
   syncPublicNav(r);

@@ -1,0 +1,3179 @@
+/* =====================================================================================
+   RISE UPON DEEN — ADMIN CONSOLE DESIGN SYSTEM
+   -------------------------------------------------------------------------------------
+   Loaded only with the admin chunk (adminConsole.ts); every rule is scoped to #adminApp
+   (or to the two admin-only overlays), so nothing here can reach a public page.
+
+   Theme: the tokens below are the public website's own V3 light/dark palette (Deen Friends
+   "df2", app notices and the V3 surfaces in src/styles), reproduced in an admin namespace
+   (--rad-*) instead of editing public CSS. The light/dark switch is the public mechanism:
+   html.light-mode + the stored "theme" preference.
+
+   Layout: #adminApp is a fixed, viewport-sized app. The sidebar is a fixed column that scrolls
+   on its own; #adminMain is the only vertical scroller on desktop. ≤ 900 px the sidebar becomes
+   a drawer. The page behind never scrolls while the console is open.
+   ===================================================================================== */
+
+/* ---------- 1. Tokens ---------- */
+#adminApp {
+  --rad-page: #050505;
+  --rad-side: #0b0d0f;
+  --rad-surface: #111417;
+  --rad-surface-2: #171b1f;
+  --rad-surface-3: #1e2328;
+  --rad-raised: rgba(255, 255, 255, 0.035);
+  --rad-hover: rgba(255, 255, 255, 0.05);
+  --rad-line: rgba(214, 190, 130, 0.14);
+  --rad-line-strong: rgba(214, 190, 130, 0.3);
+  --rad-line-neutral: rgba(255, 255, 255, 0.08);
+  --rad-text: #f3efe5;
+  --rad-soft: #d6d2c6;
+  --rad-muted: #a6acb2;
+  --rad-faint: #7f868c;
+  --rad-gold: #d9ba72;
+  --rad-gold-strong: #c7a359;
+  --rad-gold-soft: rgba(217, 186, 114, 0.14);
+  --rad-gold-grad: linear-gradient(135deg, #ead08e 0%, #d9ba72 45%, #c39a4c 100%);
+  --rad-on-gold: #1a1408;
+  --rad-info: #7fa8d4;
+  --rad-info-soft: rgba(127, 168, 212, 0.14);
+  --rad-warn: #e0b75a;
+  --rad-warn-soft: rgba(224, 183, 90, 0.14);
+  --rad-danger: #ec8f80;
+  --rad-danger-soft: rgba(236, 143, 128, 0.13);
+  --rad-ok: #d9ba72;
+  --rad-ok-soft: rgba(217, 186, 114, 0.14);
+  --rad-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+  --rad-shadow-pop: 0 24px 64px rgba(0, 0, 0, 0.5);
+  --rad-focus: 0 0 0 3px rgba(217, 186, 114, 0.45);
+  --rad-radius: 18px;
+  --rad-radius-sm: 12px;
+  --rad-radius-xs: 9px;
+  --rad-sidebar-w: 268px;
+  --rad-topbar-h: 64px;
+  --rad-font: 'Manrope', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --rad-serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --rad-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Deen Friends component tokens, mapped onto the admin palette for the React views */
+  --df2-surface: var(--rad-surface);
+  --df2-surface-2: var(--rad-surface-2);
+  --df2-surface-3: var(--rad-surface-3);
+  --df2-raised: var(--rad-raised);
+  --df2-line: var(--rad-line);
+  --df2-line-strong: var(--rad-line-strong);
+  --df2-text: var(--rad-text);
+  --df2-soft: var(--rad-soft);
+  --df2-muted: var(--rad-muted);
+  --df2-gold: var(--rad-gold);
+  --df2-gold-soft: var(--rad-gold-soft);
+  --df2-emerald: var(--rad-gold);
+  --df2-emerald-strong: var(--rad-gold-strong);
+  --df2-emerald-soft: var(--rad-gold-soft);
+  --df2-on-primary: var(--rad-on-gold);
+  --df2-danger: var(--rad-danger);
+  --df2-danger-soft: var(--rad-danger-soft);
+  --df2-shadow: var(--rad-shadow);
+  --df2-focus: var(--rad-focus);
+}
+html.light-mode #adminApp {
+  --rad-page: #fbf8f1;
+  --rad-side: #fffdf8;
+  --rad-surface: #ffffff;
+  --rad-surface-2: #f8f2e6;
+  --rad-surface-3: #f1e8d6;
+  --rad-raised: rgba(255, 255, 255, 0.75);
+  --rad-hover: rgba(120, 92, 40, 0.06);
+  --rad-line: rgba(120, 92, 40, 0.15);
+  --rad-line-strong: rgba(120, 92, 40, 0.3);
+  --rad-line-neutral: rgba(29, 38, 33, 0.09);
+  --rad-text: #1d2621;
+  --rad-soft: #38433d;
+  --rad-muted: #5c6660;
+  --rad-faint: #7a817c;
+  --rad-gold: #94701f;
+  --rad-gold-strong: #7a5a16;
+  --rad-gold-soft: rgba(148, 112, 31, 0.1);
+  --rad-gold-grad: linear-gradient(135deg, #a8822d 0%, #8f6a1c 100%);
+  --rad-on-gold: #ffffff;
+  --rad-info: #2f6596;
+  --rad-info-soft: rgba(47, 101, 150, 0.1);
+  --rad-warn: #9a6a0c;
+  --rad-warn-soft: rgba(154, 106, 12, 0.1);
+  --rad-danger: #b14a3c;
+  --rad-danger-soft: rgba(177, 74, 60, 0.08);
+  --rad-ok: #8f6a1c;
+  --rad-ok-soft: rgba(148, 112, 31, 0.1);
+  --rad-shadow: 0 14px 38px rgba(60, 45, 15, 0.08);
+  --rad-shadow-pop: 0 22px 54px rgba(60, 45, 15, 0.18);
+  --rad-focus: 0 0 0 3px rgba(148, 112, 31, 0.3);
+}
+
+/* ---------- 2. Base (and neutralising public page-level rules inside the console) ---------- */
+#adminApp {
+  position: fixed;
+  inset: 0;
+  z-index: 3500;
+  display: block;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--rad-page) !important;
+  color: var(--rad-text) !important;
+  font-family: var(--rad-font);
+  font-size: 14px;
+  line-height: 1.55;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  isolation: isolate;
+  color-scheme: dark;
+}
+html.light-mode #adminApp {
+  color-scheme: light;
+}
+#adminApp[hidden] {
+  display: none !important;
+}
+#adminApp > section {
+  background: transparent !important;
+  color: inherit !important;
+  box-shadow: none !important;
+}
+#adminApp *,
+#adminApp *::before,
+#adminApp *::after {
+  box-sizing: border-box;
+}
+#adminApp * {
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--rad-line-strong) transparent;
+}
+#adminApp *::-webkit-scrollbar {
+  display: block !important;
+  width: 10px;
+  height: 10px;
+}
+#adminApp *::-webkit-scrollbar-thumb {
+  background: var(--rad-line-strong);
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+#adminApp *::-webkit-scrollbar-track {
+  background: transparent;
+}
+#adminApp :is(h1, h2, h3, h4) {
+  margin: 0;
+  font-family: var(--rad-font);
+  color: var(--rad-text) !important;
+  -webkit-text-fill-color: currentColor !important;
+  text-shadow: none !important;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+#adminApp h1 {
+  font-size: 1.55rem;
+  font-weight: 800;
+}
+#adminApp h2 {
+  font-size: 1.15rem;
+  font-weight: 750;
+}
+#adminApp h3 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+#adminApp p {
+  margin: 0;
+}
+#adminApp a {
+  color: var(--rad-gold);
+}
+#adminApp button {
+  font: inherit;
+  color: inherit;
+}
+#adminApp :is(p, span, a, div, td, th, button, label) {
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+#adminApp :focus-visible {
+  outline: none;
+  box-shadow: var(--rad-focus) !important;
+}
+#adminApp ::selection {
+  background: var(--rad-gold-soft);
+  color: var(--rad-text);
+}
+#adminApp code,
+#adminApp .rad-code {
+  font-family: var(--rad-mono);
+  font-size: 0.86em;
+}
+#adminApp .rad-icon {
+  flex: 0 0 auto;
+  display: block;
+}
+#adminApp .rad-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+#adminApp .rad-muted,
+#adminApp .muted {
+  color: var(--rad-muted) !important;
+}
+#adminApp .rad-kicker,
+#adminApp .eyebrow,
+#adminApp .df2-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase;
+  color: var(--rad-gold) !important;
+  -webkit-text-fill-color: currentColor !important;
+  opacity: 1 !important;
+}
+#adminApp .eyebrow::before,
+#adminApp .eyebrow::after {
+  display: none !important;
+}
+
+/* ---------- 3. Auth gate + login ---------- */
+#adminApp .rad-gate {
+  color: var(--rad-muted);
+}
+#adminApp .rad-login {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-x: hidden;
+  overflow-y: auto; /* only scrolls when the viewport is shorter than the card (e.g. keyboard open) */
+  overscroll-behavior: contain;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(60% 45% at 50% 0%, var(--rad-gold-soft), transparent 70%),
+    var(--rad-page) !important;
+}
+#adminApp .rad-login-top {
+  width: min(440px, 100%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+#adminApp .rad-login-card {
+  width: min(440px, 100%);
+  margin: auto 0;
+  padding: clamp(22px, 4vw, 34px);
+  display: grid;
+  gap: 16px;
+  background: var(--rad-surface) !important;
+  border: 1px solid var(--rad-line);
+  border-radius: 22px;
+  box-shadow: var(--rad-shadow);
+}
+#adminApp .rad-login-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+#adminApp .rad-login-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  object-fit: contain;
+  background: var(--rad-surface-2);
+  border: 1px solid var(--rad-line);
+  padding: 6px;
+}
+#adminApp .rad-login-brand .rad-kicker {
+  margin: 0 0 2px;
+}
+#adminApp .rad-login h1 {
+  font-family: var(--rad-serif);
+  font-size: clamp(1.9rem, 6vw, 2.3rem);
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.05;
+}
+#adminApp .rad-login-lead {
+  color: var(--rad-muted);
+}
+#adminApp .rad-login-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--rad-faint);
+  text-align: center;
+}
+#adminApp .rad-btn-block {
+  width: 100%;
+}
+@media (max-height: 560px) {
+  #adminApp .rad-login-card {
+    gap: 12px;
+    padding: 18px;
+  }
+  #adminApp .rad-login-logo {
+    width: 44px;
+    height: 44px;
+  }
+  #adminApp .rad-login-lead,
+  #adminApp .rad-login-foot {
+    display: none;
+  }
+}
+
+/* ---------- 4. Shell: sidebar, topbar, main ---------- */
+#adminApp .rad-shell {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: var(--rad-sidebar-w) minmax(0, 1fr);
+  min-height: 0;
+}
+#adminApp .rad-shell[hidden] {
+  display: none !important;
+}
+#adminApp .rad-sidebar {
+  position: relative;
+  z-index: 3;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--rad-side) !important;
+  border-right: 1px solid var(--rad-line);
+}
+#adminApp .rad-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  flex: 0 0 auto;
+}
+#adminApp .rad-brand-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  object-fit: contain;
+  background: var(--rad-surface-2);
+  border: 1px solid var(--rad-line);
+  padding: 4px;
+}
+#adminApp .rad-brand-text {
+  display: grid;
+  min-width: 0;
+  line-height: 1.2;
+}
+#adminApp .rad-brand-text b {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--rad-text);
+}
+#adminApp .rad-brand-text span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rad-gold);
+}
+#adminApp .rad-icon-btn.rad-sidebar-close {
+  display: none;
+  margin-left: auto;
+}
+#adminApp .rad-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 12px 16px;
+}
+#adminApp .rad-nav-group + .rad-nav-group {
+  margin-top: 14px;
+}
+#adminApp .rad-nav-label {
+  margin: 0 10px 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--rad-faint);
+}
+#adminApp .rad-nav button,
+#adminApp .rad-nav-link {
+  position: relative;
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  margin: 1px 0;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--rad-soft);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+#adminApp .rad-nav button .rad-icon,
+#adminApp .rad-nav-link .rad-icon {
+  color: var(--rad-muted);
+  transition: color 0.16s ease;
+}
+#adminApp .rad-nav button:hover,
+#adminApp .rad-nav-link:hover {
+  background: var(--rad-hover);
+  color: var(--rad-text);
+}
+#adminApp .rad-nav button.active {
+  background: var(--rad-gold-soft);
+  border-color: var(--rad-line);
+  color: var(--rad-text);
+}
+#adminApp .rad-nav button.active .rad-icon {
+  color: var(--rad-gold);
+}
+#adminApp .rad-nav button.active::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--rad-gold);
+}
+#adminApp .rad-sidebar-bottom {
+  flex: 0 0 auto;
+  padding: 10px 12px 14px;
+  border-top: 1px solid var(--rad-line);
+  display: grid;
+  gap: 2px;
+}
+#adminApp .rad-logout:hover {
+  color: var(--rad-danger);
+  background: var(--rad-danger-soft);
+}
+#adminApp .rad-logout:hover .rad-icon {
+  color: var(--rad-danger);
+}
+#adminApp .rad-workspace {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+#adminApp .rad-topbar {
+  flex: 0 0 var(--rad-topbar-h);
+  height: var(--rad-topbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 clamp(16px, 2.4vw, 32px);
+  border-bottom: 1px solid var(--rad-line);
+  background: color-mix(in srgb, var(--rad-page) 88%, transparent) !important;
+  backdrop-filter: saturate(140%) blur(14px);
+  -webkit-backdrop-filter: saturate(140%) blur(14px);
+  position: relative;
+  z-index: 2;
+}
+#adminApp .rad-topbar-start,
+#adminApp .rad-topbar-end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+#adminApp .rad-topbar-title {
+  display: grid;
+  min-width: 0;
+  line-height: 1.2;
+}
+#adminApp .rad-crumb {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--rad-faint);
+}
+#adminApp #adminTopTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--rad-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#adminApp .rad-icon-btn.admin-mobile-menu {
+  display: none;
+}
+#adminApp .rad-user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 260px;
+  padding: 7px 12px;
+  border: 1px solid var(--rad-line);
+  border-radius: 999px;
+  background: var(--rad-surface);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rad-soft);
+}
+#adminApp .rad-user-chip #adminUserEmail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#adminApp .rad-user-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--rad-gold);
+  box-shadow: 0 0 0 3px var(--rad-gold-soft);
+  flex: 0 0 auto;
+}
+#adminApp .rad-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-top: 16px;
+  padding: clamp(18px, 2.6vw, 34px) clamp(16px, 2.6vw, 36px) 64px;
+  outline: none;
+}
+#adminApp .rad-main > * {
+  max-width: 1480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+#adminApp .rad-backdrop {
+  display: none;
+}
+
+/* ---------- 5. Buttons & controls ---------- */
+#adminApp .rad-btn,
+#adminApp .premium-btn,
+#adminApp .rud-df-admin-btn,
+#adminApp .df2-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 16px !important;
+  border: 1px solid var(--rad-line) !important;
+  border-radius: var(--rad-radius-sm) !important;
+  background: var(--rad-surface) !important;
+  color: var(--rad-text) !important;
+  font-family: var(--rad-font) !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.2 !important;
+  text-transform: none !important;
+  text-decoration: none !important;
+  white-space: nowrap;
+  box-shadow: none !important;
+  cursor: pointer;
+  transform: none !important;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, opacity 0.16s ease !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+#adminApp .premium-btn::after,
+#adminApp .premium-btn::before {
+  display: none !important;
+}
+#adminApp :is(.rad-btn, .premium-btn, .rud-df-admin-btn, .df2-btn):hover:not(:disabled) {
+  background: var(--rad-surface-2) !important;
+  border-color: var(--rad-line-strong) !important;
+}
+#adminApp :is(.rad-btn-primary, .premium-btn.primary, .rud-df-admin-btn.primary, .df2-btn-primary) {
+  background: var(--rad-gold-grad) !important;
+  border-color: transparent !important;
+  color: var(--rad-on-gold) !important;
+}
+#adminApp :is(.rad-btn-primary, .premium-btn.primary, .rud-df-admin-btn.primary, .df2-btn-primary):hover:not(:disabled) {
+  background: var(--rad-gold-grad) !important;
+  filter: brightness(1.06);
+  border-color: transparent !important;
+}
+#adminApp :is(.rad-btn-danger, .premium-btn.danger, .rud-df-admin-btn.danger, .df2-btn-danger) {
+  background: var(--rad-danger) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+}
+html.light-mode #adminApp :is(.rad-btn-danger, .premium-btn.danger, .rud-df-admin-btn.danger, .df2-btn-danger) {
+  color: #fff !important;
+}
+#adminApp :is(.rad-btn-danger, .premium-btn.danger, .rud-df-admin-btn.danger, .df2-btn-danger):hover:not(:disabled) {
+  background: var(--rad-danger) !important;
+  filter: brightness(1.08);
+}
+#adminApp :is(.rad-btn-ghost-danger, .df2-btn-ghost-danger, .admin-delete-page-btn) {
+  color: var(--rad-danger) !important;
+}
+#adminApp :is(.rad-btn-ghost-danger, .df2-btn-ghost-danger, .admin-delete-page-btn):hover:not(:disabled) {
+  background: var(--rad-danger-soft) !important;
+  border-color: var(--rad-danger) !important;
+}
+#adminApp :is(.rad-btn-sm, .premium-btn.small, .df2-btn-sm) {
+  min-height: 34px;
+  padding: 7px 12px !important;
+  font-size: 12.5px !important;
+  border-radius: 10px !important;
+}
+#adminApp :is(.rad-btn, .premium-btn, .rud-df-admin-btn, .df2-btn, .mini-action, .rud-df-admin-mini, .rad-tool-btn):disabled,
+#adminApp :is(.rad-btn, .premium-btn, .rud-df-admin-btn, .df2-btn)[aria-busy='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+#adminApp .rad-btn.is-busy::after {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: radSpin 0.7s linear infinite;
+}
+@keyframes radSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+#adminApp .rad-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  gap: 6px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--rad-line);
+  border-radius: 12px;
+  background: var(--rad-surface);
+  color: var(--rad-soft);
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+#adminApp .rad-icon-btn:hover {
+  background: var(--rad-surface-2);
+  color: var(--rad-text);
+  border-color: var(--rad-line-strong);
+}
+#adminApp .rad-theme-toggle {
+  grid-auto-flow: column;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+#adminApp .rad-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  border: 0;
+  background: none;
+  color: var(--rad-muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+#adminApp .rad-link-btn:hover {
+  color: var(--rad-gold);
+}
+#adminApp .mini-action,
+#adminApp .rud-df-admin-mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid var(--rad-line);
+  border-radius: 9px;
+  background: var(--rad-surface);
+  color: var(--rad-soft);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+#adminApp .mini-action:hover:not(:disabled),
+#adminApp .rud-df-admin-mini:hover:not(:disabled) {
+  background: var(--rad-surface-2);
+  border-color: var(--rad-line-strong);
+  color: var(--rad-text);
+}
+#adminApp :is(.mini-action, .rud-df-admin-mini).primary {
+  color: var(--rad-gold);
+  border-color: var(--rad-line-strong);
+}
+#adminApp :is(.mini-action, .rud-df-admin-mini).danger,
+#adminApp .mini-action[data-delete],
+#adminApp .mini-action[data-permanent] {
+  color: var(--rad-danger);
+}
+#adminApp :is(.mini-action, .rud-df-admin-mini).danger:hover:not(:disabled),
+#adminApp .mini-action[data-delete]:hover,
+#adminApp .mini-action[data-permanent]:hover {
+  background: var(--rad-danger-soft);
+  border-color: var(--rad-danger);
+}
+
+/* Fields */
+#adminApp .rad-field,
+#adminApp .field,
+#adminApp .rud-df-admin-field,
+#adminApp .ruddm-field,
+#adminApp .df2-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  margin: 0;
+}
+#adminApp :is(.rad-field, .field, .rud-df-admin-field, .ruddm-field, .df2-field) > label,
+#adminApp :is(.rad-field, .field, .rud-df-admin-field, .df2-field) > span:first-child,
+#adminApp .ruddm-label {
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  color: var(--rad-soft) !important;
+}
+#adminApp :is(.rad-field, .field, .df2-field) small {
+  color: var(--rad-faint);
+  font-size: 12px;
+}
+#adminApp :is(.rad-input, .input, .select, .textarea, .rud-df-admin-input, .rud-df-admin-select, .rud-df-admin-textarea, .rud-df-admin-search, .ruddm-input, .df2-input),
+#adminApp .df2-field :is(input, select, textarea),
+#adminApp .rad-field :is(select, textarea),
+#adminApp .rad-tablebar input[type='search'],
+#adminApp .rad-filter :is(select, input) {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 13px !important;
+  border: 1px solid var(--rad-line) !important;
+  border-radius: var(--rad-radius-sm) !important;
+  background: var(--rad-surface) !important;
+  color: var(--rad-text) !important;
+  -webkit-text-fill-color: var(--rad-text) !important;
+  font: 500 14px/1.45 var(--rad-font) !important;
+  box-shadow: none !important;
+  outline: none;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+  appearance: none;
+}
+#adminApp :is(.select, .rud-df-admin-select, .df2-input, select) {
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--rad-muted) 50%),
+    linear-gradient(135deg, var(--rad-muted) 50%, transparent 50%) !important;
+  background-position:
+    calc(100% - 17px) 52%,
+    calc(100% - 12px) 52% !important;
+  background-size: 5px 5px !important;
+  background-repeat: no-repeat !important;
+  padding-right: 32px !important;
+}
+#adminApp :is(input, textarea).df2-input {
+  background-image: none !important;
+  padding-right: 13px !important;
+}
+#adminApp textarea:is(.textarea, .rud-df-admin-textarea, .rad-input),
+#adminApp .df2-field textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+#adminApp .textarea.tall {
+  min-height: 200px;
+}
+#adminApp :is(input, select, textarea):focus-visible,
+#adminApp :is(.rad-input, .input, .select, .textarea, .rud-df-admin-input, .rud-df-admin-select, .rud-df-admin-textarea, .rud-df-admin-search, .ruddm-input, .df2-input):focus {
+  border-color: var(--rad-gold) !important;
+  box-shadow: var(--rad-focus) !important;
+}
+#adminApp ::placeholder {
+  color: var(--rad-faint) !important;
+  -webkit-text-fill-color: var(--rad-faint) !important;
+  opacity: 1;
+}
+#adminApp select option {
+  background: var(--rad-surface);
+  color: var(--rad-text);
+}
+#adminApp input[type='checkbox'],
+#adminApp input[type='radio'] {
+  width: 17px;
+  height: 17px;
+  min-height: 0;
+  accent-color: var(--rad-gold);
+  cursor: pointer;
+}
+#adminApp input[type='file'] {
+  max-width: 100%;
+}
+#adminApp .rad-input-wrap {
+  position: relative;
+}
+#adminApp .rad-input-wrap .rad-input {
+  padding-right: 48px !important;
+}
+#adminApp .rad-input-affix {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--rad-muted);
+  cursor: pointer;
+}
+#adminApp .rad-input-affix:hover,
+#adminApp .rad-input-affix.is-on {
+  color: var(--rad-gold);
+  background: var(--rad-gold-soft);
+}
+#adminApp .arabic,
+#adminApp .arabic-big {
+  font-family: 'Noto Naskh Arabic', 'Amiri', serif !important;
+  direction: rtl;
+  font-size: 1.15rem !important;
+  line-height: 1.9 !important;
+}
+
+/* Toggle switch (legacy .switch markup) */
+#adminApp .toggle-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+}
+#adminApp .switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 26px;
+  flex: 0 0 auto;
+}
+#adminApp .switch input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  z-index: 1;
+}
+#adminApp .switch span {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--rad-surface-3) !important;
+  border: 1px solid var(--rad-line-strong);
+  transition: background-color 0.18s ease;
+}
+#adminApp .switch span::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--rad-muted) !important;
+  transition: transform 0.18s ease, background-color 0.18s ease;
+}
+#adminApp .switch input:checked + span {
+  background: var(--rad-gold-soft) !important;
+  border-color: var(--rad-gold);
+}
+#adminApp .switch input:checked + span::before {
+  transform: translateX(20px);
+  background: var(--rad-gold) !important;
+}
+#adminApp .switch input:focus-visible + span {
+  box-shadow: var(--rad-focus);
+}
+
+/* Alerts, notes, pills */
+#adminApp .rad-alert,
+#adminApp .admin-persist-note,
+#adminApp .config-note,
+#adminApp .rud-df-admin-alert,
+#adminApp .rud-df-admin-note,
+#adminApp .ruddm-note,
+#adminApp .df2-form-error,
+#adminApp .draft-restore-bar {
+  display: block;
+  padding: 11px 14px;
+  border: 1px solid var(--rad-line);
+  border-radius: var(--rad-radius-sm);
+  background: var(--rad-surface-2);
+  color: var(--rad-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+#adminApp .rad-alert[hidden],
+#adminApp .config-note[hidden],
+#adminApp .draft-restore-bar[hidden] {
+  display: none !important;
+}
+#adminApp .rad-alert-error,
+#adminApp .rud-df-admin-alert,
+#adminApp .df2-form-error {
+  border-color: color-mix(in srgb, var(--rad-danger) 45%, transparent);
+  background: var(--rad-danger-soft);
+  color: var(--rad-danger);
+}
+#adminApp .rad-alert-warn,
+#adminApp .config-note {
+  border-color: color-mix(in srgb, var(--rad-warn) 45%, transparent);
+  background: var(--rad-warn-soft);
+  color: var(--rad-warn);
+}
+#adminApp .rad-alert-info,
+#adminApp .admin-persist-note,
+#adminApp .rud-df-admin-note {
+  border-color: var(--rad-line);
+  background: var(--rad-gold-soft);
+  color: var(--rad-soft);
+}
+#adminApp .admin-persist-note::before {
+  display: none;
+}
+#adminApp .draft-restore-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+#adminApp .draft-restore-bar button {
+  border: 1px solid var(--rad-line);
+  background: var(--rad-surface);
+  color: var(--rad-text);
+  border-radius: 9px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+#adminApp .status-pill,
+#adminApp .rud-df-admin-pill,
+#adminApp .rad-pill,
+#adminApp .df2-status,
+#adminApp .df2-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding: 3px 10px;
+  border: 1px solid var(--rad-line);
+  border-radius: 999px;
+  background: var(--rad-surface-2);
+  color: var(--rad-soft);
+  font-size: 11.5px;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-transform: none;
+}
+#adminApp :is(.status-pill.live, .rud-df-admin-pill.ok, .rad-pill-ok, .df2-status-published) {
+  border-color: color-mix(in srgb, var(--rad-ok) 45%, transparent);
+  background: var(--rad-ok-soft);
+  color: var(--rad-ok);
+}
+#adminApp :is(.rud-df-admin-pill.warn, .rad-pill-warn, .df2-status-draft) {
+  border-color: color-mix(in srgb, var(--rad-warn) 45%, transparent);
+  background: var(--rad-warn-soft);
+  color: var(--rad-warn);
+}
+#adminApp :is(.rud-df-admin-pill.danger, .rad-pill-danger) {
+  border-color: color-mix(in srgb, var(--rad-danger) 45%, transparent);
+  background: var(--rad-danger-soft);
+  color: var(--rad-danger);
+}
+#adminApp :is(.rud-df-admin-pill.info, .rad-pill-info, .df2-status-archived) {
+  border-color: color-mix(in srgb, var(--rad-info) 40%, transparent);
+  background: var(--rad-info-soft);
+  color: var(--rad-info);
+}
+#adminApp .df2-badge {
+  min-width: 24px;
+  justify-content: center;
+  background: var(--rad-gold);
+  border-color: transparent;
+  color: var(--rad-on-gold);
+}
+#adminApp .live-dot,
+#adminApp .analytics-presence-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--rad-gold);
+  box-shadow: 0 0 0 3px var(--rad-gold-soft);
+  vertical-align: middle;
+}
+#adminApp .empty-live,
+#adminApp .rud-df-admin-empty,
+#adminApp .rad-empty {
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  min-height: 96px;
+  padding: 22px 16px;
+  border: 1px dashed var(--rad-line-strong);
+  border-radius: var(--rad-radius-sm);
+  background: transparent;
+  color: var(--rad-muted);
+  font-size: 13.5px;
+  text-align: center;
+}
+#adminApp td .empty-live {
+  border: 0;
+  min-height: 72px;
+}
+
+/* ---------- 6. Page header, panels, grids ---------- */
+#adminApp .admin-head,
+#adminApp .rad-page-head,
+#adminApp .df2-admin-head,
+#adminApp .rud-df-admin-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px 18px;
+  margin: 0 0 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+#adminApp :is(.admin-head, .rad-page-head, .df2-admin-head, .rud-df-admin-page-head) > div:first-child {
+  min-width: min(100%, 280px);
+  flex: 1 1 360px;
+}
+#adminApp :is(.admin-head, .rad-page-head, .df2-admin-head) h1,
+#adminApp .rud-df-admin-page-head h2 {
+  font-family: var(--rad-serif);
+  font-size: clamp(1.75rem, 3vw, 2.2rem) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0;
+  line-height: 1.1;
+}
+#adminApp :is(.admin-head, .rad-page-head, .df2-admin-head) h1 small {
+  font-family: var(--rad-font);
+  font-size: 0.5em;
+  color: var(--rad-muted);
+}
+#adminApp :is(.admin-head, .rad-page-head, .df2-admin-head, .rud-df-admin-page-head) p {
+  margin-top: 6px;
+  max-width: 760px;
+  color: var(--rad-muted) !important;
+  font-size: 13.5px;
+}
+#adminApp .manager-page-actions,
+#adminApp .rad-head-actions,
+#adminApp .rud-df-admin-actions,
+#adminApp .df2-admin-actions,
+#adminApp .form-actions,
+#adminApp .rad-actions,
+#adminApp .bulk-actions,
+#adminApp .df2-sheet-actions,
+#adminApp .rud-reset-actions,
+#adminApp .df2-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+#adminApp .form-actions {
+  margin-top: 18px;
+}
+#adminApp .admin-panel,
+#adminApp .rad-card,
+#adminApp .rud-df-admin-panel,
+#adminApp .df2-card,
+#adminApp .analytics-breakdown,
+#adminApp .rud-df-admin-detail-card {
+  position: relative;
+  margin: 0 0 18px;
+  padding: clamp(16px, 2vw, 22px);
+  border: 1px solid var(--rad-line);
+  border-radius: var(--rad-radius);
+  background: var(--rad-surface) !important;
+  color: var(--rad-text) !important;
+  box-shadow: none;
+}
+#adminApp .admin-panel > :last-child,
+#adminApp .rad-card > :last-child {
+  margin-bottom: 0;
+}
+#adminApp .admin-panel h2,
+#adminApp .rad-card h2 {
+  font-size: 1.05rem;
+}
+#adminApp .admin-panel-head,
+#adminApp .rad-card-head,
+#adminApp .rud-df-admin-panel-head,
+#adminApp .manager-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  margin-bottom: 14px;
+}
+#adminApp .admin-panel-head p,
+#adminApp .rad-card-head p {
+  margin-top: 4px;
+  font-size: 13px;
+}
+#adminApp .manager-toolbar strong {
+  font-size: 14px;
+}
+#adminApp .admin-form-grid,
+#adminApp .rad-form-grid,
+#adminApp .broadcast-compose-grid,
+#adminApp .rud-push-admin-grid,
+#adminApp .df2-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+#adminApp :is(.admin-form-grid, .rad-form-grid, .broadcast-compose-grid, .rud-push-admin-grid) .wide,
+#adminApp .rad-span-2 {
+  grid-column: 1 / -1;
+}
+#adminApp .filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+#adminApp .filter-chip,
+#adminApp .rad-seg button,
+#adminApp .df2-segmented button,
+#adminApp .admin-upload-type-strip button {
+  min-height: 34px;
+  padding: 6px 13px;
+  border: 1px solid var(--rad-line) !important;
+  border-radius: 999px;
+  background: var(--rad-surface) !important;
+  color: var(--rad-muted) !important;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+#adminApp .filter-chip:hover,
+#adminApp .rad-seg button:hover,
+#adminApp .df2-segmented button:hover,
+#adminApp .admin-upload-type-strip button:hover {
+  color: var(--rad-text) !important;
+  border-color: var(--rad-line-strong) !important;
+}
+#adminApp .filter-chip.active,
+#adminApp .rad-seg button.active,
+#adminApp .rad-seg button[aria-selected='true'],
+#adminApp .df2-segmented button.active,
+#adminApp .admin-upload-type-strip button.active {
+  background: var(--rad-gold-soft) !important;
+  border-color: var(--rad-gold) !important;
+  color: var(--rad-text) !important;
+}
+#adminApp .rad-seg,
+#adminApp .df2-segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: 0;
+}
+#adminApp .manager-toolbar #managerSearch {
+  flex: 1 1 240px;
+}
+
+/* ---------- 7. Tables ---------- */
+#adminApp .table-wrap,
+#adminApp .rud-df-admin-table-wrap,
+#adminApp .rad-table-wrap {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  border: 1px solid var(--rad-line);
+  border-radius: var(--rad-radius-sm);
+  background: var(--rad-surface);
+  -webkit-overflow-scrolling: touch;
+}
+#adminApp table,
+#adminApp .rud-df-admin-table,
+#adminApp .df2-admin-table {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: transparent !important;
+  font-size: 13px;
+  color: var(--rad-text);
+}
+#adminApp th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--rad-line);
+  background: var(--rad-surface-2) !important;
+  color: var(--rad-muted) !important;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+#adminApp td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--rad-line-neutral);
+  background: transparent !important;
+  color: var(--rad-soft);
+  vertical-align: middle;
+  text-align: left;
+}
+#adminApp tbody tr:last-child > td {
+  border-bottom: 0;
+}
+#adminApp tbody tr {
+  transition: background-color 0.12s ease;
+}
+#adminApp tbody tr:hover > td {
+  background: var(--rad-hover) !important;
+}
+#adminApp td strong,
+#adminApp td b {
+  color: var(--rad-text);
+  font-weight: 700;
+}
+#adminApp td small {
+  color: var(--rad-faint);
+}
+#adminApp .table-actions,
+#adminApp .rud-df-admin-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+#adminApp th.rad-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+#adminApp th.rad-sortable:hover {
+  color: var(--rad-text) !important;
+}
+#adminApp th.rad-sortable::after {
+  content: '↕';
+  margin-left: 6px;
+  opacity: 0.35;
+  font-size: 10px;
+}
+#adminApp th[aria-sort='ascending']::after {
+  content: '↑';
+  opacity: 1;
+  color: var(--rad-gold);
+}
+#adminApp th[aria-sort='descending']::after {
+  content: '↓';
+  opacity: 1;
+  color: var(--rad-gold);
+}
+#adminApp tr[data-rad-out],
+#adminApp tr[data-rud-page-hidden] {
+  display: none !important;
+}
+#adminApp .bulk-select-cell {
+  width: 44px;
+}
+
+/* Table toolbar (adminTableKit) */
+#adminApp .rad-tablebar {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+#adminApp .rad-tablebar-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+#adminApp .rad-tablebar-search {
+  flex: 1 1 220px;
+  max-width: 360px;
+}
+#adminApp .rad-tablebar-search[hidden] {
+  display: none;
+}
+#adminApp .rad-tablebar input[type='search'] {
+  min-height: 36px;
+  padding: 7px 12px !important;
+  font-size: 13px !important;
+}
+#adminApp .rad-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--rad-line);
+  border-radius: 10px;
+  background: var(--rad-surface);
+  color: var(--rad-soft);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#adminApp .rad-tool-btn[hidden] {
+  display: none;
+}
+#adminApp .rad-tool-btn:hover:not(:disabled),
+#adminApp .rad-tool-btn[aria-expanded='true'] {
+  border-color: var(--rad-line-strong);
+  color: var(--rad-text);
+  background: var(--rad-surface-2);
+}
+#adminApp .rad-tool-btn b {
+  min-width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--rad-gold);
+  color: var(--rad-on-gold);
+  font-size: 10.5px;
+}
+#adminApp .rad-tool-btn b[hidden] {
+  display: none;
+}
+#adminApp .rad-tablebar-count {
+  margin-left: auto;
+  color: var(--rad-faint);
+  font-size: 12px;
+  font-weight: 600;
+}
+#adminApp .rad-pop-wrap {
+  position: relative;
+}
+#adminApp .rad-pop {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  width: min(300px, calc(100vw - 32px));
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--rad-line-strong);
+  border-radius: 14px;
+  background: var(--rad-surface) !important;
+  box-shadow: var(--rad-shadow-pop);
+}
+#adminApp .rad-pop[hidden] {
+  display: none;
+}
+#adminApp .rad-pop-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--rad-faint);
+}
+#adminApp .rad-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rad-soft);
+  cursor: pointer;
+}
+#adminApp .rad-check:hover {
+  background: var(--rad-hover);
+}
+#adminApp .rad-check.is-locked {
+  cursor: default;
+  opacity: 0.7;
+}
+#adminApp .rad-check small {
+  color: var(--rad-faint);
+  font-weight: 600;
+  font-size: 11px;
+}
+#adminApp .rad-filter {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+#adminApp .rad-filter legend,
+#adminApp .rad-filter > span {
+  padding: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--rad-soft);
+}
+#adminApp .rad-filter-range {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+#adminApp .rad-filter-range label {
+  display: grid;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--rad-faint);
+}
+#adminApp .rad-filter :is(select, input) {
+  min-height: 36px;
+  padding: 6px 10px !important;
+  font-size: 13px !important;
+}
+#adminApp .rad-pop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rad-line);
+}
+#adminApp .rad-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+#adminApp .rad-chips[hidden] {
+  display: none;
+}
+#adminApp .rad-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid var(--rad-line-strong);
+  border-radius: 999px;
+  background: var(--rad-gold-soft);
+  color: var(--rad-text);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+#adminApp .rad-chip span {
+  color: var(--rad-muted);
+  font-size: 14px;
+  line-height: 1;
+}
+#adminApp .rad-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--rad-muted);
+}
+#adminApp .rad-pager-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+#adminApp .rad-pager-size select {
+  min-height: 32px;
+  padding: 4px 28px 4px 10px !important;
+  width: auto;
+}
+#adminApp .rad-pager-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ---------- 8. Stats & charts ---------- */
+#adminApp .stats,
+#adminApp .analytics-stats,
+#adminApp .rad-stats,
+#adminApp .rud-df-admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
+  gap: 12px;
+  margin: 0 0 18px;
+}
+#adminApp .stat,
+#adminApp .analytics-stat,
+#adminApp .rad-stat,
+#adminApp .rud-df-admin-stat {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  min-height: 104px;
+  padding: 16px 16px 14px;
+  border: 1px solid var(--rad-line);
+  border-radius: 16px;
+  background: var(--rad-surface) !important;
+  color: var(--rad-text) !important;
+}
+#adminApp .stat::before {
+  display: none;
+}
+#adminApp .rad-stat:has(.rad-stat-icon) small {
+  padding-right: 40px;
+}
+#adminApp :is(.stat, .analytics-stat, .rad-stat, .rud-df-admin-stat) small {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rad-muted);
+}
+#adminApp :is(.stat, .analytics-stat, .rad-stat, .rud-df-admin-stat) strong {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--rad-text);
+  font-variant-numeric: tabular-nums;
+}
+#adminApp :is(.stat, .analytics-stat, .rad-stat, .rud-df-admin-stat) span {
+  font-size: 12px;
+  color: var(--rad-faint);
+}
+#adminApp .rad-stat-icon {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--rad-gold-soft);
+  color: var(--rad-gold);
+}
+#adminApp .analytics-grid,
+#adminApp .rad-grid-2,
+#adminApp .rud-df-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+#adminApp .rad-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+#adminApp .rad-grid-wide {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+#adminApp .analytics-breakdown h3 {
+  margin-bottom: 10px;
+}
+#adminApp .analytics-row,
+#adminApp .rad-bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rad-line-neutral);
+  font-size: 13px;
+}
+#adminApp .analytics-row:last-child,
+#adminApp .rad-bar-row:last-child {
+  border-bottom: 0;
+}
+#adminApp .analytics-row b,
+#adminApp .rad-bar-row b {
+  color: var(--rad-text);
+  font-variant-numeric: tabular-nums;
+}
+#adminApp .rad-bar-track {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--rad-surface-3);
+  overflow: hidden;
+}
+#adminApp .rad-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--rad-gold);
+}
+#adminApp .rad-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+#adminApp .rad-chart .rad-axis {
+  stroke: var(--rad-line);
+  stroke-width: 1;
+}
+#adminApp .rad-chart .rad-grid {
+  stroke: var(--rad-line-neutral);
+  stroke-width: 1;
+}
+#adminApp .rad-chart text {
+  fill: var(--rad-faint);
+  font: 600 10.5px var(--rad-font);
+}
+#adminApp .rad-chart .rad-series-a {
+  stroke: var(--rad-gold);
+  fill: var(--rad-gold);
+}
+#adminApp .rad-chart .rad-series-b {
+  stroke: var(--rad-info);
+  fill: var(--rad-info);
+}
+#adminApp .rad-chart .rad-area-a {
+  fill: var(--rad-gold);
+  opacity: 0.14;
+  stroke: none;
+}
+#adminApp .rad-chart .rad-area-b {
+  fill: var(--rad-info);
+  opacity: 0.1;
+  stroke: none;
+}
+#adminApp .rad-chart .rad-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+#adminApp .rad-chart .rad-bar {
+  stroke: none;
+}
+#adminApp .rad-chart .rad-hit {
+  fill: transparent;
+  stroke: none;
+  cursor: crosshair;
+}
+#adminApp .rad-chart .rad-cursor {
+  stroke: var(--rad-line-strong);
+  stroke-dasharray: 3 3;
+}
+#adminApp .rad-chart-wrap {
+  position: relative;
+}
+#adminApp .rad-chart-tip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  padding: 8px 10px;
+  border: 1px solid var(--rad-line-strong);
+  border-radius: 10px;
+  background: var(--rad-surface) !important;
+  box-shadow: var(--rad-shadow-pop);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--rad-text);
+  white-space: nowrap;
+  transform: translate(-50%, calc(-100% - 10px));
+}
+#adminApp .rad-chart-tip b {
+  font-variant-numeric: tabular-nums;
+}
+#adminApp .rad-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--rad-muted);
+}
+#adminApp .rad-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 3px;
+  vertical-align: -1px;
+}
+#adminApp .rad-legend .a {
+  background: var(--rad-gold);
+}
+#adminApp .rad-legend .b {
+  background: var(--rad-info);
+}
+#adminApp .rad-skeleton {
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--rad-surface-2), var(--rad-surface-3), var(--rad-surface-2));
+  background-size: 200% 100%;
+  animation: radShimmer 1.4s ease-in-out infinite;
+}
+@keyframes radShimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+#adminApp .rad-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--rad-muted);
+  font-size: 13px;
+}
+#adminApp .rad-loading::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--rad-line-strong);
+  border-top-color: var(--rad-gold);
+  animation: radSpin 0.8s linear infinite;
+}
+
+/* ---------- 9. Legacy content views (upload, editor, bulk delete, analytics) ---------- */
+#adminApp .admin-inline-upload,
+#adminApp .admin-file-import-panel,
+#adminApp .bulk-upload-shell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+#adminApp .admin-inline-upload-copy {
+  flex: 1 1 300px;
+  min-width: 0;
+}
+#adminApp .admin-inline-upload-copy h3,
+#adminApp .admin-file-import-title h2 {
+  font-size: 1.05rem;
+  margin: 2px 0 4px;
+}
+#adminApp .admin-inline-upload-copy p,
+#adminApp .admin-file-import-title p,
+#adminApp .bulk-help {
+  color: var(--rad-muted);
+  font-size: 13px;
+}
+#adminApp .admin-inline-upload-field,
+#adminApp .admin-upload-drop,
+#adminApp .bulk-upload-drop {
+  flex: 1 1 320px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 74px;
+  padding: 14px 16px;
+  border: 1px dashed var(--rad-line-strong);
+  border-radius: 14px;
+  background: var(--rad-surface-2);
+  color: var(--rad-text);
+  cursor: pointer;
+  transition: border-color 0.16s ease, background-color 0.16s ease;
+}
+#adminApp .admin-inline-upload-field:hover,
+#adminApp .admin-upload-drop:hover,
+#adminApp .bulk-upload-drop:hover {
+  border-color: var(--rad-gold);
+  background: var(--rad-gold-soft);
+}
+#adminApp .admin-inline-upload-field small,
+#adminApp .admin-upload-drop small,
+#adminApp .bulk-upload-drop small {
+  display: block;
+  color: var(--rad-muted);
+  font-size: 12px;
+}
+#adminApp .upload-icon,
+#adminApp .bulk-upload-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  background: var(--rad-gold-soft);
+  color: var(--rad-gold);
+  font-weight: 800;
+}
+#adminApp .admin-upload-box {
+  display: grid;
+  gap: 10px;
+}
+#adminApp .admin-upload-copy strong {
+  display: block;
+}
+#adminApp .admin-upload-copy small {
+  color: var(--rad-muted);
+}
+#adminApp .admin-upload-type-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+#adminApp .upload-progress,
+#adminApp .bulk-import-progress {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--rad-surface-3);
+}
+#adminApp .upload-progress i,
+#adminApp .bulk-import-progress i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: var(--rad-gold);
+  transition: width 0.16s linear;
+}
+#adminApp .bulk-import-progress span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+}
+#adminApp .bulk-stat {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--rad-line);
+  border-radius: 12px;
+  background: var(--rad-surface-2);
+}
+#adminApp .bulk-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+#adminApp .bulk-preview-wrap {
+  max-height: 460px;
+  overflow: auto;
+  border: 1px solid var(--rad-line);
+  border-radius: 12px;
+}
+#adminApp .bulk-row-error td {
+  background: var(--rad-danger-soft) !important;
+}
+#adminApp .bulk-error-text {
+  color: var(--rad-danger);
+  font-size: 12px;
+}
+#adminApp .bulk-delete-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--rad-danger) 40%, transparent);
+  border-radius: 14px;
+  background: var(--rad-surface) !important;
+  box-shadow: var(--rad-shadow);
+}
+#adminApp .bulk-delete-toolbar[hidden] {
+  display: none;
+}
+#adminApp .bulk-delete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+#adminApp .bulk-delete-actions button {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid var(--rad-line);
+  border-radius: 10px;
+  background: var(--rad-surface);
+  color: var(--rad-soft);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#adminApp .bulk-delete-actions button.danger {
+  background: var(--rad-danger);
+  border-color: transparent;
+  color: #fff;
+}
+#adminApp .bulk-delete-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+#adminApp .preview-panel,
+#adminApp .broadcast-preview,
+#adminApp .rud-push-preview,
+#adminApp .rud-maintenance-admin-preview {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--rad-line);
+  border-radius: 14px;
+  background: var(--rad-surface-2) !important;
+}
+#adminApp .preview-panel h3,
+#adminApp .broadcast-preview h3 {
+  font-size: 1.05rem;
+}
+#adminApp .preview-panel p,
+#adminApp .broadcast-preview p {
+  color: var(--rad-muted);
+}
+#adminApp .rud-maintenance-admin-preview strong {
+  font-size: 2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--rad-gold);
+}
+#adminApp .rud-maintenance-admin-preview small {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--rad-faint);
+}
+#adminApp .rud-push-config-state {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--rad-surface-2);
+  font-size: 13px;
+}
+#adminApp .analytics-bulk-bar,
+#adminApp .analytics-danger-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--rad-muted);
+}
+#adminApp .analytics-delete-btn {
+  min-height: 32px;
+  padding: 5px 12px;
+  border: 1px solid color-mix(in srgb, var(--rad-danger) 40%, transparent);
+  border-radius: 9px;
+  background: var(--rad-danger-soft);
+  color: var(--rad-danger);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#adminApp .analytics-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+#adminApp .analytics-visitor-name {
+  font-weight: 700;
+  color: var(--rad-text);
+}
+#adminApp .route-live {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--rad-surface-2);
+  font-family: var(--rad-mono);
+  font-size: 11.5px;
+}
+#adminApp .analytics-note p {
+  color: var(--rad-muted);
+}
+#adminApp .rad-fatal pre {
+  white-space: pre-wrap;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--rad-surface-2);
+}
+
+/* ---------- 10. Deen Friends console (Trust & Safety) ---------- */
+#adminApp .rud-df-admin {
+  color: var(--rad-text);
+}
+#adminApp .rud-df-admin-shell {
+  display: grid;
+  gap: 16px;
+}
+#adminApp .rud-df-admin-side {
+  position: sticky;
+  top: calc(-1 * clamp(18px, 2.6vw, 34px));
+  z-index: 5;
+  margin: calc(-1 * clamp(18px, 2.6vw, 34px)) calc(-1 * clamp(16px, 2.6vw, 36px)) 0;
+  padding: 10px clamp(16px, 2.6vw, 36px);
+  border-bottom: 1px solid var(--rad-line);
+  background: color-mix(in srgb, var(--rad-page) 92%, transparent) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+#adminApp .rud-df-admin-brand,
+#adminApp .rud-df-admin-side-foot {
+  display: none;
+}
+#adminApp .rud-df-admin-nav {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none !important;
+  padding: 2px;
+}
+#adminApp .rud-df-admin-nav::-webkit-scrollbar {
+  display: none !important;
+}
+#adminApp .rud-df-admin-nav button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 6px 13px;
+  border: 1px solid var(--rad-line);
+  border-radius: 999px;
+  background: var(--rad-surface);
+  color: var(--rad-muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+#adminApp .rud-df-admin-nav button b {
+  font-weight: 700;
+  opacity: 0.8;
+}
+#adminApp .rud-df-admin-nav button:hover {
+  color: var(--rad-text);
+  border-color: var(--rad-line-strong);
+}
+#adminApp .rud-df-admin-nav button.active {
+  background: var(--rad-gold-soft);
+  border-color: var(--rad-gold);
+  color: var(--rad-text);
+}
+#adminApp .rud-df-admin-main {
+  min-width: 0;
+}
+#adminApp .rud-df-admin-top {
+  display: none;
+}
+#adminApp .rud-df-admin-body {
+  min-width: 0;
+}
+#adminApp .rud-df-admin-kicker {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--rad-gold);
+}
+#adminApp .rud-df-admin-panel-head h3 {
+  font-size: 1rem;
+}
+#adminApp .rud-df-admin-panel-head span,
+#adminApp .rud-df-admin-muted {
+  color: var(--rad-faint);
+  font-size: 12px;
+}
+#adminApp .rud-df-admin-panel-body {
+  min-width: 0;
+}
+#adminApp .rud-df-admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+#adminApp .rud-df-admin-toolbar .rud-df-admin-search {
+  flex: 1 1 260px;
+}
+#adminApp .rud-df-admin-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+#adminApp .rud-df-admin-detail-grid > div {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--rad-line);
+  border-radius: 12px;
+  background: var(--rad-surface-2);
+}
+#adminApp .rud-df-admin-detail-grid small {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rad-faint);
+}
+#adminApp .rud-df-admin-detail-grid b {
+  font-size: 1.05rem;
+}
+#adminApp .rud-df-admin-code {
+  font-family: var(--rad-mono);
+  font-size: 12px;
+  color: var(--rad-muted);
+  word-break: break-all;
+}
+#adminApp .rud-df-admin-message {
+  max-width: 520px;
+  white-space: pre-wrap;
+}
+#adminApp .rud-df-admin-kv {
+  display: grid;
+  grid-template-columns: minmax(110px, 160px) minmax(0, 1fr);
+  gap: 8px 14px;
+  margin: 0;
+  font-size: 13px;
+}
+#adminApp .rud-df-admin-kv dt {
+  color: var(--rad-faint);
+  font-weight: 700;
+}
+#adminApp .rud-df-admin-kv dd {
+  margin: 0;
+  min-width: 0;
+  word-break: break-word;
+}
+#adminApp .rud-df-admin-form,
+#adminApp .ruddm-user-modal {
+  display: grid;
+  gap: 14px;
+}
+#adminApp .rud-df-admin-subtabs,
+#adminApp .rud-df-admin-user-management-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+#adminApp .rud-df-admin-user-management-tabs button,
+#adminApp .rud-df-admin-subtabs button {
+  min-height: 34px;
+  padding: 6px 13px;
+  border: 1px solid var(--rad-line);
+  border-radius: 999px;
+  background: var(--rad-surface);
+  color: var(--rad-muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#adminApp .rud-df-admin-user-management-tabs button.active,
+#adminApp .rud-df-admin-subtabs button.active {
+  background: var(--rad-gold-soft);
+  border-color: var(--rad-gold);
+  color: var(--rad-text);
+}
+#adminApp .rud-df-admin-user-management-tabs .rud-df-admin-subtabs {
+  margin: 0;
+}
+#adminApp .rud-df-admin-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+}
+html.light-mode #adminApp .rud-df-admin-drawer {
+  background: rgba(29, 38, 33, 0.24);
+}
+#adminApp .rud-df-admin-drawer[hidden] {
+  display: none;
+}
+#adminApp .rud-df-admin-drawer-card {
+  width: min(560px, 100%);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--rad-line);
+  background: var(--rad-surface) !important;
+  box-shadow: var(--rad-shadow-pop);
+  animation: radDrawerIn 0.22s ease-out;
+}
+@keyframes radDrawerIn {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+#adminApp .rud-df-admin-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--rad-line);
+  font-size: 15px;
+}
+#adminApp .rud-df-admin-drawer-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 18px;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+#adminApp .rud-df-admin-detail {
+  min-width: 0;
+}
+#adminApp .rud-df-admin-detail-id,
+#adminApp .rud-df-admin-detail-sub {
+  color: var(--rad-muted);
+  font-size: 12.5px;
+}
+#adminApp .rud-df-admin-delete h4 {
+  margin: 8px 0 4px;
+  font-size: 13px;
+}
+#adminApp .rud-df-admin-delete ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--rad-soft);
+  font-size: 13px;
+}
+#adminApp .rud-df-admin-error-list {
+  margin-top: 6px;
+  font-family: var(--rad-mono);
+  font-size: 12px;
+}
+#adminApp .rud-df-auth-status,
+#adminApp .ruddm-status {
+  font-size: 12.5px;
+  color: var(--rad-muted);
+}
+#adminApp .ruddm-reset-card,
+#adminApp .ruddm-actions {
+  display: grid;
+  gap: 10px;
+}
+
+/* ---------- 11. React views (Deen Friends admin views) ---------- */
+#adminApp .rad-react-view {
+  display: block;
+  color: var(--rad-text);
+  background: transparent !important;
+}
+#adminApp .df2-admin-view {
+  display: grid;
+  gap: 16px;
+}
+#adminApp .df2-admin-head {
+  margin-bottom: 0;
+}
+#adminApp .df2-admin-list {
+  display: grid;
+  gap: 10px;
+}
+#adminApp .df2-card {
+  margin: 0;
+}
+#adminApp .df2-admin-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  width: 100%;
+  padding: 14px 16px;
+  text-align: left;
+  color: var(--rad-text);
+  font: inherit;
+  cursor: default;
+}
+#adminApp button.df2-admin-row {
+  cursor: pointer;
+  border: 1px solid var(--rad-line);
+  border-radius: var(--rad-radius);
+  background: var(--rad-surface) !important;
+  transition: border-color 0.16s ease, background-color 0.16s ease;
+}
+#adminApp button.df2-admin-row:hover {
+  border-color: var(--rad-line-strong);
+  background: var(--rad-surface-2) !important;
+}
+#adminApp .df2-admin-row-main {
+  display: grid;
+  gap: 4px;
+  flex: 1 1 280px;
+  min-width: 0;
+}
+#adminApp .df2-admin-row-main strong {
+  font-size: 14.5px;
+}
+#adminApp .df2-admin-row-main strong small {
+  color: var(--rad-muted);
+  font-weight: 600;
+}
+#adminApp .df2-admin-row-main > small {
+  color: var(--rad-muted);
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+#adminApp .df2-admin-row-main .df2-status {
+  justify-self: start;
+}
+#adminApp .df2-inline-note {
+  color: var(--rad-muted);
+  font-size: 13px;
+}
+#adminApp .df2-form {
+  display: grid;
+  gap: 16px;
+}
+#adminApp .df2-fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: 8px;
+}
+#adminApp .df2-fieldset legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--rad-soft);
+}
+#adminApp .df2-admin-thread-view {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 12px;
+}
+#adminApp .df2-admin-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: min(62vh, 640px);
+  min-height: 240px;
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid var(--rad-line);
+  border-radius: var(--rad-radius);
+  background: var(--rad-surface-2) !important;
+}
+#adminApp .df2-admin-messages .df2-msg {
+  position: relative;
+  max-width: min(76%, 560px);
+  padding: 10px 13px;
+  border-radius: 16px;
+  border: 1px solid var(--rad-line);
+  background: var(--rad-surface) !important;
+  color: var(--rad-text);
+  font-size: 13.5px;
+}
+#adminApp .df2-admin-messages .df2-msg.mine {
+  align-self: flex-end;
+  background: var(--rad-gold-soft) !important;
+  border-color: var(--rad-line-strong);
+}
+#adminApp .df2-admin-messages .df2-msg.theirs {
+  align-self: flex-start;
+}
+#adminApp .df2-admin-messages .df2-msg p {
+  white-space: pre-wrap;
+}
+#adminApp .df2-msg-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--rad-faint);
+}
+#adminApp .df2-automated-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rad-gold);
+}
+#adminApp .df2-admin-reply {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+#adminApp .df2-admin-reply textarea {
+  flex: 1 1 auto;
+  min-height: 52px;
+  max-height: 200px;
+  padding: 11px 13px;
+  border: 1px solid var(--rad-line);
+  border-radius: var(--rad-radius-sm);
+  background: var(--rad-surface) !important;
+  color: var(--rad-text) !important;
+  -webkit-text-fill-color: var(--rad-text) !important;
+  font: 500 14px/1.45 var(--rad-font);
+  resize: vertical;
+}
+#adminApp .rud-retention-note {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--rad-surface-2);
+}
+#adminApp .rud-clear-confirm {
+  display: grid;
+  gap: 12px;
+  border-color: color-mix(in srgb, var(--rad-danger) 45%, transparent) !important;
+}
+#adminApp .df2-admin-table {
+  border: 1px solid var(--rad-line);
+  border-radius: var(--rad-radius-sm);
+  overflow: hidden;
+}
+#adminApp .rud-guide-admin,
+#adminApp .rud-winner-admin,
+#adminApp .rud-reset-admin {
+  display: grid;
+  gap: 16px;
+}
+#adminApp .rud-guide-admin-grid,
+#adminApp .rud-reset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+#adminApp .rud-guide-admin-wide {
+  grid-column: 1 / -1;
+}
+#adminApp .rud-guide-admin-tour {
+  display: grid;
+  gap: 12px;
+}
+#adminApp .rud-guide-admin-tour-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+#adminApp .rud-guide-admin-tour-body,
+#adminApp .rud-guide-admin-steps,
+#adminApp .rud-guide-admin-general {
+  display: grid;
+  gap: 12px;
+}
+#adminApp .rud-guide-admin-step {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--rad-line);
+  border-radius: 14px;
+  background: var(--rad-surface-2);
+}
+#adminApp .rud-guide-admin-problems {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--rad-warn-soft);
+  color: var(--rad-warn);
+  font-size: 13px;
+}
+#adminApp .df2-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+#adminApp .df2-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+#adminApp .rud-winner-admin-card {
+  display: grid;
+  gap: 14px;
+}
+#adminApp .df2-pick-list {
+  display: grid;
+  gap: 8px;
+}
+#adminApp .rud-winner-pick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--rad-line);
+  border-radius: 12px;
+  background: var(--rad-surface-2);
+}
+#adminApp .rud-winner-rank {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--rad-gold-soft);
+  color: var(--rad-gold);
+  font-weight: 800;
+}
+#adminApp .rud-reset-card {
+  display: grid;
+  gap: 14px;
+}
+#adminApp .rud-reset-card h2 {
+  font-family: var(--rad-serif);
+  font-size: 1.7rem;
+  font-weight: 600;
+}
+#adminApp .rud-reset-grid h3 {
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+#adminApp .rud-reset-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+#adminApp .rud-reset-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--rad-line);
+  border-radius: 10px;
+  background: var(--rad-surface-2);
+  font-size: 13px;
+}
+#adminApp .rud-reset-list li small {
+  grid-column: 1 / -1;
+  color: var(--rad-danger);
+}
+#adminApp .rud-reset-list li[data-state='done'] b {
+  color: var(--rad-ok);
+}
+#adminApp .rud-reset-list li[data-state='error'] b {
+  color: var(--rad-danger);
+}
+#adminApp .rud-reset-list.is-kept li {
+  color: var(--rad-muted);
+}
+
+/* ---------- 12. New admin views ---------- */
+#adminApp .rad-section-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 26px 0 12px;
+}
+#adminApp .rad-section-title h2 {
+  font-size: 1.05rem;
+}
+#adminApp .rad-section-title p {
+  color: var(--rad-faint);
+  font-size: 12.5px;
+}
+#adminApp .rad-card-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 14px;
+  margin-bottom: 14px;
+}
+#adminApp .rad-card-title h3 {
+  font-size: 15px;
+}
+#adminApp .rad-card-title p {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--rad-faint);
+}
+#adminApp .rad-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  margin: 0 0 18px;
+  padding: 4px;
+  border: 1px solid var(--rad-line);
+  border-radius: 14px;
+  background: var(--rad-surface);
+  scrollbar-width: none !important;
+}
+#adminApp .rad-tabs button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--rad-muted);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#adminApp .rad-tabs button:hover {
+  color: var(--rad-text);
+}
+#adminApp .rad-tabs button[aria-selected='true'] {
+  background: var(--rad-gold-soft);
+  color: var(--rad-text);
+  box-shadow: inset 0 0 0 1px var(--rad-line-strong);
+}
+#adminApp .rad-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+#adminApp .rad-list-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--rad-line);
+  border-radius: 14px;
+  background: var(--rad-surface);
+}
+#adminApp .rad-list-item.is-muted {
+  opacity: 0.72;
+}
+#adminApp .rad-list-main {
+  display: grid;
+  gap: 3px;
+  flex: 1 1 280px;
+  min-width: 0;
+}
+#adminApp .rad-list-main strong {
+  font-size: 14px;
+}
+#adminApp .rad-list-main small {
+  color: var(--rad-muted);
+  font-size: 12.5px;
+}
+#adminApp .rad-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 12px;
+  color: var(--rad-faint);
+}
+#adminApp .rad-date-badge {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  min-height: 52px;
+  padding: 6px 4px;
+  border: 1px solid var(--rad-line);
+  border-radius: 12px;
+  background: var(--rad-surface-2);
+  text-align: center;
+  line-height: 1.1;
+  flex: 0 0 auto;
+}
+#adminApp .rad-date-badge b {
+  font-size: 1.15rem;
+  color: var(--rad-text);
+}
+#adminApp .rad-date-badge small {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rad-gold);
+}
+#adminApp .rad-date-badge.is-today {
+  border-color: var(--rad-gold);
+  background: var(--rad-gold-soft);
+}
+#adminApp .rad-preview-card {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--rad-line-strong);
+  border-radius: var(--rad-radius);
+  background: var(--rad-surface-2) !important;
+}
+#adminApp .rad-preview-card h4 {
+  font-size: 1.05rem;
+}
+#adminApp .rad-preview-card p,
+#adminApp .rad-prewrap {
+  white-space: pre-wrap;
+  color: var(--rad-soft);
+  font-size: 13.5px;
+}
+#adminApp .rad-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--rad-surface-3);
+  overflow: hidden;
+}
+#adminApp .rad-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--rad-gold);
+  transition: width 0.3s ease;
+}
+#adminApp .rad-recipient {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--rad-gold);
+  border-radius: 14px;
+  background: var(--rad-gold-soft);
+}
+#adminApp .rad-avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--rad-surface-3);
+  color: var(--rad-gold);
+  font-weight: 800;
+}
+#adminApp .rad-results {
+  display: grid;
+  gap: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--rad-line);
+  border-radius: 12px;
+  background: var(--rad-surface);
+}
+#adminApp .rad-results button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--rad-text);
+  text-align: left;
+  cursor: pointer;
+}
+#adminApp .rad-results button:hover,
+#adminApp .rad-results button:focus-visible {
+  background: var(--rad-hover);
+}
+#adminApp .rad-results small {
+  color: var(--rad-muted);
+}
+#adminApp .rad-counter {
+  justify-self: end;
+  font-size: 11.5px;
+  color: var(--rad-faint);
+  font-variant-numeric: tabular-nums;
+}
+#adminApp .rad-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+}
+#adminApp .rad-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+#adminApp .rad-switch i {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid var(--rad-line-strong);
+  background: var(--rad-surface-3);
+  transition: background-color 0.18s ease;
+  flex: 0 0 auto;
+}
+#adminApp .rad-switch i::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--rad-muted);
+  transition: transform 0.18s ease, background-color 0.18s ease;
+}
+#adminApp .rad-switch input:checked + i {
+  background: var(--rad-gold-soft);
+  border-color: var(--rad-gold);
+}
+#adminApp .rad-switch input:checked + i::before {
+  transform: translateX(18px);
+  background: var(--rad-gold);
+}
+#adminApp .rad-switch input:focus-visible + i {
+  box-shadow: var(--rad-focus);
+}
+#adminApp .rad-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+#adminApp .rad-days label {
+  position: relative;
+}
+#adminApp .rad-days input {
+  position: absolute;
+  opacity: 0;
+}
+#adminApp .rad-days span {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid var(--rad-line);
+  border-radius: 10px;
+  background: var(--rad-surface);
+  color: var(--rad-muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#adminApp .rad-days input:checked + span {
+  background: var(--rad-gold-soft);
+  border-color: var(--rad-gold);
+  color: var(--rad-text);
+}
+#adminApp .rad-days input:focus-visible + span {
+  box-shadow: var(--rad-focus);
+}
+
+/* Dialog (React views) */
+#adminApp .rad-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+}
+html.light-mode #adminApp .rad-dialog-backdrop {
+  background: rgba(29, 38, 33, 0.3);
+}
+#adminApp .rad-dialog {
+  width: min(520px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid var(--rad-line-strong);
+  border-radius: 20px;
+  background: var(--rad-surface) !important;
+  box-shadow: var(--rad-shadow-pop);
+  animation: radPop 0.18s ease-out;
+}
+#adminApp .rad-dialog.is-danger {
+  border-color: color-mix(in srgb, var(--rad-danger) 55%, transparent);
+}
+@keyframes radPop {
+  from {
+    transform: translateY(8px) scale(0.98);
+    opacity: 0;
+  }
+}
+#adminApp .rad-dialog h2 {
+  font-size: 1.15rem;
+}
+#adminApp .rad-dialog p {
+  color: var(--rad-soft);
+}
+#adminApp .rad-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* ---------- 13. Admin-only overlays outside #adminApp ---------- */
+#deleteOverlay .modal-card,
+#bulkDeleteOverlay .bulk-delete-confirm-card {
+  width: min(480px, 100%) !important;
+  padding: 24px !important;
+  border-radius: 20px !important;
+  border: 1px solid rgba(214, 190, 130, 0.3) !important;
+  background: #111417 !important;
+  color: #f3efe5 !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5) !important;
+  font-family: 'Manrope', system-ui, sans-serif;
+}
+html.light-mode #deleteOverlay .modal-card,
+html.light-mode #bulkDeleteOverlay .bulk-delete-confirm-card {
+  background: #ffffff !important;
+  color: #1d2621 !important;
+  border-color: rgba(120, 92, 40, 0.3) !important;
+}
+#deleteOverlay h2,
+#bulkDeleteOverlay h2,
+#bulkDeleteOverlay h3 {
+  font-family: 'Manrope', system-ui, sans-serif !important;
+  font-size: 1.2rem !important;
+  font-weight: 800 !important;
+  margin: 0 0 8px !important;
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+#deleteOverlay .form-actions,
+#bulkDeleteOverlay .bulk-delete-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+#deleteOverlay .premium-btn,
+#bulkDeleteOverlay button {
+  min-height: 40px;
+  padding: 9px 16px !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(214, 190, 130, 0.3) !important;
+  background: transparent !important;
+  color: inherit !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+}
+#deleteOverlay #confirmDelete,
+#bulkDeleteOverlay .danger,
+#bulkDeleteOverlay [data-confirm-bulk-delete] {
+  background: #ec8f80 !important;
+  border-color: transparent !important;
+  color: #1a0b08 !important;
+}
+html.light-mode #deleteOverlay #confirmDelete,
+html.light-mode #bulkDeleteOverlay .danger {
+  background: #b14a3c !important;
+  color: #fff !important;
+}
+
+/* ---------- 14. Responsive ---------- */
+@media (max-width: 1200px) {
+  #adminApp .rad-grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #adminApp .rad-grid-wide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 900px) {
+  #adminApp .rad-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #adminApp .rad-sidebar {
+    position: fixed;
+    z-index: 50;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(300px, 86vw);
+    transform: translateX(-104%);
+    transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: var(--rad-shadow-pop);
+    visibility: hidden;
+  }
+  #adminApp .rad-sidebar.open {
+    transform: none;
+    visibility: visible;
+  }
+  #adminApp .rad-icon-btn.rad-sidebar-close {
+    display: inline-grid;
+  }
+  #adminApp .rad-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  html.light-mode #adminApp .rad-backdrop {
+    background: rgba(29, 38, 33, 0.3);
+  }
+  #adminApp .rad-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  #adminApp .rad-icon-btn.admin-mobile-menu {
+    display: inline-grid;
+  }
+  #adminApp .rad-user-chip {
+    display: none;
+  }
+  #adminApp .analytics-grid,
+  #adminApp .rad-grid-2,
+  #adminApp .rad-grid-3,
+  #adminApp .rud-df-admin-grid,
+  #adminApp .rud-guide-admin-grid,
+  #adminApp .rud-reset-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  #adminApp {
+    --rad-topbar-h: 58px;
+  }
+  #adminApp .rad-crumb,
+  #adminApp .rad-theme-label {
+    display: none;
+  }
+  #adminApp .rad-main {
+    padding: 16px 14px 56px;
+  }
+  #adminApp .admin-form-grid,
+  #adminApp .rad-form-grid,
+  #adminApp .broadcast-compose-grid,
+  #adminApp .rud-push-admin-grid,
+  #adminApp .df2-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #adminApp .stats,
+  #adminApp .analytics-stats,
+  #adminApp .rad-stats,
+  #adminApp .rud-df-admin-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  #adminApp :is(.stat, .analytics-stat, .rad-stat, .rud-df-admin-stat) {
+    min-height: 92px;
+    padding: 13px;
+  }
+  #adminApp :is(.stat, .analytics-stat, .rad-stat, .rud-df-admin-stat) strong {
+    font-size: 1.4rem;
+  }
+  #adminApp .rad-stat-icon {
+    display: none;
+  }
+  #adminApp :is(.admin-head, .rad-page-head, .df2-admin-head) > :not(:first-child) {
+    width: 100%;
+  }
+  #adminApp :is(.admin-panel, .rad-card, .rud-df-admin-panel, .df2-card) {
+    padding: 14px;
+    border-radius: 16px;
+  }
+  #adminApp td,
+  #adminApp th {
+    padding: 10px 11px;
+  }
+  #adminApp .rad-tablebar-count {
+    margin-left: 0;
+    width: 100%;
+  }
+  #adminApp .df2-admin-reply {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  #adminApp .df2-admin-messages .df2-msg {
+    max-width: 88%;
+  }
+  #adminApp .rud-df-admin-kv {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #adminApp .rad-dialog {
+    padding: 18px;
+  }
+  #adminApp .rad-dialog-actions > * {
+    flex: 1 1 auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #adminApp *,
+  #adminApp *::before,
+  #adminApp *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- 15. Grid rhythm ---------- */
+#adminApp :is(.rad-grid-2, .rad-grid-3, .rad-grid-wide, .analytics-grid, .rud-df-admin-grid) {
+  margin-bottom: 18px;
+}
+#adminApp :is(.rad-grid-2, .rad-grid-3, .rad-grid-wide, .analytics-grid, .rud-df-admin-grid) > :is(.rad-card, .admin-panel, .rud-df-admin-panel, .analytics-breakdown) {
+  margin-bottom: 0;
+}
+#adminApp .df2-admin-view > :is(.rad-card, .rad-page-head, .rad-tabs, .rad-grid-2, .rad-grid-3, .rad-grid-wide) {
+  margin-bottom: 0;
+}
+#adminApp .rad-tablebar[hidden] {
+  display: none;
+}

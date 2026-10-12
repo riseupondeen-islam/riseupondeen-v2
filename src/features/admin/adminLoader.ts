@@ -34,10 +34,30 @@ function whenLoaded(action: (mod: AdminConsole) => void): void {
     .then((mod) => {
       if (rudIsAdminRoute()) action(mod);
     })
-    .catch((error: unknown) => console.error('[Rise Upon Deen] Admin console could not be loaded.', error));
+    .catch((error: unknown) => {
+      console.error('[Rise Upon Deen] Admin console could not be loaded.', error);
+      const gate = document.querySelector('#adminAuthGate span');
+      if (gate && rudIsAdminRoute()) gate.textContent = 'The Admin Console could not load. Check your connection and reload the page.';
+    });
+}
+
+/** Shows the neutral "verifying" screen at once, so neither the public page nor any admin screen is
+ *  visible while the console chunk downloads and the session is checked. */
+function showVerifyingScreen(): void {
+  const app = document.getElementById('adminApp');
+  if (!app) return;
+  if (!loaded) app.dataset.auth = 'checking';
+  app.hidden = false;
+  for (const el of [
+    document.querySelector('#root > main:not(#dynamicPage):not(#adminApp)'),
+    document.querySelector('#root > footer'),
+    document.getElementById('dynamicPage'),
+  ])
+    if (el instanceof HTMLElement) el.hidden = true;
 }
 
 export function renderAdminRoute(): void {
+  showVerifyingScreen();
   whenLoaded((mod) => mod.renderAdminRoute());
 }
 export function showAdminLogin(): void {

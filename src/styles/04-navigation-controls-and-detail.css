@@ -709,14 +709,6 @@ body.rud-individual-detail-open #rudBackLane .rud-back-lane-inner{
 
 /* ---- original <style id=rud-analytics-online-offline-only> ---- */
 
-#adminApp .analytics-visitor-name{display:inline-flex;align-items:center;gap:8px;font-weight:800!important}
-#adminApp .analytics-visitor-name.is-online{color:#76e39a!important}
-#adminApp .analytics-visitor-name.is-offline{color:#ef7777!important}
-#adminApp .analytics-presence-dot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}
-#adminApp .analytics-presence-text{display:block;margin-top:4px;color:#758791;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
-#adminApp .analytics-visitor-name.is-online + .analytics-presence-text{color:#76c88e}
-#adminApp .analytics-visitor-name.is-offline + .analytics-presence-text{color:#c66f6f}
-
 /* ---- original <style id=rud-hadith-title-center-download-only> ---- */
 
 #dynamicPage .compact-hadith-reader .compact-reader-head{position:relative!important;}

@@ -15,7 +15,14 @@ import { $, $$, COLLECTION } from '../../../runtime/core';
 import { collection, doc, serverTimestamp, updateDoc, writeBatch } from '../../../services/firebase/sdk';
 import { busy, closeLayer, dateText, esc, label, openLayer, toast } from '../../../utils/ui';
 
+/* Search, filters and bulk-selection survive live refreshes (a publish/feature toggle or any other
+   content change re-renders the table): previously every refresh reset them. */
+const managerMemory = new Map();
+const pendingToggles = new Set();
+
 function manager(opts = {}) {
+  const memoryKey = opts.type || (opts.featured ? 'featured' : 'all');
+  const remembered = opts.live ? managerMemory.get(memoryKey) : null;
   const isSadaqah = opts.type === 'sadaqah';
   const headerTitle = opts.title || 'Manage Content';
   const headerCopy = isSadaqah
@@ -23,11 +30,12 @@ function manager(opts = {}) {
     : opts.type
       ? `Manage your ${label(opts.type)} library. Saved content remains securely stored in Firestore.`
       : 'Create, edit, publish and organize your verified Islamic content.';
-  let selectionMode = false;
-  const selected = new Set();
-  let type = opts.type || 'all',
-    status = 'all',
-    search = '';
+  let selectionMode = !!remembered?.selectionMode;
+  const selected = new Set(remembered?.selected || []);
+  let type = remembered?.type || opts.type || 'all',
+    status = remembered?.status || 'all',
+    search = remembered?.search || '';
+  const remember = () => managerMemory.set(memoryKey, { selectionMode, selected: [...selected], type, status, search });
 
   $('#adminMain').innerHTML = `
     <div class="admin-head"><div><h1>${esc(headerTitle)}</h1><p>${esc(headerCopy)}</p></div><div class="manager-page-actions"><button class="premium-btn primary" id="newContent">${isSadaqah ? '+ Add Request' : '+ Create Content'}</button>${isSadaqah ? '' : '<button class="premium-btn admin-upload-page-btn" id="pageUploadFile">Upload File</button>'}<button class="premium-btn admin-delete-page-btn" id="pageDeleteEntries">Delete Entries</button></div></div><div class="admin-persist-note">${isSadaqah ? 'Only the display name, short need, UPI ID and verification date are intended for public display.' : 'Published items and saved drafts are stored in Firebase and return when you sign in again.'}</div>${opts.type && !isSadaqah ? `<section class="admin-panel admin-inline-upload"><div class="admin-inline-upload-copy"><span class="eyebrow">FILE IMPORT</span><h3>Upload ${esc(label(opts.type))} File</h3><p>Choose Excel/CSV here. If you select the complete workbook, only ${esc(label(opts.type))} rows will be loaded.</p></div><label class="admin-inline-upload-field" for="managerQuickUpload"><input id="managerQuickUpload" type="file" accept=".xlsx,.xls,.csv" hidden><span class="upload-icon">↑</span><span><strong>Choose ${esc(label(opts.type))} Excel / CSV</strong><small>Preview before importing to Firebase</small></span></label></section>` : ''}<div class="bulk-delete-toolbar" id="bulkDeleteToolbar" hidden><div class="bulk-delete-status"><span id="bulkDeleteCount">0 entries selected</span></div><div class="bulk-delete-actions"><button type="button" id="selectVisibleEntries">Select visible</button><button type="button" id="clearSelectedEntries">Clear</button><button type="button" class="danger" id="deleteSelectedEntries">Delete selected</button><button type="button" id="cancelBulkDelete">Cancel</button></div></div><section class="admin-panel"><div class="manager-toolbar"><input class="input" style="flex:1;min-width:220px" id="managerSearch" type="search" placeholder="Search content…"><div class="filter-row">
@@ -55,6 +63,7 @@ function manager(opts = {}) {
   };
 
   const draw = () => {
+    remember();
     const list = currentList();
     if (isSadaqah) {
       $('#managerHead').innerHTML =
@@ -163,6 +172,15 @@ function manager(opts = {}) {
       draw();
     }),
   );
+  // Restore the remembered view state on a live refresh.
+  if (remembered) {
+    const input = $('#managerSearch');
+    if (input) input.value = search;
+    $$('[data-mtype]').forEach((x) => x.classList.toggle('active', x.dataset.mtype === type));
+    $$('[data-mstatus]').forEach((x) => x.classList.toggle('active', x.dataset.mstatus === status));
+    $('#bulkDeleteToolbar').hidden = !selectionMode;
+    $('#pageDeleteEntries').textContent = selectionMode ? 'Cancel Delete' : 'Delete Entries';
+  }
   draw();
 }
 function bindManagerActions() {
@@ -246,6 +264,10 @@ function openBulkDeleteConfirm(ids, onDone) {
 async function toggleField(id, field) {
   const i = S.adminContent.find((x) => x.id === id);
   if (!i) return;
+  // A second click while the first write is in flight used to toggle the value straight back.
+  const key = `${id}:${field}`;
+  if (pendingToggles.has(key)) return;
+  pendingToggles.add(key);
   try {
     if (i.type === 'sadaqah' && field === 'published') {
       const active = !i.published;
@@ -269,12 +291,17 @@ async function toggleField(id, field) {
     );
   } catch (e) {
     toast(e.code === 'permission-denied' ? 'Permission denied.' : 'Unable to update content.', 'error');
+  } finally {
+    pendingToggles.delete(key);
   }
 }
 async function toggleSadaqahFulfilled(id) {
   const i = S.adminContent.find((x) => x.id === id && x.type === 'sadaqah');
   if (!i) return;
   const fulfilled = !i.fulfilled;
+  const key = `${id}:fulfilled`;
+  if (pendingToggles.has(key)) return;
+  pendingToggles.add(key);
   try {
     await updateDoc(doc(S.db, COLLECTION, id), {
       fulfilled,
@@ -284,6 +311,8 @@ async function toggleSadaqahFulfilled(id) {
     toast(fulfilled ? 'Sadaqah request marked fulfilled and deactivated.' : 'Sadaqah request reopened.');
   } catch (e) {
     toast(e.code === 'permission-denied' ? 'Permission denied.' : 'Unable to update Sadaqah request.', 'error');
+  } finally {
+    pendingToggles.delete(key);
   }
 }
 

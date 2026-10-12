@@ -34,6 +34,7 @@ import {
   writeBatch,
 } from '../../../services/firebase/sdk';
 import { esc, toast } from '../../../utils/ui';
+import { viewSignal } from '../adminViews';
 
 /** A clear, specific message for a failed console action (the old generic "Action failed." hid the reason). */
 function adminErrorMessage(err) {
@@ -198,13 +199,20 @@ async function deenFriendsAdminView() {
     return 'info';
   };
   const pill = (v) => `<span class="rud-df-admin-pill ${statusClass(v)}">${escText(v || '—')}</span>`;
-  const load = async (key, force = false) => {
-    if (!force && state.loaded[key]) return state[key];
+  /* Reads are bounded (MAX_PAGES × 1000 documents per collection) and de-duplicated: concurrent
+     calls for the same collection share one request (the user list used to start one full read of
+     restrictions and suspensions per row). A failed read is remembered and shown, never as zeros. */
+  const MAX_PAGES = 5;
+  const inflight = {};
+  state.capped = {};
+  const load = (key, force = false) => {
+    if (!force && state.loaded[key]) return Promise.resolve(state[key]);
+    if (inflight[key]) return inflight[key];
     const name = collections[key];
     if (!name) {
       state.errors[key] = { code: 'unknown-collection', message: 'Unknown Firestore collection', collection: name };
       state[key] = [];
-      return state[key];
+      return Promise.resolve(state[key]);
     }
     state.loading[key] = true;
     delete state.errors[key];
@@ -212,49 +220,118 @@ async function deenFriendsAdminView() {
       const ref = collection(S.db, name);
       const all = [];
       let cursor = null;
-      for (let page = 0; page < 1000; page++) {
+      state.capped[key] = false;
+      for (let page = 0; page < MAX_PAGES; page++) {
         const q = cursor ? query(ref, limit(1000), startAfter(cursor)) : query(ref, limit(1000));
         const snap = await getDocs(q);
         all.push(...snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) })));
-        if (snap.docs.length < 1000) break;
+        if (snap.docs.length < 1000) return all;
         cursor = snap.docs[snap.docs.length - 1];
       }
+      state.capped[key] = true;
       return all;
     };
-    try {
-      let rows;
+    inflight[key] = (async () => {
       try {
-        rows = await readAll();
-      } catch (firstError) {
-        if (firstError?.code === 'permission-denied') {
-          try {
-            await me.getIdTokenResult(true);
-          } catch {}
+        let rows;
+        try {
           rows = await readAll();
-        } else throw firstError;
+        } catch (firstError) {
+          if (firstError?.code === 'permission-denied') {
+            try {
+              await me.getIdTokenResult(true);
+            } catch {}
+            rows = await readAll();
+          } else throw firstError;
+        }
+        state[key] = rows;
+        state.loaded[key] = true;
+        return state[key];
+      } catch (e) {
+        state[key] = [];
+        delete state.loaded[key];
+        state.errors[key] = {
+          code: String(e?.code || 'unknown'),
+          message: String(e?.message || 'Firestore read failed'),
+          collection: name,
+        };
+        console.error(`[Deen Friends Admin] Failed to load ${name}`, e);
+        return state[key];
+      } finally {
+        delete state.loading[key];
+        delete inflight[key];
       }
-      state[key] = rows;
-      state.loaded[key] = true;
-      return state[key];
-    } catch (e) {
-      state[key] = [];
-      delete state.loaded[key];
-      state.errors[key] = {
-        code: String(e?.code || 'unknown'),
-        message: String(e?.message || 'Firestore read failed'),
-        collection: name,
-      };
-      console.error(`[Deen Friends Admin] Failed to load ${name}`, e);
-      return state[key];
-    } finally {
-      delete state.loading[key];
-    }
+    })();
+    return inflight[key];
   };
   const invalidate = (...keys) =>
     keys.forEach((k) => {
       delete state.loaded[k];
       state[k] = [];
     });
+  /** Shows which collections could not be read for the current section (instead of empty tables). */
+  const showReadErrors = () => {
+    const bodyNow = $('#rudDfAdminBody');
+    if (!bodyNow) return;
+    bodyNow.querySelector('.rud-df-admin-read-alert[data-generic]')?.remove();
+    const failed = Object.entries(state.errors);
+    if (!failed.length || bodyNow.querySelector('.rud-df-admin-read-alert')) return;
+    bodyNow.insertAdjacentHTML(
+      'afterbegin',
+      `<div class="rud-df-admin-alert rud-df-admin-read-alert" data-generic role="alert"><b>Some data could not be loaded</b><div class="rud-df-admin-error-list">${failed
+        .map(([, e]) => `${escText(e.collection)} — ${escText(adminErrorMessage(e))}`)
+        .join('<br>')}</div><button type="button" class="rud-df-admin-btn primary" data-df-retry-reads>Retry</button></div>`,
+    );
+  };
+  /** Refresh: re-reads the given collections from Firestore and re-renders, with loading feedback. */
+  const refreshing = new Set();
+  const refreshSection = async (button, keys, render) => {
+    if (refreshing.has(render)) return;
+    refreshing.add(render);
+    if (button) {
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+      button.textContent = 'Refreshing…';
+    }
+    try {
+      keys.forEach((k) => {
+        delete state.loaded[k];
+        delete state.errors[k];
+      });
+      await Promise.all(keys.map((k) => load(k, true)));
+      await render(true);
+      showReadErrors();
+      const failed = keys.filter((k) => state.errors[k]);
+      toast(failed.length ? 'Some data could not be refreshed.' : 'Updated with the latest data.', failed.length ? 'error' : undefined);
+    } catch (e) {
+      toast(adminErrorMessage(e), 'error');
+    } finally {
+      refreshing.delete(render);
+      if (button?.isConnected) {
+        button.disabled = false;
+        button.removeAttribute('aria-busy');
+        button.textContent = 'Refresh';
+      }
+    }
+  };
+  /** Search boxes re-render their section; keep focus and the caret where the admin is typing. */
+  let searchTimer = 0;
+  const searchRerender = (input, render) => {
+    state.search = input.value;
+    const id = input.id;
+    const caret = input.selectionStart;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(async () => {
+      await render();
+      const el = document.getElementById(id);
+      if (el) {
+        el.focus({ preventScroll: true });
+        try {
+          el.setSelectionRange(caret, caret);
+        } catch {}
+      }
+    }, 220);
+  };
   const writeAudit = async (action, target = '', reason = '', extra = {}) => {
     try {
       await addDoc(collection(S.db, 'deens_admin_audit_logs'), {
@@ -421,10 +498,10 @@ async function deenFriendsAdminView() {
       body.innerHTML += `<div class="rud-df-admin-alert rud-df-admin-read-alert"><b>Firestore read issue</b><br>Some collections could not be read, so their counts are not shown as real zero values.<div class="rud-df-admin-error-list">${details}</div><div class="rud-df-admin-note" style="margin-top:10px">Signed-in account: ${escText(me.email || '')} · Firebase project: ${escText(firebaseConfig?.projectId || 'unknown')} · Token email: ${escText(tokenEmail || 'unknown')}</div><button type="button" class="rud-df-admin-btn primary" id="rudDfRetryReads">Retry reads</button></div>`;
     }
     body.innerHTML += `<div class="rud-df-admin-stats">
-      ${metric('Users', users.length, 'registered profiles')}
-      ${metric('Connections', friendships.length, 'accepted friendships')}
+      ${metric('Users', `${users.length}${state.capped.users ? '+' : ''}`, 'registered profiles')}
+      ${metric('Connections', `${friendships.length}${state.capped.friendships ? '+' : ''}`, 'accepted friendships')}
       ${metric('Pending requests', pending, 'awaiting action')}
-      ${metric('Messages', messages.length, 'loaded records')}
+      ${metric('Messages', `${messages.length}${state.capped.messages ? '+' : ''}`, 'loaded records')}
       ${metric('Open cases', openCases, 'moderation queue')}
       ${metric('Suspensions', suspended, 'active restrictions')}
     </div>
@@ -452,7 +529,7 @@ async function deenFriendsAdminView() {
         'Navigation',
       )}
     </div>`;
-    $('#rudDfRefresh').onclick = () => renderTab(true);
+    $('#rudDfRefresh').onclick = (e) => refreshSection(e.currentTarget, keys, command);
     $('#rudDfRetryReads')?.addEventListener('click', () => {
       keys.forEach((k) => {
         delete state.loaded[k];
@@ -484,33 +561,14 @@ async function deenFriendsAdminView() {
     $('#rudDfGoSafety').onclick = () => go('safety');
   }
 
-  async function userManagement() {
-    const sub = state.userManagementTab || 'accounts';
-    const usersRows = await load('users');
-    const count = usersRows.length;
-    const tabs = `<div class="rud-df-admin-subtabs" role="tablist">
-      <button type="button" class="${sub === 'accounts' ? 'active' : ''}" data-df-user-subtab="accounts">Accounts & Profiles</button>
-      <button type="button" class="${sub === 'firestore' ? 'active' : ''}" data-df-user-subtab="firestore">Firestore Data</button>
+  const userTabs = (sub) => `<div class="rud-df-admin-user-management-tabs" role="tablist" aria-label="User management">
+      <button type="button" role="tab" aria-selected="${sub === 'accounts'}" class="${sub === 'accounts' ? 'active' : ''}" data-df-user-subtab="accounts">Accounts & Profiles</button>
+      <button type="button" role="tab" aria-selected="${sub === 'firestore'}" class="${sub === 'firestore' ? 'active' : ''}" data-df-user-subtab="firestore">Firestore Data</button>
     </div>`;
-    if (sub === 'firestore') {
-      await firestoreDataManager();
-      return;
-    }
-    await users();
-    const bodyNow = $('#rudDfAdminBody');
-    if (bodyNow) {
-      const wrap = document.createElement('div');
-      wrap.className = 'rud-df-admin-user-management-tabs';
-      wrap.innerHTML = tabs;
-      bodyNow.insertBefore(wrap, bodyNow.firstChild);
-      wrap.querySelectorAll('[data-df-user-subtab]').forEach(
-        (b) =>
-          (b.onclick = () => {
-            state.userManagementTab = b.dataset.dfUserSubtab;
-            renderTab(true);
-          }),
-      );
-    }
+
+  async function userManagement() {
+    if ((state.userManagementTab || 'accounts') === 'firestore') await firestoreDataManager();
+    else await users();
   }
 
   async function firestoreDataManager() {
@@ -526,7 +584,7 @@ async function deenFriendsAdminView() {
       'Inspect and safely modify Deen Friends Firestore records. Changes are validated and audit logged.',
       btn('Refresh', 'rudDfFirestoreRefresh') + btn('New record', 'rudDfFirestoreNew', 'primary'),
     );
-    body.innerHTML += `<div class="rud-df-admin-user-management-tabs" role="tablist"><button type="button" data-df-user-subtab="accounts">Accounts & Profiles</button><button type="button" class="active" data-df-user-subtab="firestore">Firestore Data</button></div>
+    body.innerHTML += `${userTabs('firestore')}
       <div class="rud-df-admin-toolbar"><label class="rud-df-admin-field" style="min-width:240px;flex:1"><span>Collection</span><select class="rud-df-admin-select" id="rudDfFirestoreCollection">${allowed.map(([k, n]) => `<option value="${escText(k)}" ${k === selected ? 'selected' : ''}>${escText(n)}</option>`).join('')}</select></label><span class="rud-df-admin-muted">${rows.length} records loaded</span></div>
       <div class="rud-df-admin-grid"><div>${table(
         ['Record ID', 'Summary', 'Updated', 'Actions'],
@@ -548,18 +606,8 @@ async function deenFriendsAdminView() {
       state.firestoreRecordId = '';
       renderTab(true);
     };
-    $('#rudDfFirestoreRefresh').onclick = () => {
-      invalidate(selected);
-      renderTab(true);
-    };
+    $('#rudDfFirestoreRefresh').onclick = (e) => refreshSection(e.currentTarget, [selected], firestoreDataManager);
     $('#rudDfFirestoreNew').onclick = () => openFirestoreEditor(null, collectionName);
-    body.querySelectorAll('[data-df-user-subtab]').forEach(
-      (b) =>
-        (b.onclick = () => {
-          state.userManagementTab = b.dataset.dfUserSubtab;
-          renderTab(true);
-        }),
-    );
   }
 
   function firestoreEditor(record, collectionName) {
@@ -650,7 +698,9 @@ async function deenFriendsAdminView() {
   }
 
   async function users() {
-    const users = filterRows(await load('users'), [
+    // (This list used to be named `users`, shadowing this function: the search box and the Refresh
+    // button then called the array instead of re-rendering, and threw.)
+    const rows = filterRows(await load('users'), [
       'id',
       'uid',
       'displayName',
@@ -669,12 +719,13 @@ async function deenFriendsAdminView() {
         btn('Refresh', 'rudDfUsersRefresh') +
         btn('Export CSV', 'rudDfUsersExport'),
     );
+    body.innerHTML += userTabs('accounts');
     body.innerHTML += `<div class="rud-df-admin-grid">
       <div>${
-        `<div class="rud-df-admin-toolbar"><input class="rud-df-admin-search" id="rudDfUsersSearch" value="${escText(state.search)}" placeholder="Search name, username, UID or visitor ID"><span class="rud-df-admin-muted" style="font-size:9px">${users.length} shown</span></div>` +
+        `<div class="rud-df-admin-toolbar"><input class="rud-df-admin-search" id="rudDfUsersSearch" value="${escText(state.search)}" placeholder="Search name, username, UID or visitor ID"><span class="rud-df-admin-muted">${rows.length} shown</span></div>` +
         table(
           ['User', 'Username', 'UID', 'Created', 'Status', 'Actions'],
-          users
+          rows
             .map(
               (u) => `<tr>
         <td><b>${escText(u.displayName || u.name || 'Unnamed')}</b><br><span class="rud-df-admin-muted">${escText(u.email || 'No password account')}</span></td>
@@ -690,22 +741,16 @@ async function deenFriendsAdminView() {
       <div class="rud-df-admin-detail" id="rudDfUserDetail">${selected ? await userDetail(selected) : `<div class="rud-df-admin-panel"><div class="rud-df-admin-empty">Select a user to open the full 360° record.</div></div>`}</div>
     </div>`;
     const input = $('#rudDfUsersSearch');
-    input.oninput = () => {
-      state.search = input.value;
-      users();
-    };
+    input.oninput = () => searchRerender(input, users);
     $('#rudDfCreateUser').onclick = () => adminCreateUserForm();
-    $('#rudDfUsersRefresh').onclick = () => {
-      invalidate('users', 'restrictions', 'suspensions');
-      users();
-    };
+    $('#rudDfUsersRefresh').onclick = (e) => refreshSection(e.currentTarget, ['users', 'restrictions', 'suspensions'], users);
     $('#rudDfUsersExport').onclick = () =>
       exportCSV(
-        users,
+        rows,
         ['id', 'uid', 'displayName', 'username', 'visitorId', 'createdAt', 'updatedAt', 'lastActiveAt'],
         'deen-friends-users.csv',
       );
-    users.forEach(async (u) => {
+    rows.forEach(async (u) => {
       const st = u.deletionRequestedAt ? 'deletion pending' : await userStatus(u.id);
       const el = $(`#rudDfStatus_${u.id}`);
       if (el) el.innerHTML = pill(st);
@@ -1173,14 +1218,8 @@ async function deenFriendsAdminView() {
           .join(''),
         'No friendships found.',
       );
-    $('#rudDfConnectionsSearch').oninput = (e) => {
-      state.search = e.target.value;
-      connections();
-    };
-    $('#rudDfConnectionsRefresh').onclick = () => {
-      invalidate('friendships');
-      connections();
-    };
+    $('#rudDfConnectionsSearch').oninput = (e) => searchRerender(e.target, connections);
+    $('#rudDfConnectionsRefresh').onclick = (e) => refreshSection(e.currentTarget, ['friendships', 'users'], connections);
     $('#rudDfConnectionsExport').onclick = () =>
       exportCSV(rows, ['id', 'members', 'streakCount', 'createdAt', 'updatedAt'], 'deen-friends-connections.csv');
   }
@@ -1222,15 +1261,9 @@ async function deenFriendsAdminView() {
     // first render showed only "Open" and the actions appeared only after changing the status filter.
     body.innerHTML += `<div id="rudDfRequestsTableHost"></div>`;
     render();
-    $('#rudDfRequestsSearch').oninput = (e) => {
-      state.search = e.target.value;
-      requests();
-    };
+    $('#rudDfRequestsSearch').oninput = (e) => searchRerender(e.target, requests);
     $('#rudDfRequestsFilter').onchange = render;
-    $('#rudDfRequestsRefresh').onclick = () => {
-      invalidate('requests');
-      requests();
-    };
+    $('#rudDfRequestsRefresh').onclick = (e) => refreshSection(e.currentTarget, ['requests', 'users'], requests);
     $('#rudDfRequestsExport').onclick = () =>
       exportCSV(rows, ['id', 'fromUid', 'toUid', 'status', 'createdAt', 'updatedAt'], 'deen-friends-requests.csv');
   }
@@ -1256,14 +1289,8 @@ async function deenFriendsAdminView() {
           .join(''),
         'No username requests found.',
       );
-    $('#rudDfUsernameSearch').oninput = (e) => {
-      state.search = e.target.value;
-      usernameChanges();
-    };
-    $('#rudDfUsernameRefresh').onclick = () => {
-      invalidate('usernameChanges');
-      usernameChanges();
-    };
+    $('#rudDfUsernameSearch').oninput = (e) => searchRerender(e.target, usernameChanges);
+    $('#rudDfUsernameRefresh').onclick = (e) => refreshSection(e.currentTarget, ['usernameChanges', 'users'], usernameChanges);
     $('#rudDfUsernameExport').onclick = () =>
       exportCSV(
         rr,
@@ -1309,10 +1336,7 @@ async function deenFriendsAdminView() {
       render();
     };
     $('#rudDfConversationFilter').onchange = render;
-    $('#rudDfMessagesRefresh').onclick = () => {
-      invalidate('messages');
-      adminMessages();
-    };
+    $('#rudDfMessagesRefresh').onclick = (e) => refreshSection(e.currentTarget, ['messages', 'users'], adminMessages);
     $('#rudDfMessagesExport').onclick = () =>
       exportCSV(
         rows,
@@ -1363,10 +1387,12 @@ async function deenFriendsAdminView() {
       ${section('Private chat access logs', ['Admin', 'Conversation', 'Case', 'Reason', 'Time'], privateAccessLogs.map((x) => `<tr><td>${escText(x.adminUid)}</td><td class="rud-df-admin-code">${escText(x.conversationId || '—')}</td><td>${escText(x.caseId || '—')}</td><td>${escText(x.reason || '')}</td><td>${fmt(x.timestamp)}</td></tr>`).join(''))}
       ${section('Risk signals', ['User', 'Signal', 'Severity', 'Status', 'Created'], risk.map((x) => `<tr><td>${escText(uname(x.uid, map))}</td><td>${escText(x.signalType || x.type || '—')}</td><td>${pill(x.severity || 'normal')}</td><td>${pill(x.status || 'review')}</td><td>${fmt(x.createdAt)}</td></tr>`).join(''))}
     </div>`;
-    $('#rudDfSafetyRefresh').onclick = () => {
-      invalidate('reports', 'cases', 'blocks', 'appeals', 'riskSignals', 'evidence');
-      safety();
-    };
+    $('#rudDfSafetyRefresh').onclick = (e) =>
+      refreshSection(
+        e.currentTarget,
+        ['reports', 'cases', 'blocks', 'appeals', 'riskSignals', 'evidence', 'restrictions', 'suspensions', 'privateAccessLogs'],
+        safety,
+      );
     $('#rudDfSafetyExport').onclick = () =>
       exportJSON({ reports, cases, blocks, appeals, riskSignals: risk, evidence }, 'deen-friends-safety');
   }
@@ -1396,10 +1422,7 @@ async function deenFriendsAdminView() {
           .join(''),
         'No activity logs found.',
       );
-    $('#rudDfActivitySearch').oninput = (e) => {
-      state.search = e.target.value;
-      activity();
-    };
+    $('#rudDfActivitySearch').oninput = (e) => searchRerender(e.target, activity);
     $('#rudDfActivityDelete').onclick = guarded(async () => {
       if (
         !rr.length ||
@@ -1416,10 +1439,7 @@ async function deenFriendsAdminView() {
       activity();
       toast('Activity logs deleted.');
     });
-    $('#rudDfActivityRefresh').onclick = () => {
-      invalidate('activity');
-      activity();
-    };
+    $('#rudDfActivityRefresh').onclick = (e) => refreshSection(e.currentTarget, ['activity'], activity);
     $('#rudDfActivityExport').onclick = () =>
       exportCSV(
         rr,
@@ -1447,10 +1467,7 @@ async function deenFriendsAdminView() {
         .join(''),
       'No analytics records found.',
     );
-    $('#rudDfAnalyticsRefresh').onclick = () => {
-      invalidate('analytics');
-      analytics();
-    };
+    $('#rudDfAnalyticsRefresh').onclick = (e) => refreshSection(e.currentTarget, ['analytics'], analytics);
     $('#rudDfAnalyticsExport').onclick = () => exportJSON(rows, 'deen-friends-analytics');
   }
 
@@ -1474,10 +1491,7 @@ async function deenFriendsAdminView() {
       'No notices found.',
     );
     $('#rudDfNewNotice').onclick = () => noticeForm();
-    $('#rudDfNoticesRefresh').onclick = () => {
-      invalidate('notices');
-      notices();
-    };
+    $('#rudDfNoticesRefresh').onclick = (e) => refreshSection(e.currentTarget, ['notices'], notices);
   }
 
   function noticeForm(existing = null) {
@@ -1544,10 +1558,7 @@ async function deenFriendsAdminView() {
       'No Deen Friends settings found.',
     );
     $('#rudDfNewSetting').onclick = () => settingForm();
-    $('#rudDfSettingsRefresh').onclick = () => {
-      invalidate('settings');
-      settings();
-    };
+    $('#rudDfSettingsRefresh').onclick = (e) => refreshSection(e.currentTarget, ['settings'], settings);
   }
   function settingForm(existing = null) {
     openDrawer(
@@ -1610,10 +1621,7 @@ async function deenFriendsAdminView() {
           .join(''),
         'No audit logs found.',
       );
-    $('#rudDfAuditSearch').oninput = (e) => {
-      state.search = e.target.value;
-      audit();
-    };
+    $('#rudDfAuditSearch').oninput = (e) => searchRerender(e.target, audit);
     $('#rudDfAuditDelete').onclick = guarded(async () => {
       if (
         !rows.length ||
@@ -1631,10 +1639,7 @@ async function deenFriendsAdminView() {
       audit();
       toast('Admin audit logs deleted.');
     });
-    $('#rudDfAuditRefresh').onclick = () => {
-      invalidate('audit');
-      audit();
-    };
+    $('#rudDfAuditRefresh').onclick = (e) => refreshSection(e.currentTarget, ['audit'], audit);
     $('#rudDfAuditExport').onclick = () =>
       exportCSV(
         rows,
@@ -1643,6 +1648,7 @@ async function deenFriendsAdminView() {
       );
   }
 
+  let renderSeq = 0;
   async function renderTab(force = false) {
     closeSide();
     $('#rudDfAdminTopTitle').textContent =
@@ -1675,11 +1681,15 @@ async function deenFriendsAdminView() {
         settings,
         audit,
       }[state.tab] || command;
+    const seq = ++renderSeq;
+    if (!force) body.innerHTML = `<p class="rad-loading" role="status">Loading ${escText($('#rudDfAdminTopTitle').textContent)}…</p>`;
     try {
       await fn(force);
+      if (seq === renderSeq) showReadErrors();
     } catch (e) {
       console.error(e);
-      body.innerHTML = `<div class="rud-df-admin-alert">Unable to load this admin section. Check Firestore rules and the signed-in Super Admin account.<br><br><span class="rud-df-admin-code">${escText(e?.message || e)}</span></div>`;
+      if (seq === renderSeq)
+        body.innerHTML = `<div class="rud-df-admin-alert">Unable to load this admin section. ${escText(adminErrorMessage(e))}<br><br><span class="rud-df-admin-code">${escText(e?.message || e)}</span><br><br><button type="button" class="rud-df-admin-btn primary" data-df-retry-reads>Retry</button></div>`;
     }
   }
   const go = (tab) => {
@@ -1883,9 +1893,24 @@ async function deenFriendsAdminView() {
   }
 
   // One delegated handler for all Deen Friends Admin actions.
+  const signal = viewSignal();
   main.addEventListener(
     'click',
     guarded(async (e) => {
+      const sub = e.target.closest?.('[data-df-user-subtab]');
+      if (sub) {
+        state.userManagementTab = sub.dataset.dfUserSubtab;
+        renderTab(true);
+        return;
+      }
+      if (e.target.closest?.('[data-df-retry-reads]')) {
+        Object.keys(state.errors).forEach((k) => {
+          delete state.errors[k];
+          delete state.loaded[k];
+        });
+        renderTab(true);
+        return;
+      }
       if (e.target.closest?.('#rudDfAdminMenu')) {
         $('#rudDfAdminSide')?.classList.toggle('open');
         return;
@@ -2359,13 +2384,23 @@ async function deenFriendsAdminView() {
         }
       }
     }),
+    { signal },
   );
 
-  // One delegated handler for all User Management actions.
-
-  drawer.addEventListener('click', (e) => {
-    if (e.target === drawer) closeDrawer();
-  });
+  drawer.addEventListener(
+    'click',
+    (e) => {
+      if (e.target === drawer) closeDrawer();
+    },
+    { signal },
+  );
+  document.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.key === 'Escape' && !drawer.hidden) closeDrawer();
+    },
+    { signal },
+  );
   renderTab();
 }
 

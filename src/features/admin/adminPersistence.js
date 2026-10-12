@@ -103,6 +103,12 @@ function restoreBulkRows() {
     return false;
   }
 }
+/** Removes the cached admin content list (called on sign-out so no admin dataset stays on the device). */
+function clearAdminContentCache() {
+  try {
+    localStorage.removeItem(ADMIN_CACHE_KEY);
+  } catch {}
+}
 function clearBulkCache() {
   try {
     localStorage.removeItem(BULK_CACHE_KEY);
@@ -120,6 +126,7 @@ export function init() {
 }
 
 export {
+  clearAdminContentCache,
   cacheAdminContent,
   cacheBulkRows,
   clearBulkCache,

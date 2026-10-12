@@ -802,17 +802,6 @@ body.rud-gx-open .rud-ix-card { display: none; }
 }
 
 /* Admin › App Guide editor */
-.rud-guide-admin .df2-card { padding: 16px; margin-bottom: 12px; }
-.rud-guide-admin-general { display: grid; gap: 12px; }
-.rud-guide-admin-tour-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.rud-guide-admin-tour-body { margin-top: 14px; display: grid; gap: 12px; }
-.rud-guide-admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 12px; align-items: end; }
-.rud-guide-admin-wide { grid-column: 1 / -1; }
-.rud-guide-admin-steps { margin: 0; padding: 0 0 0 18px; display: grid; gap: 12px; }
-.rud-guide-admin-step { padding: 12px; border: 1px solid var(--df2-line); border-radius: 14px; background: var(--df2-raised); }
-.rud-guide-admin-step .df2-admin-actions { margin-top: 8px; }
-.rud-guide-admin-problems { margin: 0 0 12px; padding-left: 20px; }
-.rud-guide-admin input[aria-invalid='true'] { border-color: var(--df2-danger) !important; }
 .df2-field select {
   width: 100%;
   min-height: 46px;
@@ -1174,10 +1163,6 @@ html body .df2-root .df2-streak-summary { flex-direction: row; align-items: cent
 /* Chat internals scroll inside their own containers; nothing chains to the page (Section 5). */
 .df2-sheet-body { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .df2-sheet-backdrop { overscroll-behavior: contain; }
-.rud-retention-note { margin: 0 0 10px; }
-.rud-clear-confirm { padding: 16px; margin-bottom: 12px; border-color: var(--df2-danger) !important; }
-.rud-clear-confirm h2 { margin: 0 0 6px; font-size: 1.1rem; }
-.rud-clear-confirm .df2-input { margin: 10px 0; }
 
 /* =========================================================================================
    Premium accent (V3.1): the Deen Friends accent was emerald green; buttons, chips, toggles and
@@ -1279,9 +1264,6 @@ html body .df2-root .df2-btn-xs { min-height: 30px; padding: 0 12px; font-size: 
 .df2-winner-name small { color: #d9c08a; font-size: 0.76rem; }
 .df2-winner-message { margin: 0; color: #f0e2bf; font-size: 0.86rem; line-height: 1.5; }
 @media (prefers-reduced-motion: reduce) { .df2-winner-shine { animation: none; display: none; } }
-.rud-winner-admin-card { display: grid; gap: 12px; padding: 16px; max-width: 640px; }
-.rud-winner-admin-card h3 { margin: 4px 0 0; font-size: 1rem; }
-.rud-winner-rank { min-width: 2.2em; color: var(--df2-gold); }
 
 /* =========================================================================================
    Visiting card (V3.1) — rectangular, foil edge, slow light sweep, script signature.
@@ -1537,7 +1519,7 @@ html body .df2-root .df2-add-card.df2-tools-panel { padding: 12px; }
 }
 
 /* The hero entrance plays once per visit (see homeInteractions.js) — never again on returning Home. */
-html.rud-home-played .hero :is(.hero-reveal, .hero-kicker, .hero-tagline, .hero-support, .hero-actions, .hero-title-line, .hero-title-line-accent, .hero-scroll, .hero-title-simple) {
+html.rud-home-played .hero :is(.hero-reveal,.hero-kicker,.hero-tagline,.hero-support,.hero-actions,.hero-title-line,.hero-title-line-accent,.hero-scroll,.hero-title-simple) {
   animation: none !important;
   opacity: 1 !important;
   transform: none !important;
@@ -1645,19 +1627,6 @@ html.light-mode .rud-mq-btn.is-primary { color: #fff; background: linear-gradien
 @media (prefers-reduced-motion: reduce) { .rud-mq-item, .rud-mq-shell, .rud-mq-skel { animation: none; } }
 
 /* Admin › Data & Accounts — Full Admin Data Reset (V3.5). */
-.rud-reset-admin { padding: 4px 0 24px; }
-.rud-reset-card { display: grid; gap: 14px; max-width: 760px; padding: 20px; border: 1px solid rgba(201, 76, 76, 0.28); }
-.rud-reset-card h2 { margin: 2px 0 0; font-size: 1.35rem; }
-.rud-reset-card h3 { margin: 0 0 8px; font-size: 0.82rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--df2-muted); }
-.rud-reset-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
-.rud-reset-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-.rud-reset-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: baseline; padding: 9px 12px; border: 1px solid var(--df2-line); border-radius: 12px; font-size: 0.86rem; }
-.rud-reset-list li b { font-variant-numeric: tabular-nums; }
-.rud-reset-list li small { grid-column: 1 / -1; color: #c94c4c; }
-.rud-reset-list li[data-state='done'] b { color: var(--df2-gold); }
-.rud-reset-list li[data-state='error'] { border-color: rgba(201, 76, 76, 0.45); }
-.rud-reset-list.is-kept li { grid-template-columns: 1fr; color: var(--df2-muted); }
-.rud-reset-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* "Your data on this page" (V3.5) — the same quiet control on My Deen, Qur'an, Saved and Tasbih. */
 .rud-page-data { display: flex; justify-content: center; margin: 22px auto 8px; padding: 0 16px; }

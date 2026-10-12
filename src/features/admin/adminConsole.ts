@@ -1,7 +1,9 @@
 /* Admin console bundle — loaded on demand (see adminLoader.ts) only when the admin route is
- * opened, so public visitors never download or run the console code.
+ * opened, so public visitors never download or run the console code or its stylesheet.
  * Controllers are started once, in their original relative order.
  */
+import './styles/admin-console.css';
+import { S } from '../../runtime/store';
 import * as adminPersistence from './adminPersistence';
 import * as adminAuth from './adminAuth';
 import * as adminRouter from './adminRouter';
@@ -19,7 +21,7 @@ import * as contentManager from './views/contentManager';
 import * as contentPreview from './views/contentPreview';
 import * as contentTrash from './contentTrash';
 import * as siteContent from './views/siteContent';
-import * as adminPager from './adminPager';
+import * as adminTableKit from './adminTableKit';
 
 export { renderAdminRoute, setAdminDrawer, showAdminDashboard, showAdminLogin } from './adminRouter';
 
@@ -41,7 +43,7 @@ const CONTROLLERS: ReadonlyArray<readonly [string, { init: () => void }]> = [
   ['contentPreview', contentPreview],
   ['contentTrash', contentTrash],
   ['siteContent', siteContent],
-  ['adminPager', adminPager],
+  ['adminTableKit', adminTableKit],
 ];
 
 let started = false;
@@ -49,6 +51,8 @@ let started = false;
 export function startAdminConsole(): void {
   if (started) return;
   started = true;
+  // The console opens on its Dashboard (the store's historical default was the Names table).
+  if (!S.currentAdminView || S.currentAdminView === 'names') S.currentAdminView = 'dashboard';
   for (const [name, controller] of CONTROLLERS) {
     try {
       controller.init();

@@ -398,8 +398,11 @@ service cloud.firestore {
         if isAdmin()
         || resource.data.published == true;
 
+      // The maintenance switch and its access list ("Maintenance Access") decide who can use the
+      // public site, so only the Super Admin may change them. Other content: any admin, as before.
       allow create, update, delete:
-        if isAdmin();
+        if isAdmin()
+        && (documentId != 'rud_maintenance_config' || isSuperAdmin());
     }
 
 
@@ -1905,6 +1908,137 @@ service cloud.firestore {
         allow delete:
           if isOwner(uid) || isTrustSafetyAdmin();
       }
+    }
+
+
+    /* =========================================================
+       DAILY CHALLENGE SCHEDULE (Admin Console)
+
+       deens_challenge_schedule/{entryId}
+       The automation plan behind Daily Deen Challenges: one entry
+       per challenge (from the 30-day library or written by an
+       admin) with the day it runs and an optional repeat
+       (every day, or chosen weekdays). The trusted scheduler
+       (push-scheduler/challengeScheduler.js, Admin SDK) turns the
+       entries due today into ordinary published challenges with
+       the fixed id  sched_<entryId>_<yyyymmdd>, so a retry or an
+       overlapping run can never publish the same day twice.
+       Users never read this collection.
+       ========================================================= */
+
+    function validScheduleEntry(d) {
+      return d.keys().hasAll([
+          'title','description','instructions','category','activity','target',
+          'repeat','date','endDate','weekdays','status','updatedBy','updatedAt','updatedAtMs'
+        ])
+        && d.keys().hasOnly([
+          'title','description','instructions','category','activity','target',
+          'repeat','date','endDate','weekdays','status','libraryKey','dayNumber','reference',
+          'updatedBy','updatedAt','updatedAtMs','createdBy','createdAt'
+        ])
+        && isString(d.title, 80) && d.title.size() >= 3
+        && isString(d.description, 400)
+        && isString(d.instructions, 1000)
+        && isString(d.category, 30)
+        && d.activity in ['manual', 'tasbih']
+        && d.target is int && d.target >= 1 && d.target <= 10000
+        && d.repeat in ['once', 'daily', 'weekly']
+        && d.date is string && d.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && d.endDate is string && (d.endDate == '' || (d.endDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') && d.endDate >= d.date))
+        && d.weekdays is list && d.weekdays.size() <= 7
+        && (d.repeat != 'weekly' || d.weekdays.size() >= 1)
+        && d.status in ['active', 'paused', 'disabled']
+        && (!('libraryKey' in d) || isString(d.libraryKey, 60))
+        && (!('dayNumber' in d) || (d.dayNumber is int && d.dayNumber >= 0 && d.dayNumber <= 366))
+        && (!('reference' in d) || isString(d.reference, 300))
+        && d.updatedBy == request.auth.uid
+        && d.updatedAt == request.time
+        && d.updatedAtMs is int;
+    }
+
+    match /deens_challenge_schedule/{entryId} {
+      allow read:
+        if isCommunityAdmin();
+
+      allow create:
+        if isCommunityAdmin()
+        && entryId.matches('^[A-Za-z0-9_-]{3,80}$')
+        && validScheduleEntry(request.resource.data)
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      allow update:
+        if isCommunityAdmin()
+        && validScheduleEntry(request.resource.data)
+        && request.resource.data.get('createdBy', '') == resource.data.get('createdBy', '');
+
+      allow delete:
+        if isCommunityAdmin();
+    }
+
+
+    /* =========================================================
+       RISE OUTREACH (Admin Console)
+
+       deens_rise_broadcasts/{requestId}
+       A Super Admin request to send one message as RISE to every
+       Deen Friends member (audience 'all') or to one member who
+       has no RISE conversation yet (audience 'user'). The browser
+       only queues the request; the trusted scheduler
+       (push-scheduler/riseBroadcasts.js, Admin SDK) delivers it in
+       bounded pages, writing each copy with the fixed message id
+       b_<requestId>, so retries never duplicate a message.
+       The document id is generated once per composed message, so
+       a double click or a retried submit cannot queue it twice.
+       Only a queued request can be cancelled; nothing else can be
+       edited from a browser.
+       ========================================================= */
+
+    match /deens_rise_broadcasts/{requestId} {
+      allow read:
+        if isSuperAdmin();
+
+      allow create:
+        if isSuperAdmin()
+        && requestId.matches('^[A-Za-z0-9_-]{8,80}$')
+        && request.resource.data.keys().hasOnly([
+             'text','audience','targetUid','targetLabel','status',
+             'createdBy','createdByEmail','createdAt','createdAtMs'
+           ])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 1
+        && request.resource.data.text.size() <= 2000
+        && request.resource.data.audience in ['all', 'user']
+        && isString(request.resource.data.targetUid, 128)
+        && isString(request.resource.data.targetLabel, 120)
+        && (request.resource.data.audience == 'all' || request.resource.data.targetUid.size() > 0)
+        && request.resource.data.status == 'queued'
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdByEmail == request.auth.token.email
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.createdAtMs is int;
+
+      // While still queued, the Super Admin may (a) cancel it, or (b) for a one-member request,
+      // record that the console already delivered it directly into an existing conversation
+      // (the scheduler then finds the copy with the same id and marks the request sent).
+      allow update:
+        if isSuperAdmin()
+        && resource.data.status == 'queued'
+        && (
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt'])
+            && request.resource.data.status == 'cancelled'
+            && request.resource.data.cancelledAt == request.time
+          )
+          || (
+            resource.data.audience == 'user'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['directDeliveredAtMs'])
+            && request.resource.data.directDeliveredAtMs is int
+          )
+        );
+
+      allow delete:
+        if false;
     }
 
 
