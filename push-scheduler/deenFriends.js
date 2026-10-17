@@ -11,13 +11,21 @@
  *  - Payloads are data-only and small, and never contain conversation content.
  *  - Per-user category preferences on each device are respected.
  *  - Invalid or expired tokens are deleted when FCM reports them.
+ *  - Admin › Notification Settings (notificationPolicy.js) is enforced: the Daily Deen Challenge
+ *    (step 6) has its own switch, every other notification here (steps 1–5) is "other". A group
+ *    that is turned off is not even queried and its events are skipped for good (the checkpoint
+ *    still advances), so turning it back on never releases a backlog. Every send re-checks first.
  */
 const { FieldValue } = require('firebase-admin/firestore');
+const { createPolicy, categoryAllowed } = require('./notificationPolicy');
 
 const STATE_DOC = 'push_scheduler_state/deen_friends';
 const DELIVERIES = 'push_deliveries_df';
 const FIRST_RUN_LOOKBACK_MS = 10 * 60 * 1000;
 const MAX_WINDOW_MS = 6 * 60 * 60 * 1000;
+const NONE = { docs: [] };
+/** Admin switch that governs each device category (see notificationPolicy.js). */
+const policyCategory = (category) => (category === 'challenges' ? 'dailyChallenge' : 'other');
 
 function invalidToken(code) {
   return /registration-token-not-registered|invalid-registration-token|messaging\/invalid-argument/.test(
@@ -55,18 +63,21 @@ function makeNameLookup(db) {
   };
 }
 
-async function sendToUser(db, messaging, uid, category, eventId, payload) {
+async function sendToUser(db, messaging, policy, uid, category, eventId, payload) {
+  if (!(await policy.allows(policyCategory(category)))) return 0; // checked before reading the devices
   const devices = await db
     .collection('deens_push_devices')
     .doc(uid)
     .collection('devices')
     .where('active', '==', true)
     .get();
-  return sendToDevices(db, messaging, uid, devices.docs, category, eventId, payload);
+  return sendToDevices(db, messaging, policy, uid, devices.docs, category, eventId, payload);
 }
 
 /** Sends to device documents that were already read (active ones only). */
-async function sendToDevices(db, messaging, uid, deviceDocs, category, eventId, payload) {
+async function sendToDevices(db, messaging, policy, uid, deviceDocs, category, eventId, payload) {
+  // Immediately before claiming and sending: a switch turned off mid-run stops further sends.
+  if (!(await policy.allows(policyCategory(category)))) return 0;
   const targets = deviceDocs.filter(
     (d) => d.get('active') === true && d.get('fcmToken') && (d.get('categories') || {})[category] !== false,
   );
@@ -96,7 +107,15 @@ async function sendToDevices(db, messaging, uid, deviceDocs, category, eventId, 
   return sent;
 }
 
-async function processDeenFriendsEvents(db, messaging) {
+async function processDeenFriendsEvents(db, messaging, { policy = createPolicy(db) } = {}) {
+  const switches = await policy.get();
+  // Settings unreadable: send nothing and keep the checkpoint, so a later run can still deliver these
+  // events once the switches are verified (bounded by MAX_WINDOW_MS).
+  if (policy.unavailable()) return { skipped: 'notification settings unavailable', sent: 0 };
+  const otherOn = categoryAllowed(switches, 'other'); // steps 1–5, off by default
+  const dailyOn = categoryAllowed(switches, 'dailyChallenge'); // step 6, on by default
+  const notify = (uid, category, eventId, payload) =>
+    sendToUser(db, messaging, policy, uid, category, eventId, payload);
   const stateRef = db.doc(STATE_DOC);
   const stateSnap = await stateRef.get();
   const until = Date.now() - 3000; // leave room for clocks and in-flight writes
@@ -108,11 +127,11 @@ async function processDeenFriendsEvents(db, messaging) {
   let sent = 0;
 
   // 1. New friend requests -> the recipient.
-  const created = await range('createdAtMs')(db.collection('deens_friend_requests')).limit(300).get();
+  const created = otherOn ? await range('createdAtMs')(db.collection('deens_friend_requests')).limit(300).get() : NONE;
   for (const doc of created.docs) {
     const r = doc.data();
     if (r.status !== 'pending' || !r.toUid) continue;
-    sent += await sendToUser(db, messaging, r.toUid, 'friendRequests', `fr:${doc.id}`, {
+    sent += await notify(r.toUid, 'friendRequests', `fr:${doc.id}`, {
       title: 'New Deen Friend request',
       body: `${await nameOf(r.fromUid)} would like to connect with you.`,
       route: '#deen-friends',
@@ -120,11 +139,11 @@ async function processDeenFriendsEvents(db, messaging) {
   }
 
   // 2. Accepted requests -> the person who asked.
-  const answered = await range('updatedAtMs')(db.collection('deens_friend_requests')).limit(300).get();
+  const answered = otherOn ? await range('updatedAtMs')(db.collection('deens_friend_requests')).limit(300).get() : NONE;
   for (const doc of answered.docs) {
     const r = doc.data();
     if (r.status !== 'accepted' || !r.fromUid) continue;
-    sent += await sendToUser(db, messaging, r.fromUid, 'friendRequests', `fa:${doc.id}`, {
+    sent += await notify(r.fromUid, 'friendRequests', `fa:${doc.id}`, {
       title: 'Request accepted',
       body: `${await nameOf(r.toUid)} accepted your Deen Friend request.`,
       route: '#deen-friends',
@@ -132,7 +151,9 @@ async function processDeenFriendsEvents(db, messaging) {
   }
 
   // 3. New Deen interactions -> one notification per sender/recipient pair per run (no content).
-  const interactions = await range('createdAtMs')(db.collection('deens_friend_messages')).limit(500).get();
+  const interactions = otherOn
+    ? await range('createdAtMs')(db.collection('deens_friend_messages')).limit(500).get()
+    : NONE;
   const grouped = new Map();
   for (const doc of interactions.docs) {
     const m = doc.data();
@@ -157,7 +178,7 @@ async function processDeenFriendsEvents(db, messaging) {
   }
   for (const g of grouped.values()) {
     const who = await nameOf(g.sender);
-    sent += await sendToUser(db, messaging, g.recipient, 'friendActivity', `msg:${g.recipient}:${g.newest}`, {
+    sent += await notify(g.recipient, 'friendActivity', `msg:${g.recipient}:${g.newest}`, {
       title: who,
       body: g.challenge
         ? 'sent you a Deen challenge.'
@@ -169,11 +190,13 @@ async function processDeenFriendsEvents(db, messaging) {
   }
 
   // 4. Challenge accepted / declined -> the friend who sent it.
-  const responded = await range('respondedAtMs')(db.collection('deens_friend_messages')).limit(300).get();
+  const responded = otherOn
+    ? await range('respondedAtMs')(db.collection('deens_friend_messages')).limit(300).get()
+    : NONE;
   for (const doc of responded.docs) {
     const m = doc.data();
     if (m.kind !== 'challenge' || !m.senderUid) continue;
-    sent += await sendToUser(db, messaging, m.senderUid, 'friendActivity', `chr:${doc.id}:${m.status}`, {
+    sent += await notify(m.senderUid, 'friendActivity', `chr:${doc.id}:${m.status}`, {
       title: m.status === 'accepted' ? 'Challenge accepted' : 'Challenge declined',
       body: `${await nameOf(m.recipientUid)} ${m.status === 'accepted' ? 'accepted' : 'declined'} your challenge.`,
       route: m.friendshipId ? `#deen-friends/chat/${encodeURIComponent(m.friendshipId)}` : '#deen-friends/chats',
@@ -181,7 +204,7 @@ async function processDeenFriendsEvents(db, messaging) {
   }
 
   // 5. Replies from RISE -> the user (never the reply text).
-  const threads = await range('lastMessageAtMs')(db.collection('deens_rise_threads')).limit(300).get();
+  const threads = otherOn ? await range('lastMessageAtMs')(db.collection('deens_rise_threads')).limit(300).get() : NONE;
   for (const doc of threads.docs) {
     const t = doc.data();
     if (t.lastFrom !== 'rise') continue;
@@ -191,7 +214,7 @@ async function processDeenFriendsEvents(db, messaging) {
     const reply = latest.docs[0];
     if (!reply || reply.get('from') !== 'rise' || reply.get('automated') !== false || !reply.get('adminUid')) continue;
     if (Number(reply.get('createdAtMs')) <= since) continue;
-    sent += await sendToUser(db, messaging, doc.id, 'rise', `rise:${doc.id}:${reply.id}`, {
+    sent += await notify(doc.id, 'rise', `rise:${doc.id}:${reply.id}`, {
       title: 'RISE replied to you',
       body: 'Open Deen Friends to read the reply from the RiseUponDeen team.',
       route: '#deen-friends/rise',
@@ -201,7 +224,11 @@ async function processDeenFriendsEvents(db, messaging) {
   // 6. Newly published Daily Deen Challenges -> assigned users (or everyone with challenges on).
   // For "everyone", all registered devices are read once per run and reused for every recipient
   // (before, each recipient's devices were read a second time: twice the reads for the same result).
-  const challenges = await range('updatedAtMs')(db.collection('deens_daily_challenges')).limit(50).get();
+  // Every (challenge, member) pair is claimed once; a finished fan-out also leaves a marker, so an
+  // admin edit of an already-announced challenge does not re-read every device just to send nothing.
+  const challenges = dailyOn
+    ? await range('updatedAtMs')(db.collection('deens_daily_challenges')).limit(50).get()
+    : NONE;
   let devicesByUid = null;
   const allDevices = async () => {
     if (!devicesByUid) {
@@ -225,18 +252,25 @@ async function processDeenFriendsEvents(db, messaging) {
       route: '#deen-friends/challenges',
     };
     if (c.audience === 'all') {
+      const doneRef = db.collection(DELIVERIES).doc(`daily-done:${doc.id}`.replace(/[^a-zA-Z0-9_:-]/g, '_'));
+      if ((await doneRef.get()).exists) continue;
       for (const [uid, docs] of await allDevices()) {
-        sent += await sendToDevices(db, messaging, uid, docs, 'challenges', `daily:${doc.id}:${uid}`, payload);
+        sent += await sendToDevices(db, messaging, policy, uid, docs, 'challenges', `daily:${doc.id}:${uid}`, payload);
       }
+      // Only a complete fan-out is marked (one stopped by the switch is not; nothing more is sent anyway).
+      if (await policy.allows('dailyChallenge'))
+        await doneRef
+          .create({ createdAt: FieldValue.serverTimestamp(), expireAt: new Date(Date.now() + 14 * 86400000) })
+          .catch(() => {});
       continue;
     }
     for (const uid of Array.isArray(c.assignedUids) ? c.assignedUids : []) {
-      sent += await sendToUser(db, messaging, uid, 'challenges', `daily:${doc.id}:${uid}`, payload);
+      sent += await notify(uid, 'challenges', `daily:${doc.id}:${uid}`, payload);
     }
   }
 
   await stateRef.set({ sinceMs: until, updatedAt: FieldValue.serverTimestamp(), lastSent: sent }, { merge: true });
-  return { since, until, sent };
+  return { since, until, sent, other: otherOn, dailyChallenge: dailyOn };
 }
 
 module.exports = { processDeenFriendsEvents };

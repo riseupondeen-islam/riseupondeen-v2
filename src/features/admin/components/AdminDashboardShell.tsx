@@ -12,7 +12,6 @@ export const ADMIN_NAV: Array<{ group: string; items: NavItem[] }> = [
   {
     group: 'Overview',
     items: [
-      { view: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
       { view: 'analytics', label: 'Visitor Analytics', icon: 'analytics' },
     ],
   },
@@ -42,6 +41,7 @@ export const ADMIN_NAV: Array<{ group: string; items: NavItem[] }> = [
   {
     group: 'Communication',
     items: [
+      { view: 'notification-settings', label: 'Notification Settings', icon: 'reminders' },
       { view: 'notifications', label: 'Send Notification', icon: 'notifications' },
       { view: 'broadcast', label: 'Broadcast Message', icon: 'broadcast' },
     ],
@@ -77,7 +77,7 @@ export function AdminDashboardShell() {
               <p className="rad-nav-label">{section.group}</p>
               {section.items.map((item) => (
                 <button
-                  className={item.view === 'dashboard' ? 'active' : undefined}
+                  className={item.view === 'names' ? 'active' : undefined}
                   data-admin-view={item.view}
                   key={item.view}
                   type="button"
@@ -115,7 +115,7 @@ export function AdminDashboardShell() {
             </button>
             <div className="rad-topbar-title">
               <span className="rad-crumb">Admin Console</span>
-              <strong id="adminTopTitle">Dashboard</strong>
+              <strong id="adminTopTitle">Names of Allah</strong>
             </div>
           </div>
           <div className="rad-topbar-end">

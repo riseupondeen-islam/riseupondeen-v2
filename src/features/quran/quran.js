@@ -65,6 +65,10 @@ let RUD_QURAN_META_KEY,
    (the playing element stays the single #rudQuranAudio). rudQuranMediaKey: last lock-screen metadata. */
 let rudQuranPreloader = null,
   rudQuranMediaKey = '';
+/* Automatic recovery from a dropped connection (common when a phone locks and leaves Wi-Fi):
+   one immediate reload of the failed file, or a resume when the browser reports it is back online.
+   resumeAt continues a long Ayah from where it stopped instead of from its start. */
+let rudQuranRecovery = { src: '', tries: 0, awaitingNetwork: false, resumeAt: 0 };
 
 function rudQuranLocalGet(key, fallback) {
   try {
@@ -298,16 +302,20 @@ function rudQuranScheduleSleepIfNeeded() {
     1000,
     (rudQuranSleepEndsAt || Date.now() + Number(rudQuranSleepMode) * 60 * 1000) - Date.now(),
   );
-  rudQuranSleepTimer = setTimeout(() => {
-    try {
-      rudQuranAudio?.pause();
-    } catch {}
-    rudQuranClearMemSession();
-    rudQuranFullPlay = false;
-    rudQuranPausedByUser = true;
-    rudQuranClearSleep(true);
-    rudQuranToast("Qur'an sleep timer ended.");
-  }, delay);
+  rudQuranSleepTimer = setTimeout(rudQuranSleepNow, delay);
+}
+/* Ends a timed sleep. Also called from 'timeupdate' once the end time has passed, because mobile
+   browsers can delay timers of a page in the background (the recitation itself keeps playing). */
+function rudQuranSleepNow() {
+  if (!['10', '20', '30'].includes(rudQuranSleepMode)) return;
+  try {
+    rudQuranAudio?.pause();
+  } catch {}
+  rudQuranClearMemSession();
+  rudQuranFullPlay = false;
+  rudQuranPausedByUser = true;
+  rudQuranClearSleep(true);
+  rudQuranToast("Qur'an sleep timer ended.");
 }
 function rudQuranResetPlaybackState({ keepMode = true } = {}) {
   rudQuranFullPlay = false;
@@ -467,7 +475,10 @@ function rudQuranSyncPlayerUi() {
     .querySelectorAll('[data-quran-ui="ayah"]')
     .forEach((el) => (el.textContent = max ? `Ayah ${rudQuranCurrentAyah} of ${max}` : `Ayah ${rudQuranCurrentAyah}`));
   document.querySelectorAll('[data-quran-ui="playicon"]').forEach((el) => (el.textContent = playing ? 'Ⅱ' : '▶'));
-  rudQuranSyncMediaSession(playing);
+  /* Lock screen / notification: 'playing' while the element is playing OR buffering the next file.
+     (Requiring buffered data made every Ayah change and every network wait report 'paused', which
+     flips the lock-screen control and lets Android treat the backgrounded page as idle.) */
+  rudQuranSyncMediaSession(!!audio?.getAttribute('src') && !audio.paused);
   document
     .querySelectorAll('[data-quran-ui="currenttime"]')
     .forEach((el) => (el.textContent = rudQuranFormatTime(audio?.currentTime)));
@@ -796,22 +807,45 @@ function rudQuranEnsureAudioEngine() {
     audio.addEventListener('play', rudQuranSyncPlayerUi);
     audio.addEventListener('playing', () => {
       rudQuranPausedByUser = false;
+      rudQuranRecovery = { src: '', tries: 0, awaitingNetwork: false, resumeAt: 0 };
       rudQuranSyncPlayerUi();
       rudQuranScheduleSleepIfNeeded();
       rudQuranPreloadNext();
     });
     audio.addEventListener('waiting', rudQuranSyncPlayerUi);
-    audio.addEventListener('loadedmetadata', rudQuranSyncPlayerUi);
+    audio.addEventListener('loadedmetadata', () => {
+      // After an automatic recovery, continue the Ayah from where the connection dropped.
+      if (rudQuranRecovery.resumeAt > 0 && rudQuranRecovery.src === audio.src) {
+        try {
+          if (Number.isFinite(audio.duration) && rudQuranRecovery.resumeAt < audio.duration)
+            audio.currentTime = rudQuranRecovery.resumeAt;
+        } catch {}
+        rudQuranRecovery.resumeAt = 0;
+      }
+      rudQuranSyncPlayerUi();
+      rudQuranSyncPositionState();
+    });
     audio.addEventListener('canplay', rudQuranSyncPlayerUi);
     audio.addEventListener('pause', () => {
       rudQuranPersistPlayback(true);
+      /* The browser also fires 'timeupdate' and 'pause' when a file simply finishes. The 'ended' handler
+         starts the next Ayah straight away, so do not report a pause to the UI / lock screen in between. */
+      if (audio.ended) return;
       rudQuranSyncPlayerUi();
+      rudQuranSyncPositionState();
     });
     audio.addEventListener('timeupdate', () => {
       rudQuranPersistPlayback(false);
+      if (rudQuranSleepEndsAt && Date.now() >= rudQuranSleepEndsAt) return rudQuranSleepNow();
+      // A file's last update arrives just before 'ended', which starts the next Ayah and refreshes the UI.
+      if (audio.ended) return;
       rudQuranSyncPlayerUi();
     });
-    audio.addEventListener('durationchange', rudQuranSyncPlayerUi);
+    audio.addEventListener('durationchange', () => {
+      rudQuranSyncPlayerUi();
+      rudQuranSyncPositionState();
+    });
+    audio.addEventListener('seeked', rudQuranSyncPositionState);
     audio.addEventListener('ended', rudQuranHandleEnded);
     audio.addEventListener('error', rudQuranHandleMediaError);
     rudQuranBindMediaSession();
@@ -905,6 +939,21 @@ function rudQuranSyncMediaSession(playing) {
     });
   } catch {}
 }
+/* Lock-screen progress and scrubber (Android notification, iOS Control Center). Updated on load,
+   seek and pause rather than on every time update, as the Media Session API recommends. */
+function rudQuranSyncPositionState() {
+  const ms = typeof navigator !== 'undefined' ? navigator.mediaSession : null;
+  const a = rudQuranAudio;
+  if (!ms || typeof ms.setPositionState !== 'function' || !a) return;
+  try {
+    if (!a.getAttribute('src') || !Number.isFinite(a.duration) || a.duration <= 0) return ms.setPositionState();
+    ms.setPositionState({
+      duration: a.duration,
+      playbackRate: a.playbackRate || 1,
+      position: Math.max(0, Math.min(a.duration, a.currentTime || 0)),
+    });
+  } catch {}
+}
 function rudQuranMediaErrorMessage(audio) {
   if (!navigator.onLine) return 'Audio requires an internet connection.';
   const code = audio?.error?.code;
@@ -917,7 +966,34 @@ function rudQuranHandleMediaError() {
   const audio = rudQuranAudio;
   /* Ignore the element being emptied on purpose (no src) or an aborted load (code 1). */
   if (!audio || !audio.getAttribute('src') || audio.error?.code === 1) return;
+  /* A recitation the member did not pause that fails to load (2 = network; 4 is also what browsers
+     report when the connection drops before a file starts) recovers by itself: one immediate reload,
+     or a resume as soon as the browser is back online. Anything else, or a second failure, shows Retry
+     as before. */
+  const state = rudQuranPlaybackState;
+  if (state && !rudQuranPausedByUser && [2, 4].includes(audio.error?.code)) {
+    if (rudQuranRecovery.src !== state.src)
+      rudQuranRecovery = { src: state.src, tries: 0, awaitingNetwork: false, resumeAt: 0 };
+    const position = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+    if (position > 1) rudQuranRecovery.resumeAt = position;
+    if (!navigator.onLine) {
+      rudQuranRecovery.awaitingNetwork = true;
+      return rudQuranShowAudioError('Connection lost. Recitation will continue when you are back online.');
+    }
+    if (rudQuranRecovery.tries < 1) {
+      rudQuranRecovery.tries++;
+      rudQuranRetryAudio();
+      return;
+    }
+  }
   rudQuranShowAudioError(rudQuranMediaErrorMessage(audio));
+}
+/* Back online after a connection drop: continue the interrupted Ayah (same single element). */
+function rudQuranResumeAfterNetwork() {
+  if (!rudQuranRecovery.awaitingNetwork) return;
+  rudQuranRecovery.awaitingNetwork = false;
+  if (!rudQuranPlaybackState || rudQuranPausedByUser) return;
+  rudQuranRetryAudio();
 }
 function rudQuranHandlePlayError(error, commandToken) {
   /* A rejection from a request that was already superseded is not a failure. */
@@ -1088,7 +1164,7 @@ function rudQuranReplayCurrent(commandToken) {
   return rudQuranPlayAyah(rudQuranCurrentAyah, rudQuranFullPlay, commandToken);
 }
 function rudQuranHandleEnded() {
-  if (rudQuranPausedByUser || !rudQuranData) return;
+  if (rudQuranPausedByUser || !rudQuranData) return rudQuranSyncPlayerUi();
   const max = rudQuranData.arabic.ayahs.length,
     commandToken = rudQuranPlaybackCommand;
   if (rudQuranSleepMode === 'ayah') {
@@ -1105,13 +1181,14 @@ function rudQuranHandleEnded() {
       continuous = p.repeat === 'continuous',
       target = continuous ? Infinity : Math.max(1, Number(p.repeat) || 3),
       current = rudQuranCurrentAyah;
+    /* Without a pause between repeats the next file starts inside 'ended' itself: a timer would be
+       delayed or suspended while the screen is locked, and the recitation would stop there. */
+    const delay = Math.max(0, Number(p.delayMs) || 0);
+    const after = (fn) => (delay ? (rudQuranMemSession.delayTimer = setTimeout(fn, delay)) : fn());
     if (rudQuranMemSession.current === current && rudQuranMemSession.repeats + 1 < target) {
       rudQuranMemSession.repeats++;
       rudQuranSyncPlayerUi();
-      rudQuranMemSession.delayTimer = setTimeout(
-        () => rudQuranPlayAyah(current, true, commandToken),
-        Math.max(0, Number(p.delayMs) || 0),
-      );
+      after(() => rudQuranPlayAyah(current, true, commandToken));
       return;
     }
     rudQuranMemSession.current = current;
@@ -1126,10 +1203,7 @@ function rudQuranHandleEnded() {
         return;
       }
     }
-    rudQuranMemSession.delayTimer = setTimeout(
-      () => rudQuranPlayAyah(next, true, commandToken),
-      Math.max(0, Number(p.delayMs) || 0),
-    );
+    after(() => rudQuranPlayAyah(next, true, commandToken));
     return;
   }
   if (rudQuranPlaybackMode === 'arabic-urdu' && rudQuranPlaybackPhase === 'arabic') {
@@ -1228,6 +1302,14 @@ function rudQuranLoadSurah(number, ayah = 1, scrollAyah = false, { preserveAudio
   if (!builtin?.arabic?.ayahs?.length || !builtin?.translation?.ayahs?.length) return false;
   const sameSurah = Number(rudQuranData?.arabic?.number) === n && !!rudQuranData?.arabic?.ayahs?.length;
   if (!preserveAudio && !sameSurah) rudStopQuranAudio();
+  /* Coming back to the surah that is reciting (Back button, a saved link) must not move the playlist
+     to the Ayah in the address: the next file would otherwise jump back to it. */
+  const reciting =
+    sameSurah &&
+    rudQuranPlaybackState &&
+    Number(rudQuranPlaybackState.surah) === n &&
+    !!rudQuranAudio?.getAttribute('src');
+  if (reciting) ayah = rudQuranPlaybackState.ayah;
   ++rudQuranRequest;
   rudQuranCurrentSurah = n;
   rudQuranCurrentAyah = Math.max(
@@ -1861,10 +1943,15 @@ export function init() {
         if (document.querySelector('.rud-quran-page.reading') && rudQuranCurrentSurah && rudQuranCurrentAyah)
           rudTrackQuranLocalActivity(`${Number(rudQuranCurrentSurah)}:${Number(rudQuranCurrentAyah)}`);
         rudQuranPersistPlayback(true);
+      } else if (rudQuranAudio) {
+        // Back on screen: the system may have paused or advanced playback meanwhile (calls, other apps).
+        rudQuranSyncPlayerUi();
+        rudQuranSyncPositionState();
       }
     },
     { passive: true },
   );
+  window.addEventListener('online', rudQuranResumeAfterNetwork, { passive: true });
 }
 
 export {

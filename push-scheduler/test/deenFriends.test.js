@@ -109,6 +109,9 @@ const messaging = {
   },
 };
 const put = (p, d) => store.set(p, d);
+// This test covers every Deen Friends notification, so "other" notifications (off by default in
+// Admin › Notification Settings) are turned on here. The switches themselves: notificationPolicy.test.js.
+put('deens_admin_settings/notifications', { otherEnabled: true });
 put('push_scheduler_state/deen_friends', { sinceMs: now - 60000 });
 put('deens_users/a', { displayName: 'Aisha' });
 put('deens_users/b', { displayName: 'Bilal' });

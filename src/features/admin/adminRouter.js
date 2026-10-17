@@ -16,7 +16,6 @@ import { S } from '../../runtime/store';
 import { rudIsAdminRoute } from '../../app/routing/routeState';
 import { cacheAdminContent, readAdminCache } from './adminPersistence';
 import { renderAdminFatal, renderAdminView, suspendAdminView } from './adminViews';
-import { clearInsightsCache } from './services/adminInsights';
 import { RUD_ANALYTICS_COLLECTION } from '../analytics/visitorAnalytics';
 import { rudHideBroadcast, rudStopBroadcastListener } from '../broadcast/broadcast';
 import { stopMaintenanceLive } from '../maintenance/maintenance';
@@ -208,7 +207,9 @@ function clearAdminWorkspace() {
     S.adminAnalyticsUnsub?.();
   } catch {}
   S.adminAnalyticsUnsub = null;
-  clearInsightsCache(); // dashboard figures kept for this tab must not outlive the session
+  try {
+    sessionStorage.removeItem('rud_admin_insights_v1'); // figures cached by the removed Dashboard (older builds)
+  } catch {}
   const main = $('#adminMain');
   if (main) main.innerHTML = '';
   const email = $('#adminUserEmail');
@@ -221,7 +222,7 @@ function restoreView() {
     const v = sessionStorage.getItem(VIEW_KEY);
     if (v && document.querySelector(`.admin-nav [data-admin-view="${CSS.escape(v)}"]`)) return v;
   } catch {}
-  return S.currentAdminView && S.currentAdminView !== 'names' ? S.currentAdminView : 'dashboard';
+  return S.currentAdminView || 'names';
 }
 function rememberView(v) {
   try {

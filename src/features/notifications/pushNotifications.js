@@ -32,8 +32,7 @@ let RUD_PUSH_PREF_KEY,
   rudMessagingLoadPromise,
   rudMessagingInstance,
   rudForegroundMessageBound,
-  rudPushProfileSyncTimer,
-  rudPrayerReminderClock;
+  rudPushProfileSyncTimer;
 
 function rudPushSenderEndpoint() {
   try {
@@ -246,7 +245,6 @@ function rudCacheResolvedPrayerTimes(timings, timeZone, date, meta = {}) {
     if (changed && typeof rudRefreshReminderCenter === 'function') rudRefreshReminderCenter();
     if (changed && (location.hash || '').startsWith('#my-deen') && typeof rudRenderMyDeen === 'function')
       requestAnimationFrame(() => rudRenderMyDeen(true));
-    if (typeof rudSyncPrayerReminderClock === 'function') rudSyncPrayerReminderClock();
     return true;
   } catch {
     return false;
@@ -501,7 +499,6 @@ async function rudEnableDeenReminders(button) {
       dismissedPrompt: false,
     });
     await rudEnsureFcmToken({ force: true });
-    rudSyncPrayerReminderClock();
     toast('Deen Reminders enabled on this device.');
   } catch (e) {
     console.error('Enable notifications failed', e);
@@ -553,7 +550,6 @@ async function rudDisableAllNotifications(button) {
       }
     }
     await rudDeactivatePushRecord();
-    rudSyncPrayerReminderClock();
     toast('Deen Reminders disabled on this device.');
   } finally {
     busy(button, false);
@@ -667,7 +663,6 @@ function rudBindReminderCenter() {
       const categories = { ...current.categories, [input.dataset.rudPushCategory]: input.checked };
       rudSavePushPrefs({ ...current, categories });
       rudQueuePushProfileSync();
-      rudSyncPrayerReminderClock();
     }),
   );
   center.querySelector('#rudPushTime')?.addEventListener('change', (e) => {
@@ -693,99 +688,12 @@ function rudScheduleFcmMaintenance() {
   if (Date.now() - last < 7 * 24 * 60 * 60 * 1000) return;
   setTimeout(() => rudEnsureFcmToken().catch((e) => console.warn('Periodic FCM token refresh skipped', e)), 5000);
 }
-function rudPrayerNotificationState() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(RUD_PRAYER_NOTIFY_STATE_KEY) || '{}');
-    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
-  } catch {
-    return {};
-  }
-}
-function rudSavePrayerNotificationState(state) {
-  try {
-    const cutoff = Date.now() - 8 * 24 * 60 * 60 * 1000;
-    for (const id of Object.keys(state)) {
-      if (Number(state[id] || 0) < cutoff) delete state[id];
-    }
-    localStorage.setItem(RUD_PRAYER_NOTIFY_STATE_KEY, JSON.stringify(state));
-  } catch {}
-}
-function rudPrayerNowInZone(timeZone) {
-  try {
-    const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone,
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      }).formatToParts(new Date()),
-      map = Object.fromEntries(parts.map((x) => [x.type, x.value]));
-    return { hour: Number(map.hour) % 24, minute: Number(map.minute), second: Number(map.second) };
-  } catch {
-    const d = new Date();
-    return { hour: d.getHours(), minute: d.getMinutes(), second: d.getSeconds() };
-  }
-}
-async function rudCheckPrayerReminderNow() {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  const prefs = rudPushPrefs();
-  if (!prefs.enabled || prefs.categories.prayer !== true) return;
-  const schedule = rudResolvedPrayerSchedule();
-  if (!schedule) return;
-  const now = rudPrayerNowInZone(schedule.timeZone),
-    state = rudPrayerNotificationState();
-  for (const key of RUD_PRAYER_KEYS) {
-    const match = String(schedule.timings[key] || '').match(/^(\d{1,2}):(\d{2})$/);
-    if (!match || Number(match[1]) !== now.hour || Number(match[2]) !== now.minute) continue;
-    const id = `${schedule.date}:${key}`;
-    if (state[id]) return;
-    const name = key[0].toUpperCase() + key.slice(1);
-    try {
-      const registration = await navigator.serviceWorker.ready;
-      await registration.showNotification(`${name} Prayer`, {
-        body: `It is time for ${name}.`,
-        icon: '/icon-192.png',
-        badge: '/icon-192.png',
-        tag: `rud-prayer-${id}`,
-        renotify: false,
-        requireInteraction: false,
-        silent: false,
-        data: {
-          route: '#prayer',
-          category: 'prayer',
-          dedupeId: `prayer:${id}`,
-          prayerName: key,
-          prayerDate: schedule.date,
-        },
-      });
-      state[id] = Date.now();
-      rudSavePrayerNotificationState(state);
-    } catch (e) {
-      console.warn('Prayer reminder could not be shown', e);
-    }
-    return;
-  }
-}
-function rudSyncPrayerReminderClock() {
-  const active =
-    'Notification' in window &&
-    Notification.permission === 'granted' &&
-    rudPushPrefs().enabled &&
-    rudPushPrefs().categories.prayer === true &&
-    !!rudResolvedPrayerSchedule();
-  if (!active) {
-    if (rudPrayerReminderClock) {
-      clearInterval(rudPrayerReminderClock);
-      rudPrayerReminderClock = null;
-    }
-    return;
-  }
-  if (!rudPrayerReminderClock)
-    rudPrayerReminderClock = setInterval(() => {
-      if (!document.hidden) rudCheckPrayerReminderNow();
-    }, 30000);
-  rudCheckPrayerReminderNow();
-}
+/* Prayer reminders are delivered only by the free scheduler's push (push-scheduler/index.js), which
+   checks Admin › Notification Settings immediately before every send. This tab used to show its own
+   copy at the prayer minute while the page was open: a second sender the admin switches could not
+   reach, which also duplicated the push. Kept as a no-op for existing callers (My Deen, the prayer
+   time cache, the Reminder Center); the member's own Prayer Times preference is unchanged. */
+function rudSyncPrayerReminderClock() {}
 
 /** Runs this module's original top-level statements. Called once, in original order, by runtime/legacyRuntime. */
 export function init() {
@@ -852,11 +760,9 @@ export function init() {
   rudMessagingInstance = null;
   rudForegroundMessageBound = false;
   rudPushProfileSyncTimer = null;
-  rudPrayerReminderClock = null;
   onLegacyWindowLoad(() => {
     rudScheduleFcmMaintenance();
     window.rudRefreshPrayerCacheIfStale?.();
-    rudSyncPrayerReminderClock();
   });
   rudSyncBellDot();
   navigator.permissions
@@ -867,7 +773,6 @@ export function init() {
     if (!document.hidden) {
       rudSyncBellDot();
       window.rudRefreshPrayerCacheIfStale?.();
-      rudSyncPrayerReminderClock();
       if (typeof rudSyncSmartHome === 'function') rudSyncSmartHome();
       if (typeof rudSyncFridayMode === 'function') rudSyncFridayMode();
     }

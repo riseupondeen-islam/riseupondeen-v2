@@ -3,7 +3,6 @@
  * Controllers are started once, in their original relative order.
  */
 import './styles/admin-console.css';
-import { S } from '../../runtime/store';
 import * as adminPersistence from './adminPersistence';
 import * as adminAuth from './adminAuth';
 import * as adminRouter from './adminRouter';
@@ -51,8 +50,6 @@ let started = false;
 export function startAdminConsole(): void {
   if (started) return;
   started = true;
-  // The console opens on its Dashboard (the store's historical default was the Names table).
-  if (!S.currentAdminView || S.currentAdminView === 'names') S.currentAdminView = 'dashboard';
   for (const [name, controller] of CONTROLLERS) {
     try {
       controller.init();

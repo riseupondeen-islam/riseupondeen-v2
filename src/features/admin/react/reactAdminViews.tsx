@@ -8,20 +8,20 @@ import { RiseInboxAdmin } from './RiseInboxAdmin';
 import { GuideAdmin } from './GuideAdmin';
 import { WinnerAdmin } from './WinnerAdmin';
 import { DataResetAdmin } from './DataResetAdmin';
-import { AdminOverview } from './AdminOverview';
 import { RiseMessagesAdmin } from './RiseMessagesAdmin';
+import { NotificationSettingsAdmin } from './NotificationSettingsAdmin';
 import { PageHead } from './ui';
 
 let root: Root | null = null;
 
 export const REACT_ADMIN_VIEWS = [
-  'dashboard',
   'daily-challenges',
   'rise-inbox',
   'rise-messages',
   'app-guide',
   'monthly-winner',
   'data-reset',
+  'notification-settings',
 ] as const;
 export type ReactAdminView = (typeof REACT_ADMIN_VIEWS)[number];
 
@@ -56,8 +56,6 @@ export function unmountReactAdminView(): void {
 
 function viewFor(view: ReactAdminView) {
   switch (view) {
-    case 'dashboard':
-      return <AdminOverview />;
     case 'daily-challenges':
       return <DailyChallengesAdmin />;
     case 'app-guide':
@@ -78,6 +76,8 @@ function viewFor(view: ReactAdminView) {
       );
     case 'rise-messages':
       return <RiseMessagesAdmin />;
+    case 'notification-settings':
+      return <NotificationSettingsAdmin />;
     default:
       return <RiseInboxAdmin />;
   }

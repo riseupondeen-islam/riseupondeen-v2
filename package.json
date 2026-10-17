@@ -16,7 +16,7 @@
     "build:e2e": "vite build --mode e2e",
     "preview:e2e": "vite preview --outDir dist-e2e --port 4174 --strictPort",
     "test:e2e": "playwright test",
-    "test:scheduler": "node push-scheduler/test/deenFriends.test.js && node push-scheduler/test/maintenance.test.js && node push-scheduler/test/adminJobs.test.js && node push-scheduler/test/adminAutomation.test.js",
+    "test:scheduler": "node push-scheduler/test/deenFriends.test.js && node push-scheduler/test/maintenance.test.js && node push-scheduler/test/adminJobs.test.js && node push-scheduler/test/adminAutomation.test.js && node push-scheduler/test/notificationPolicy.test.js",
     "deploy:hosting": "npm run build && firebase deploy --only hosting"
   },
   "dependencies": {

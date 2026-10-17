@@ -25,10 +25,17 @@ re-open the console after sign-out. Firestore rules remain the authority for all
 
 ## New capabilities
 
-* **Dashboard** — website visitors, Deen Friends members and activity, challenge check-ins, RISE inbox,
-  content library and reports, from bounded reads of existing collections (cached 15 minutes for the browser tab and cleared on sign-out, Refresh
-  re-reads). Cards say when a read limit was reached and show an error instead of zeros when a read fails.
-  Charts are dependency-free SVG (no chart library or paid API was added).
+* **Dashboard** — *removed in V3.6.3.* Each load read up to ~9,800 documents (800 visitor sessions, 2,000
+  members, 3,000 activity rows, 60 challenges + up to 14 × 250 participants, 200 RISE threads, 200 reports)
+  against the free daily read quota. Its page, data service (`services/adminInsights.ts`), charts, nav entry
+  and route are gone, so none of those reads can run. The console now opens on *Names of Allah* (which
+  uses the content list the console already loads). No data was deleted.
+* **Notification Settings** (Communication) — the master switch for all user notifications and independent
+  switches for the Daily Deen Challenge (on by default), the five daily prayer reminders (off) and all other
+  notifications (off). Stored in `deens_admin_settings/notifications`; enforced by the scheduler before every
+  send (see `docs/PUSH-NOTIFICATIONS.md`). Opening the page costs one read; a change writes one document and
+  never sends anything. *Send Notification* shows whether its notifications are allowed and disables
+  queueing while they are not.
 * **Tables** — every table has *Columns* (hide/show, mandatory identifying/action columns, Select all,
   Reset to default; remembered per table on this device, column names only), *Filters* built from the
   table's real values (value filters, date ranges, combinable, chips, counts), sortable headings and

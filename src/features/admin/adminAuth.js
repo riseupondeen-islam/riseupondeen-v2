@@ -95,7 +95,7 @@ async function logout() {
     stopMaintenanceLive();
     S.adminContent = [];
     S.editingId = null;
-    S.currentAdminView = 'dashboard';
+    S.currentAdminView = 'names';
     try {
       sessionStorage.removeItem('rud_admin_view_v1');
     } catch {}

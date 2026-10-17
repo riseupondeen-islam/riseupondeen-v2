@@ -10,6 +10,7 @@ import { adminHeader } from '../adminRouter';
 import { $ } from '../../../runtime/core';
 import { addDoc, collection, serverTimestamp } from '../../../services/firebase/sdk';
 import { busy, esc, excerpt, label, route, toast } from '../../../utils/ui';
+import { categoryAllowed, readNotificationSettings } from '../services/notificationSettings';
 
 function rudNotificationAdminSources() {
   const verified = (S.adminContent || []).filter(
@@ -87,6 +88,7 @@ function notificationAdminView() {
       <div class="field wide"><label>Message</label><textarea class="textarea" id="pnMessage" maxlength="280" readonly></textarea></div>
     </div>
     <div class="rud-push-preview"><small>RISE UPON DEEN V2</small><h3 id="pnPreviewTitle">Notification preview</h3><p id="pnPreviewMessage">Choose a verified source.</p></div>
+    <div class="rad-alert rad-alert-info" id="pnPolicyState" role="status">Checking Notification Settings…</div>
     <div class="rud-push-config-state" id="pnConfigState">Messages are queued securely in Firestore. The free GitHub Actions scheduler processes the queue on its next run. Delivery also respects each visitor’s enabled notification categories.</div>
     <div class="form-actions"><button class="premium-btn primary" id="pnSend" type="button">Send Notification</button><button class="premium-btn" id="pnSchedule" type="button">Schedule Notification</button></div>
   </section>`;
@@ -124,6 +126,38 @@ function notificationAdminView() {
     recipientWrap.hidden = audience.value !== 'single';
   });
   sync();
+  /* Admin › Notification Settings decides whether these notifications may be delivered (the scheduler
+     enforces it before every send; a due job that is not allowed is cancelled). Reflect it here so a
+     notification is not queued only to be cancelled. One read per visit. */
+  const policyState = $('#pnPolicyState');
+  const setSendingAllowed = (allowed) => {
+    for (const id of ['#pnSend', '#pnSchedule']) {
+      const b = $(id);
+      if (b) b.disabled = !allowed;
+    }
+  };
+  setSendingAllowed(false);
+  readNotificationSettings()
+    .then((s) => {
+      if (!policyState?.isConnected) return;
+      const allowed = categoryAllowed(s, 'other');
+      setSendingAllowed(allowed);
+      policyState.className = `rad-alert ${allowed ? 'rad-alert-info' : 'rad-alert-warn'}`;
+      policyState.innerHTML = allowed
+        ? 'Sending is on: “All other notifications” is enabled in Notification Settings.'
+        : `Sending is off: ${s.master ? '“All other notifications” is' : 'all user notifications are'} turned off in Notification Settings, so the scheduler would cancel anything queued here. <button class="mini-action" type="button" data-admin-open="notification-settings">Open Notification Settings</button>`;
+      policyState
+        .querySelector('[data-admin-open]')
+        ?.addEventListener('click', () =>
+          document.querySelector('.admin-nav [data-admin-view="notification-settings"]')?.click(),
+        );
+    })
+    .catch(() => {
+      if (!policyState?.isConnected) return;
+      policyState.className = 'rad-alert rad-alert-error';
+      policyState.textContent =
+        'Notification Settings could not be read, so sending is disabled here. Reload the console and try again.';
+    });
   const queueJob = async (payload) => {
     if (!S.firebaseReady || !S.db || !S.auth?.currentUser || !addDoc || !collection || !serverTimestamp)
       throw new Error('Secure admin session is unavailable.');

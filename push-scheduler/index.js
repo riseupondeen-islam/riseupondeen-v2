@@ -7,6 +7,7 @@ const { runMaintenance } = require('./maintenance');
 const { processAdminJobs } = require('./adminJobs');
 const { runChallengeSchedule } = require('./challengeScheduler');
 const { processRiseBroadcasts } = require('./riseBroadcasts');
+const { createPolicy, categoryAllowed } = require('./notificationPolicy');
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '{}');
 if (!serviceAccount.project_id || !serviceAccount.client_email || !serviceAccount.private_key) {
@@ -101,8 +102,10 @@ async function claimDelivery(visitorId,date,key){
 function invalidToken(code){return /registration-token-not-registered|invalid-registration-token|messaging\/invalid-registration-token/.test(String(code||''));}
 async function disableToken(docRef){await docRef.set({active:false,fcmToken:null,enabledCategories:[],updatedAt:FieldValue.serverTimestamp()},{merge:true});}
 
-async function sendPrayer(doc,record,key,date){
+async function sendPrayer(doc,record,key,date,policy){
   const token=String(record.fcmToken||'').trim();if(!token)return false;
+  // Admin switches are checked immediately before every send (and before the delivery is claimed).
+  if(!(await policy.allows('prayer')))return false;
   const claimed=await claimDelivery(String(record.visitorId||doc.id),date,key);if(!claimed)return false;
   const label=PRAYER_LABELS[key],dedupeId=`prayer:${date}:${key}`;
   try{
@@ -125,12 +128,24 @@ async function jobRecipients(job){
   const snap=await db.collection(PUSH_COLLECTION).doc(id).get();
   return snap.exists&&snap.get('active')===true?[snap]:[];
 }
-async function sendGenericJob(jobRef,job){
+/* A due job that the admin switches do not allow is cancelled ("blocked"), never kept for later:
+   turning a switch back on must not release a backlog of old notifications. */
+async function blockJob(jobRef,reason,extra={}){
+  await jobRef.set({status:'blocked',...extra,blockedAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp(),lastError:reason},{merge:true});
+  return {blocked:true};
+}
+const BLOCKED_REASON='Not sent: notifications other than the Daily Deen Challenge and prayer reminders are turned off in Admin › Notification Settings (or all user notifications are off).';
+async function sendGenericJob(jobRef,job,policy){
   const now=Date.now();
   if(job.status!=='queued')return {skipped:true};
   if(job.scheduledAt){
     const t=Date.parse(job.scheduledAt);
     if(Number.isFinite(t)&&t>now)return {skipped:true};
+  }
+  // Checked when the job becomes due (not when it was queued), so a switch turned off later wins.
+  if(!(await policy.allows('other'))){
+    if(policy.unavailable())return {skipped:true}; // settings unreadable: keep the job, decide on a later run
+    return blockJob(jobRef,BLOCKED_REASON);
   }
   const category=String(job.category||'announcement');
   const title=String(job.title||'Rise Upon Deen').slice(0,120);
@@ -139,6 +154,7 @@ async function sendGenericJob(jobRef,job){
   const forceTest=job.forceTest===true;
   const recipients=await jobRecipients(job);
   let sent=0,eligible=0;
+  let stopped=false;
   for(const doc of recipients){
     const r=doc.data()||{};
     if(!r.fcmToken)continue;
@@ -148,6 +164,8 @@ async function sendGenericJob(jobRef,job){
     const installed=['android-pwa','ios-home-screen','installed-pwa'].includes(String(r.platform||r.schedule?.platform||''));
     if(job.audience==='app'&&!installed)continue;
     if(job.audience==='browser'&&installed)continue;
+    // Re-checked before each send (cached ≤30 s): turning a switch off stops a job mid-delivery.
+    if(!(await policy.allows('other'))){stopped=true;break;}
     eligible++;
     try{
       await messaging.send({
@@ -161,6 +179,7 @@ async function sendGenericJob(jobRef,job){
       else console.warn(`Generic push failed for ${doc.id}`,error?.message||error);
     }
   }
+  if(stopped)return blockJob(jobRef,`${BLOCKED_REASON} Stopped after ${sent} of the matching devices.`,{sent,eligible});
   if(sent>0){
     await jobRef.set({status:'sent',sent,eligible,processedAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp(),lastError:null},{merge:true});
     return {sent,eligible};
@@ -177,15 +196,18 @@ async function sendGenericJob(jobRef,job){
   },{merge:true});
   return {sent:0,eligible,retry:!giveUp};
 }
-async function processJobs(){
+async function processJobs(policy){
+  // Settings unreadable: leave the queue untouched (no reads, no sends) until a later run can verify them.
+  await policy.get();
+  if(policy.unavailable())return {skipped:'notification settings unavailable'};
   const snap=await db.collection(JOB_COLLECTION).where('status','==','queued').limit(100).get();
-  let sent=0,processed=0;
-  for(const doc of snap.docs){try{const r=await sendGenericJob(doc.ref,doc.data()||{});if(r.sent)sent+=r.sent;if(r.skipped)continue;processed++;}catch(e){await doc.ref.set({lastError:String(e?.message||e),attemptedAt:FieldValue.serverTimestamp()},{merge:true});}}
-  return {jobs:processed,sent};
+  let sent=0,processed=0,blocked=0;
+  for(const doc of snap.docs){try{const r=await sendGenericJob(doc.ref,doc.data()||{},policy);if(r.sent)sent+=r.sent;if(r.blocked)blocked++;if(r.skipped)continue;processed++;}catch(e){await doc.ref.set({lastError:String(e?.message||e),attemptedAt:FieldValue.serverTimestamp()},{merge:true});}}
+  return {jobs:processed,sent,blocked};
 }
 
 /** Sends any prayer due now to one subscriber and records when it next needs attention. */
-async function processPrayerSubscriber(doc,cache){
+async function processPrayerSubscriber(doc,cache,policy){
   const record=doc.data()||{},schedule=record.schedule||{},categories=schedule.categories||{};
   const stored=record[PRAYER_NEXT_FIELD];
   const stopChecking=async()=>{if(stored!==undefined)await doc.ref.update({[PRAYER_NEXT_FIELD]:FieldValue.delete()});};
@@ -205,7 +227,7 @@ async function processPrayerSubscriber(doc,cache){
         // GitHub's free scheduler has a minimum 5-minute cadence and is sometimes late; a 30-minute
         // catch-up window prevents a delayed run from losing a prayer alert.
         if(delta<0||delta>30)continue;
-        try{if(await sendPrayer(doc,record,key,today.date))sent++;}catch(e){console.warn(`Prayer send failed ${doc.id}/${key}`,e?.message||e);}
+        try{if(await sendPrayer(doc,record,key,today.date,policy))sent++;}catch(e){console.warn(`Prayer send failed ${doc.id}/${key}`,e?.message||e);}
       }
       next=nextPrayerCheckMs(prayers,today);
     }else if(!hasPlace){
@@ -218,7 +240,13 @@ async function processPrayerSubscriber(doc,cache){
   return {subscriber:true,sent};
 }
 
-async function processPrayerNotifications(){
+async function processPrayerNotifications(policy){
+  /* Prayer reminders are off by default (Admin › Notification Settings). While they are off — or all user
+     notifications are off, or the settings cannot be read — this pipeline does no Firestore work at all
+     (before, it read its state and two subscription queries on every 5-minute run). When they are turned
+     back on, subscribers whose check time passed meanwhile are due at once and only prayers inside the
+     normal 30-minute window are sent, so no backlog of old reminders is delivered. */
+  if(!categoryAllowed(await policy.get(),'prayer'))return {skipped:policy.unavailable()?'notification settings unavailable':'prayer notifications turned off'};
   const now=Date.now(),stateRef=db.doc(PRAYER_STATE_DOC),state=await stateRef.get();
   const syncedAt=state.exists?Number(state.get('syncedAtMs'))||0:0;
   const docs=new Map();
@@ -238,7 +266,9 @@ async function processPrayerNotifications(){
   due.docs.forEach(d=>docs.set(d.id,d));
   const cache=new Map();let sent=0,subscribers=0;
   for(const doc of docs.values()){
-    try{const r=await processPrayerSubscriber(doc,cache);if(r.subscriber)subscribers++;sent+=r.sent;}
+    // Turned off while this run is working: stop before the next subscriber (no further writes or sends).
+    if(!(await policy.allows('prayer')))break;
+    try{const r=await processPrayerSubscriber(doc,cache,policy);if(r.subscriber)subscribers++;sent+=r.sent;}
     catch(e){console.warn(`Subscriber ${doc.id} failed`,e?.message||e);}
   }
   await stateRef.set({syncedAtMs:Math.min(syncedTo,now),updatedAt:FieldValue.serverTimestamp()},{merge:true});
@@ -246,11 +276,13 @@ async function processPrayerNotifications(){
 }
 
 (async()=>{
-  const jobs=await processJobs();
-  const prayers=await processPrayerNotifications();
+  // One reader of the admin notification switches for the whole run, shared by every sender below.
+  const policy=createPolicy(db);
+  const jobs=await processJobs(policy);
+  const prayers=await processPrayerNotifications(policy);
   // Deen Friends events are independent: a failure there must never block prayer or queued reminders.
   let deenFriends;
-  try{deenFriends=await processDeenFriendsEvents(db,messaging);}catch(e){console.warn('Deen Friends notifications failed',e?.message||e);deenFriends={error:String(e?.message||e)};}
+  try{deenFriends=await processDeenFriendsEvents(db,messaging,{policy});}catch(e){console.warn('Deen Friends notifications failed',e?.message||e);deenFriends={error:String(e?.message||e)};}
   // V3 maintenance (RISE chat 24h retention, friend suggestions) is also independent of the rest.
   let maintenance;
   try{maintenance=await runMaintenance(db);}catch(e){console.warn('Maintenance failed',e?.message||e);maintenance={error:String(e?.message||e)};}
@@ -263,5 +295,5 @@ async function processPrayerNotifications(){
   try{challengeSchedule=await runChallengeSchedule(db);}catch(e){console.warn('Challenge schedule failed',e?.message||e);challengeSchedule={error:String(e?.message||e)};}
   let riseOutreach;
   try{riseOutreach=await processRiseBroadcasts(db,getAuth());}catch(e){console.warn('RISE outreach failed',e?.message||e);riseOutreach={error:String(e?.message||e)};}
-  console.log(JSON.stringify({ok:true,at:new Date().toISOString(),jobs,prayers,deenFriends,maintenance,adminJobs,challengeSchedule,riseOutreach}));
+  console.log(JSON.stringify({ok:true,at:new Date().toISOString(),notificationSettings:policy.summary(),jobs,prayers,deenFriends,maintenance,adminJobs,challengeSchedule,riseOutreach}));
 })().catch(error=>{console.error(error);process.exit(1);});

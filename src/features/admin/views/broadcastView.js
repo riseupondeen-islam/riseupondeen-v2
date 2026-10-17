@@ -10,6 +10,7 @@ import { adminDateTime, adminHeader } from '../adminRouter';
 import { RUD_ANALYTICS_COLLECTION } from '../../analytics/visitorAnalytics';
 import { RUD_BROADCAST_COLLECTION } from '../../broadcast/broadcast';
 import { rudPushSenderEndpoint } from '../../notifications/pushNotifications';
+import { categoryAllowed, readNotificationSettings } from '../services/notificationSettings';
 import { $, $$ } from '../../../runtime/core';
 import {
   addDoc,
@@ -226,7 +227,16 @@ function broadcastAdminView() {
       });
       let pushNote = '';
       const endpoint = rudPushSenderEndpoint();
-      if (endpoint && S.firebaseReady && S.auth?.currentUser) {
+      /* The optional external sender is outside this project's scheduler, so the console only calls it
+         when Admin › Notification Settings allows announcement notifications (fails closed). */
+      const pushAllowed = endpoint
+        ? await readNotificationSettings()
+            .then((s) => categoryAllowed(s, 'other'))
+            .catch(() => false)
+        : false;
+      if (endpoint && !pushAllowed) {
+        pushNote = ' In-app broadcast published; push delivery is turned off in Notification Settings.';
+      } else if (endpoint && S.firebaseReady && S.auth?.currentUser) {
         try {
           const idToken = await S.auth.currentUser.getIdToken();
           const pushResponse = await fetch(endpoint, {

@@ -25,6 +25,32 @@ Service worker onBackgroundMessage → one notification (tag = dedupeId) → cli
 Page onMessage (foreground) → in-app toast instead, skipped if already on that screen
 ```
 
+## Admin switches (Admin Console › Notification Settings)
+
+Every sender in `push-scheduler/` obeys one settings document, `deens_admin_settings/notifications`
+(Super Admin only in `firestore.rules`), through `push-scheduler/notificationPolicy.js`:
+
+| Switch | Default | Covers |
+| --- | --- | --- |
+| All user notifications (master) | On | Everything. While off nothing is sent; no category can bypass it. |
+| Daily Deen Challenge | On | "New Daily Deen Challenge" (deenFriends.js step 6) |
+| Five daily prayer reminders | Off | Fajr, Dhuhr, Asr, Maghrib, Isha (index.js prayer pipeline) |
+| All other notifications | Off | Queued `push_jobs` from Send Notification (announcements, Qur'an, Friday, new Dua/Hadith, tests), friend requests/activity, challenge replies, "RISE replied" |
+
+* A missing document means these defaults. A document that cannot be read means **nothing** is sent
+  (queued jobs and the Deen Friends checkpoint are kept for a run that can verify the settings).
+* The document is read once per run and re-checked immediately before every send (re-read when the
+  cached copy is older than 30 s), so a switch turned off stops a running delivery within ~30 s.
+* A due `push_jobs` entry that is not allowed is marked `status: 'blocked'` and never sent later;
+  Deen Friends events that occur while their switch is off are skipped for good. Turning a switch on
+  therefore never releases a backlog, and changing a switch never sends anything by itself.
+* While prayer reminders are off the prayer pipeline does no Firestore work at all. When they are
+  turned on again only prayers inside the normal 30-minute window are sent.
+* Members' own category choices and their browser permission are still respected; the switches can
+  only restrict delivery, never add a recipient.
+* Prayer reminders are delivered only by the scheduler. The page no longer shows its own local copy
+  at the prayer minute (it duplicated the push and could not be switched off by the admin).
+
 ## Events
 
 | Event | Recipient | Category (user can switch off) | Text |
@@ -66,7 +92,10 @@ not the summary field on the thread that the user can edit, so a user cannot tri
   - make the scheduler repository public (it contains no secrets);
   - change the cron to `*/15`;
   - accept the cost.
-- **Firestore reads per run:** about 6 small range queries, plus one device lookup per recipient.
+- **Firestore reads per run:** 1 settings read; then only the pipelines that are switched on query
+  anything (about 6 small range queries for Deen Friends, 3+ for prayers), plus one device lookup per
+  recipient. With the defaults (only the Daily Deen Challenge on) the prayer queries and five of the six
+  Deen Friends queries are not run.
   This fits easily in the Spark free tier for a small community.
 - **No Cloud Functions** (they need the Blaze plan) and no paid push service are used.
 

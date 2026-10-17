@@ -62,10 +62,10 @@ function suspendAdminView() {
 }
 
 const TITLES = {
-  dashboard: 'Dashboard',
   analytics: 'Visitor Analytics',
   broadcast: 'Broadcast Message',
   notifications: 'Send Notification',
+  'notification-settings': 'Notification Settings',
   'deen-friends': 'Deen Friends · Trust & Safety',
   maintenance: 'Maintenance Mode',
   scheduled: 'Scheduled Publishing',
@@ -152,8 +152,7 @@ function renderAdminView(v, opts = {}) {
     $('#adminTopTitle').textContent = 'Manage Content';
     return manager({ live: !!opts.live });
   }
-  if (!pages[v]) v = 'dashboard';
-  if (v === 'dashboard') return renderAdminView('dashboard');
+  if (!pages[v]) v = 'names'; // unknown or removed views (e.g. the former Dashboard) open the first section
   S.currentAdminView = v;
   $('#adminTopTitle').textContent = pages[v][1];
   return manager({ type: pages[v][0], title: pages[v][1], live: !!opts.live });

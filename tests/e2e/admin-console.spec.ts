@@ -77,7 +77,9 @@ test.describe('admin console · desktop', () => {
     // Correct credentials.
     await login(page);
     await expect(page.locator('#adminApp')).toHaveAttribute('data-auth', 'authorized');
-    await expect(page.locator('#adminMain .rad-overview')).toBeVisible();
+    // The console opens on the first content section (the Dashboard was removed).
+    await expect(page.locator('#adminTopTitle')).toHaveText('Names of Allah');
+    await expect(page.locator('.admin-nav [data-admin-view="names"]')).toHaveClass(/active/);
     const gate = await page.evaluate(() => {
       const w = window as unknown as { __gate: string[]; __mainBeforeLogin: number };
       return { __gate: w.__gate, __mainBeforeLogin: w.__mainBeforeLogin };
@@ -102,20 +104,76 @@ test.describe('admin console · desktop', () => {
     expect((await firestoreLog(page)).some((e) => e.op === 'auth.signOut')).toBe(true);
   });
 
-  test('dashboard reads once per 15 minutes (not on every visit) and its cache is cleared on sign-out', async ({ page }) => {
+  test('the Dashboard is gone: no nav entry, no route, and none of its Firestore reads', async ({ page }) => {
+    // An older build may have remembered the Dashboard as the last open section.
+    await page.addInitScript(() => {
+      try {
+        sessionStorage.setItem('rud_admin_view_v1', 'dashboard');
+        sessionStorage.setItem('rud_admin_insights_v1', '{"at":1,"value":{}}');
+      } catch {}
+    });
     await adminSession(page);
-    const sessionReads = async () => (await firestoreLog(page)).filter((e) => e.op === 'getDocs' && e.path === 'visitor_sessions').length;
-    await expect.poll(sessionReads).toBe(1);
-    await expect.poll(() => page.evaluate(() => !!sessionStorage.getItem('rud_admin_insights_v1'))).toBe(true);
+    await expect(page.locator('[data-admin-view="dashboard"]')).toHaveCount(0);
+    await expect(page.locator('#adminMain .rad-overview')).toHaveCount(0);
+    await expect(page.locator('#adminTopTitle')).toHaveText('Names of Allah');
     await nav(page, 'duas');
-    await nav(page, 'dashboard');
-    await expect(page.locator('#adminMain .rad-react-view[data-view="dashboard"]')).toBeVisible();
-    expect(await sessionReads()).toBe(1); // served from the cache
-    await page.getByRole('button', { name: 'Refresh' }).first().click();
-    await expect.poll(sessionReads).toBe(2); // Refresh always re-reads
+    await nav(page, 'names');
+    await page.waitForTimeout(500);
+    // The Dashboard read these collections (or sub-collections) on every load; nothing may read them now.
+    const DASHBOARD_ONLY = ['visitor_sessions', 'deens_users', 'deens_activity', 'deens_reports'];
+    const reads = (await firestoreLog(page)).filter(
+      (e) => /^(get|listen)/.test(e.op) && (DASHBOARD_ONLY.includes(e.path) || /\/participants$/.test(e.path)),
+    );
+    expect(reads).toEqual([]);
     await page.locator('#adminLogoutBtn').click();
     await expect(page.locator('#adminApp')).toHaveAttribute('data-auth', 'signed-out');
     expect(await page.evaluate(() => sessionStorage.getItem('rud_admin_insights_v1'))).toBeNull();
+  });
+
+  test('Notification Settings: defaults, independent switches, master confirmation, nothing sent on change', async ({ page }) => {
+    await adminSession(page);
+    await nav(page, 'notification-settings');
+    const view = page.locator('#adminMain .rad-notification-settings');
+    await expect(view).toBeVisible();
+    const sw = (name: string) => view.getByRole('switch', { name, exact: true });
+    // Defaults (no settings document yet): master on, Daily Deen Challenge on, everything else off.
+    await expect(sw('All user notifications')).toBeChecked();
+    await expect(sw('Daily Deen Challenge')).toBeChecked();
+    await expect(sw('Five daily prayer reminders')).not.toBeChecked();
+    await expect(sw('All other notifications')).not.toBeChecked();
+    await expect(view.locator('[data-notification-category="dailyChallenge"]')).toContainText('Sending');
+    await expect(view.locator('[data-notification-category="prayer"]')).toContainText('Not sending');
+    expect(await docs(page, 'deens_admin_settings/notifications')).toEqual([]); // opening the page writes nothing
+    // Turn prayer reminders on: one explicit document, no notification queued.
+    await sw('Five daily prayer reminders').click({ force: true });
+    await expect(sw('Five daily prayer reminders')).toBeChecked();
+    await expect(page.locator('#toastStack')).toContainText('Nothing was sent');
+    const saved = await docs(page, 'deens_admin_settings/notifications');
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toMatchObject({ masterEnabled: true, dailyChallengeEnabled: true, prayerEnabled: true, otherEnabled: false });
+    // The master switch asks first; cancelling changes nothing.
+    await sw('All user notifications').click({ force: true });
+    const dialog = page.getByRole('alertdialog');
+    await expect(dialog).toContainText('Turn off all user notifications?');
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(sw('All user notifications')).toBeChecked();
+    await sw('All user notifications').click({ force: true });
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Turn off all notifications' }).click();
+    await expect(sw('All user notifications')).not.toBeChecked();
+    await expect(view.locator('[data-notification-category="dailyChallenge"]')).toContainText('Held');
+    await expect
+      .poll(async () => (await docs(page, 'deens_admin_settings/notifications'))[0])
+      .toMatchObject({ masterEnabled: false, dailyChallengeEnabled: true, prayerEnabled: true });
+    expect((await docs(page, 'push_jobs/')).length).toBe(0); // no switch ever queues a notification
+    // Reopening reads the stored state.
+    await nav(page, 'duas');
+    await nav(page, 'notification-settings');
+    await expect(sw('All user notifications')).not.toBeChecked();
+    await expect(sw('Five daily prayer reminders')).toBeChecked();
+    // Send Notification reflects the switches: "other" notifications are off, so queueing is disabled.
+    await nav(page, 'notifications');
+    await expect(page.locator('#pnPolicyState')).toContainText('Sending is off');
+    await expect(page.locator('#pnSend')).toBeDisabled();
   });
 
   test('layout: fixed sidebar, only the content area scrolls, no page or horizontal scroll', async ({ page }) => {
@@ -278,7 +336,7 @@ test.describe('admin console · desktop', () => {
     const log = await firestoreLog(page);
     expect(JSON.stringify(log)).toContain('RISE_THREAD_DELETED');
     // Navigating away and back re-reads from Firestore: still gone.
-    await nav(page, 'dashboard');
+    await nav(page, 'duas');
     await nav(page, 'rise-inbox');
     await page.getByRole('button', { name: /^All/ }).click();
     await expect(page.locator('.df2-admin .rad-empty')).toContainText('No conversations');
